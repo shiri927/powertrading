@@ -49,18 +49,18 @@ const PricePrediction = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Price Prediction & Forecasting</h1>
+        <h1 className="text-3xl font-bold text-foreground">价格预测与分析</h1>
         <p className="text-muted-foreground mt-2">
-          AI-powered market analysis and price forecasting tools
+          AI驱动的市场分析与价格预测工具
         </p>
       </div>
 
       {/* Prediction Tabs */}
       <Tabs defaultValue="spot-price" className="w-full">
         <TabsList>
-          <TabsTrigger value="spot-price">Spot Price (现货电价)</TabsTrigger>
-          <TabsTrigger value="price-diff">Price Difference (价差)</TabsTrigger>
-          <TabsTrigger value="supply-demand">Supply & Demand (供需)</TabsTrigger>
+          <TabsTrigger value="spot-price">现货电价预测</TabsTrigger>
+          <TabsTrigger value="price-diff">价差预测</TabsTrigger>
+          <TabsTrigger value="supply-demand">供需预测</TabsTrigger>
         </TabsList>
 
         {/* Spot Price Prediction */}
@@ -70,49 +70,49 @@ const PricePrediction = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Target className="h-4 w-4" />
-                  Prediction Accuracy
+                  预测准确率
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-success">92.4%</div>
-                <p className="text-xs text-muted-foreground mt-1">Last 7 days average</p>
+                <p className="text-xs text-muted-foreground mt-1">过去7天平均</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Tomorrow Peak Price</CardTitle>
+                <CardTitle className="text-sm font-medium">明日峰值价格</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">¥518/MWh</div>
-                <p className="text-xs text-warning mt-1">Expected at 16:00</p>
+                <p className="text-xs text-warning mt-1">预计出现在16:00</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Tomorrow Valley Price</CardTitle>
+                <CardTitle className="text-sm font-medium">明日谷值价格</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">¥252/MWh</div>
-                <p className="text-xs text-muted-foreground mt-1">Expected at 04:00</p>
+                <p className="text-xs text-muted-foreground mt-1">预计出现在04:00</p>
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Day-ahead Price Prediction (日前电价预测)</CardTitle>
+              <CardTitle>日前电价预测</CardTitle>
               <CardDescription>
-                Predicted vs actual spot prices with confidence intervals
+                预测电价与实际电价对比及置信区间
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mb-4 flex items-center gap-2">
                 <Badge variant="outline">
                   <TrendingUp className="h-3 w-3 mr-1" />
-                  96-point forecast available
+                  96点预测曲线可用
                 </Badge>
                 <Badge variant="secondary">
-                  Confidence: 89.5%
+                  置信度: 89.5%
                 </Badge>
               </div>
               <ResponsiveContainer width="100%" height={400}>
@@ -120,7 +120,7 @@ const PricePrediction = () => {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="time" className="text-xs" />
                   <YAxis 
-                    label={{ value: 'Price (¥/MWh)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: '价格 (¥/MWh)', angle: -90, position: 'insideLeft' }}
                     className="text-xs" 
                   />
                   <Tooltip />
@@ -130,7 +130,7 @@ const PricePrediction = () => {
                     dataKey="actual" 
                     stroke="hsl(var(--chart-1))" 
                     strokeWidth={2}
-                    name="Actual Price (实际电价)"
+                    name="实际电价"
                     dot={{ r: 4 }}
                   />
                   <Line 
@@ -139,30 +139,30 @@ const PricePrediction = () => {
                     stroke="hsl(var(--chart-2))" 
                     strokeWidth={2}
                     strokeDasharray="5 5"
-                    name="Predicted Price (预测电价)"
+                    name="预测电价"
                     dot={{ r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
 
               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                <h4 className="text-sm font-medium mb-2">Prediction Factors</h4>
+                <h4 className="text-sm font-medium mb-2">预测因素</h4>
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Weather Conditions</span>
-                    <span className="font-medium">Clear, Windy</span>
+                    <span className="text-muted-foreground">天气状况</span>
+                    <span className="font-medium">晴朗，有风</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Renewable Output Forecast</span>
-                    <span className="font-medium">High (9,200 MW)</span>
+                    <span className="text-muted-foreground">新能源出力预测</span>
+                    <span className="font-medium">高 (9,200 MW)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Load Forecast</span>
-                    <span className="font-medium">Normal (18,100 MW)</span>
+                    <span className="text-muted-foreground">负荷预测</span>
+                    <span className="font-medium">正常 (18,100 MW)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Coal Price Trend</span>
-                    <span className="font-medium text-success">Stable</span>
+                    <span className="text-muted-foreground">煤价趋势</span>
+                    <span className="font-medium text-success">平稳</span>
                   </div>
                 </div>
               </div>
@@ -176,10 +176,10 @@ const PricePrediction = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />
-                Day-ahead vs Real-time Price Difference (价差预测)
+                日前与实时电价价差预测
               </CardTitle>
               <CardDescription>
-                Spot market arbitrage opportunity analysis
+                现货市场套利机会分析
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -188,7 +188,7 @@ const PricePrediction = () => {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="time" className="text-xs" />
                   <YAxis 
-                    label={{ value: 'Price Diff (¥/MWh)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: '价差 (¥/MWh)', angle: -90, position: 'insideLeft' }}
                     className="text-xs" 
                   />
                   <Tooltip />
@@ -200,7 +200,7 @@ const PricePrediction = () => {
                     stroke="hsl(var(--chart-3))" 
                     fill="hsl(var(--chart-3))"
                     fillOpacity={0.2}
-                    name="Upper Bound"
+                    name="上限"
                   />
                   <Area 
                     type="monotone" 
@@ -208,37 +208,37 @@ const PricePrediction = () => {
                     stroke="hsl(var(--chart-3))" 
                     fill="hsl(var(--chart-3))"
                     fillOpacity={0.2}
-                    name="Lower Bound"
+                    name="下限"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="predicted" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
-                    name="Predicted Difference (预测价差)"
+                    name="预测价差"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="diff" 
                     stroke="hsl(var(--secondary))" 
                     strokeWidth={2}
-                    name="Actual Difference (实际价差)"
+                    name="实际价差"
                   />
                 </AreaChart>
               </ResponsiveContainer>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="p-3 border border-border rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">Direction Accuracy</div>
+                  <div className="text-xs text-muted-foreground mb-1">方向准确率</div>
                   <div className="text-lg font-bold text-success">87.3%</div>
                 </div>
                 <div className="p-3 border border-border rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">Value Prediction Error</div>
+                  <div className="text-xs text-muted-foreground mb-1">数值预测误差</div>
                   <div className="text-lg font-bold">±3.2 ¥/MWh</div>
                 </div>
                 <div className="p-3 border border-border rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">Arbitrage Opportunities</div>
-                  <div className="text-lg font-bold text-warning">4 periods</div>
+                  <div className="text-xs text-muted-foreground mb-1">套利机会</div>
+                  <div className="text-lg font-bold text-warning">4 个时段</div>
                 </div>
               </div>
             </CardContent>
@@ -246,21 +246,21 @@ const PricePrediction = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Price Difference Drivers Analysis</CardTitle>
+              <CardTitle>价差驱动因素分析</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Bidding Space Difference</span>
-                  <span className="text-sm font-medium text-primary">High Impact</span>
+                  <span className="text-sm">竞价空间差异</span>
+                  <span className="text-sm font-medium text-primary">高影响</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Renewable Forecast Error</span>
-                  <span className="text-sm font-medium text-secondary">Medium Impact</span>
+                  <span className="text-sm">新能源预测偏差</span>
+                  <span className="text-sm font-medium text-secondary">中影响</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Load Forecast Accuracy</span>
-                  <span className="text-sm font-medium text-muted-foreground">Low Impact</span>
+                  <span className="text-sm">负荷预测准确性</span>
+                  <span className="text-sm font-medium text-muted-foreground">低影响</span>
                 </div>
               </div>
             </CardContent>
@@ -271,9 +271,9 @@ const PricePrediction = () => {
         <TabsContent value="supply-demand" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>15-Day Supply & Demand Forecast (市场供需预测)</CardTitle>
+              <CardTitle>15日供需预测</CardTitle>
               <CardDescription>
-                Renewable output, thermal generation, and load predictions
+                新能源出力、火电发电与负荷预测
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -282,7 +282,7 @@ const PricePrediction = () => {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="day" className="text-xs" />
                   <YAxis 
-                    label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: '功率 (MW)', angle: -90, position: 'insideLeft' }}
                     className="text-xs" 
                   />
                   <Tooltip />
@@ -293,7 +293,7 @@ const PricePrediction = () => {
                     stackId="1"
                     stroke="hsl(var(--chart-3))" 
                     fill="hsl(var(--chart-3))"
-                    name="Renewable Output (新能源出力)"
+                    name="新能源出力"
                   />
                   <Area 
                     type="monotone" 
@@ -301,14 +301,14 @@ const PricePrediction = () => {
                     stackId="1"
                     stroke="hsl(var(--chart-4))" 
                     fill="hsl(var(--chart-4))"
-                    name="Thermal Generation (火电)"
+                    name="火电"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="load" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
-                    name="System Load (负荷预测)"
+                    name="负荷预测"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -318,28 +318,28 @@ const PricePrediction = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>7-Day Bidding Space Forecast</CardTitle>
+                <CardTitle>7日竞价空间预测</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Tomorrow</span>
+                  <span className="text-sm">明日</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">2,850 MW</span>
-                    <Badge variant="outline">Medium</Badge>
+                    <Badge variant="outline">中等</Badge>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Day 3</span>
+                  <span className="text-sm">第3日</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">3,420 MW</span>
-                    <Badge variant="default">High</Badge>
+                    <Badge variant="default">高</Badge>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Day 7</span>
+                  <span className="text-sm">第7日</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">2,180 MW</span>
-                    <Badge variant="secondary">Low</Badge>
+                    <Badge variant="secondary">低</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -347,19 +347,19 @@ const PricePrediction = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Inter-regional Transmission</CardTitle>
+                <CardTitle>区域间输电</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Import Forecast</span>
+                  <span className="text-sm">输入预测</span>
                   <span className="text-sm font-medium">1,250 MW</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Export Forecast</span>
+                  <span className="text-sm">输出预测</span>
                   <span className="text-sm font-medium">850 MW</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Net Position</span>
+                  <span className="text-sm">净位置</span>
                   <span className="text-sm font-medium text-success">+400 MW</span>
                 </div>
               </CardContent>

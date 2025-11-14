@@ -61,14 +61,14 @@ const GenerationPlanning = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Generation Planning</h1>
+          <h1 className="text-3xl font-bold text-foreground">发电计划管理</h1>
           <p className="text-muted-foreground mt-2">
-            Renewable energy generation planning and power forecasting
+            新能源发电计划与功率预测
           </p>
         </div>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
-          New Plan
+          新建计划
         </Button>
       </div>
 
@@ -76,44 +76,44 @@ const GenerationPlanning = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+            <CardTitle className="text-sm font-medium">交易单元总数</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{planOverview.totalUnits}</div>
-            <p className="text-xs text-muted-foreground mt-1">Trading units</p>
+            <p className="text-xs text-muted-foreground mt-1">交易单元</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">已完成</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">{planOverview.completed}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {((planOverview.completed / planOverview.totalUnits) * 100).toFixed(1)}% completion
+              {((planOverview.completed / planOverview.totalUnits) * 100).toFixed(1)}% 完成率
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">待发布</CardTitle>
             <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{planOverview.pending}</div>
-            <p className="text-xs text-muted-foreground mt-1">To be published</p>
+            <p className="text-xs text-muted-foreground mt-1">待发布计划</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Draft</CardTitle>
+            <CardTitle className="text-sm font-medium">草稿</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{planOverview.draft}</div>
-            <p className="text-xs text-muted-foreground mt-1">In progress</p>
+            <p className="text-xs text-muted-foreground mt-1">制定中</p>
           </CardContent>
         </Card>
       </div>
@@ -121,9 +121,9 @@ const GenerationPlanning = () => {
       {/* Annual Plan Tracking */}
       <Card>
         <CardHeader>
-          <CardTitle>Annual Generation Plan Tracking (发电计划追踪)</CardTitle>
+          <CardTitle>年度发电计划追踪</CardTitle>
           <CardDescription>
-            Monthly plan vs actual generation with completion rates
+            月度计划与实际发电量对比及完成率
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -133,13 +133,13 @@ const GenerationPlanning = () => {
               <XAxis dataKey="month" className="text-xs" />
               <YAxis 
                 yAxisId="left"
-                label={{ value: 'Volume (MWh)', angle: -90, position: 'insideLeft' }}
+                label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft' }}
                 className="text-xs" 
               />
               <YAxis 
                 yAxisId="right"
                 orientation="right"
-                label={{ value: 'Completion (%)', angle: 90, position: 'insideRight' }}
+                label={{ value: '完成率 (%)', angle: 90, position: 'insideRight' }}
                 className="text-xs" 
               />
               <Tooltip />
@@ -148,13 +148,13 @@ const GenerationPlanning = () => {
                 yAxisId="left"
                 dataKey="plan" 
                 fill="hsl(var(--chart-1))"
-                name="Planned (计划)"
+                name="计划"
               />
               <Bar 
                 yAxisId="left"
                 dataKey="actual" 
                 fill="hsl(var(--chart-2))"
-                name="Actual (实际)"
+                name="实际"
               />
               <Line 
                 yAxisId="right"
@@ -162,7 +162,7 @@ const GenerationPlanning = () => {
                 dataKey="completion" 
                 stroke="hsl(var(--success))" 
                 strokeWidth={2}
-                name="Completion Rate (%)"
+                name="完成率 (%)"
               />
             </BarChart>
           </ResponsiveContainer>
@@ -172,9 +172,9 @@ const GenerationPlanning = () => {
       {/* Plan Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Commercial Plan Breakdown (商业计划分解)</CardTitle>
+          <CardTitle>商业计划分解</CardTitle>
           <CardDescription>
-            Revenue tracking by transaction type
+            按交易类型统计的收益追踪
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -202,7 +202,7 @@ const GenerationPlanning = () => {
                   className="h-2"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>YTD Completion</span>
+                  <span>年累完成率</span>
                   <span>{item.type === "Mid-term" ? "95%" : item.type === "Green Power" ? "88%" : "92%"}</span>
                 </div>
               </div>
@@ -216,24 +216,24 @@ const GenerationPlanning = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Short-term Power Forecast (短期功率预测)
+            短期功率预测
           </CardTitle>
           <CardDescription>
-            24-hour ahead generation forecast vs actual output
+            24小时发电量预测与实际出力对比
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-4 md:grid-cols-3">
             <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">Forecast Accuracy</div>
+              <div className="text-xs text-muted-foreground mb-1">预测准确率</div>
               <div className="text-xl font-bold text-success">96.8%</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">Peak Forecast</div>
+              <div className="text-xs text-muted-foreground mb-1">峰值预测</div>
               <div className="text-xl font-bold">720 MW</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">Valley Forecast</div>
+              <div className="text-xs text-muted-foreground mb-1">谷值预测</div>
               <div className="text-xl font-bold">280 MW</div>
             </div>
           </div>
@@ -242,11 +242,11 @@ const GenerationPlanning = () => {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
                 dataKey="hour" 
-                label={{ value: 'Hour', position: 'insideBottom', offset: -5 }}
+                label={{ value: '小时', position: 'insideBottom', offset: -5 }}
                 className="text-xs" 
               />
               <YAxis 
-                label={{ value: 'Power Output (MW)', angle: -90, position: 'insideLeft' }}
+                label={{ value: '功率输出 (MW)', angle: -90, position: 'insideLeft' }}
                 className="text-xs" 
               />
               <Tooltip />
@@ -257,14 +257,14 @@ const GenerationPlanning = () => {
                 stroke="hsl(var(--primary))" 
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                name="Forecasted (预测)"
+                name="预测"
               />
               <Line 
                 type="monotone" 
                 dataKey="actual" 
                 stroke="hsl(var(--secondary))" 
                 strokeWidth={2}
-                name="Actual Output (实际出力)"
+                name="实际出力"
               />
             </LineChart>
           </ResponsiveContainer>
