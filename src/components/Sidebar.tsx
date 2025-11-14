@@ -2,47 +2,147 @@ import { NavLink } from "./NavLink";
 import { 
   LayoutDashboard, 
   TrendingUp, 
-  CloudRain, 
+  BarChart3,
   Zap,
+  ShoppingCart,
+  PieChart,
   Settings,
-  BarChart3
+  ChevronDown
 } from "lucide-react";
+import { useState } from "react";
 
 const navigation = [
-  { name: "数据概览", href: "/", icon: LayoutDashboard },
-  { name: "市场情报", href: "/market", icon: BarChart3 },
-  { name: "价格预测", href: "/prediction", icon: TrendingUp },
-  { name: "气象情报", href: "/weather", icon: CloudRain },
-  { name: "发电计划", href: "/generation", icon: Zap },
-  { name: "系统管理", href: "/settings", icon: Settings },
+  { 
+    name: "首页大屏", 
+    href: "/", 
+    icon: LayoutDashboard 
+  },
+  { 
+    name: "预测数据", 
+    icon: TrendingUp,
+    children: [
+      { name: "市场供需预测", href: "/forecast/supply-demand" },
+      { name: "现货电价预测", href: "/forecast/spot-price" },
+      { name: "价差预测", href: "/forecast/price-difference" },
+      { name: "气象情报", href: "/forecast/weather" },
+      { name: "外送价格计算", href: "/forecast/transmission-price" },
+    ]
+  },
+  { 
+    name: "市场情报", 
+    href: "/market", 
+    icon: BarChart3 
+  },
+  { 
+    name: "新能源交易", 
+    icon: Zap,
+    children: [
+      { name: "基础数据", href: "/renewable/base-data" },
+      { name: "交易决策", href: "/renewable/decision" },
+      { name: "交易操作台", href: "/renewable/console" },
+      { name: "出清管理", href: "/renewable/clearing" },
+      { name: "结算管理", href: "/renewable/settlement" },
+      { name: "复盘分析", href: "/renewable/review" },
+    ]
+  },
+  { 
+    name: "售电业务", 
+    icon: ShoppingCart,
+    children: [
+      { name: "基础数据", href: "/retail/base-data" },
+      { name: "交易决策", href: "/retail/decision" },
+      { name: "交易操作台", href: "/retail/console" },
+      { name: "零售交易", href: "/retail/trading" },
+      { name: "用电负荷管理", href: "/retail/load" },
+      { name: "出清与结算", href: "/retail/settlement" },
+      { name: "复盘分析", href: "/retail/review" },
+    ]
+  },
+  { 
+    name: "收益分析", 
+    icon: PieChart,
+    children: [
+      { name: "发电侧收益", href: "/revenue/generation" },
+      { name: "售电侧收益", href: "/revenue/retail" },
+    ]
+  },
+  { 
+    name: "系统管理", 
+    href: "/settings", 
+    icon: Settings 
+  },
 ];
 
 export const Sidebar = () => {
+  const [expandedItems, setExpandedItems] = useState<string[]>(["预测数据"]);
+
+  const toggleExpand = (name: string) => {
+    setExpandedItems(prev => 
+      prev.includes(name) 
+        ? prev.filter(item => item !== name)
+        : [...prev, name]
+    );
+  };
+
   return (
     <div className="w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-xl font-bold text-sidebar-foreground">
-            电力交易系统
+            电力交易平台
           </h1>
           <p className="text-sm text-sidebar-foreground/60 mt-1">
-            Power Trading System
+            Power Trading Platform
           </p>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
-            </NavLink>
+            <div key={item.name}>
+              {item.href ? (
+                <NavLink
+                  to={item.href}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </NavLink>
+              ) : (
+                <>
+                  <button
+                    onClick={() => toggleExpand(item.name)}
+                    className="flex items-center justify-between w-full gap-3 px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      {item.name}
+                    </div>
+                    <ChevronDown 
+                      className={`h-4 w-4 transition-transform ${
+                        expandedItems.includes(item.name) ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {expandedItems.includes(item.name) && item.children && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.name}
+                          to={child.href}
+                          className="block px-3 py-2 text-sm text-sidebar-foreground/70 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        >
+                          {child.name}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           ))}
         </nav>
 
