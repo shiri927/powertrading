@@ -9,12 +9,12 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Market Intelligence", href: "/market", icon: BarChart3 },
-  { name: "Price Prediction", href: "/prediction", icon: TrendingUp },
-  { name: "Weather Intelligence", href: "/weather", icon: CloudRain },
-  { name: "Generation Planning", href: "/generation", icon: Zap },
-  { name: "System Management", href: "/settings", icon: Settings },
+  { name: "数据概览", href: "/", icon: LayoutDashboard },
+  { name: "市场情报", href: "/market", icon: BarChart3 },
+  { name: "价格预测", href: "/prediction", icon: TrendingUp },
+  { name: "气象情报", href: "/weather", icon: CloudRain },
+  { name: "发电计划", href: "/generation", icon: Zap },
+  { name: "系统管理", href: "/settings", icon: Settings },
 ];
 
 export const Sidebar = () => {
@@ -24,10 +24,10 @@ export const Sidebar = () => {
         {/* Logo */}
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-xl font-bold text-sidebar-foreground">
-            Power Trading System
+            电力交易系统
           </h1>
           <p className="text-sm text-sidebar-foreground/60 mt-1">
-            电力交易系统
+            Power Trading System
           </p>
         </div>
 
@@ -49,7 +49,7 @@ export const Sidebar = () => {
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border">
           <p className="text-xs text-sidebar-foreground/60 text-center">
-            © 2024 Power Trading Platform
+            © 2024 电力交易平台
           </p>
         </div>
       </div>

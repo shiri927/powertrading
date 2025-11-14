@@ -56,9 +56,9 @@ const SystemManagement = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">System Management</h1>
+        <h1 className="text-3xl font-bold text-foreground">系统管理</h1>
         <p className="text-muted-foreground mt-2">
-          User accounts, roles, and station configuration
+          用户账户、角色及场站配置管理
         </p>
       </div>
 
@@ -69,15 +69,15 @@ const SystemManagement = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Account Management (账户管理)
+                账户管理
               </CardTitle>
               <CardDescription className="mt-2">
-                Manage user accounts and access permissions
+                管理用户账户和访问权限
               </CardDescription>
             </div>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Account
+              添加账户
             </Button>
           </div>
         </CardHeader>
@@ -86,7 +86,7 @@ const SystemManagement = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
-                placeholder="Search accounts..." 
+                placeholder="搜索账户..." 
                 className="pl-9"
               />
             </div>
@@ -130,15 +130,15 @@ const SystemManagement = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Role Management (角色管理)
+                角色管理
               </CardTitle>
               <CardDescription className="mt-2">
-                Configure roles and permissions
+                配置角色和权限
               </CardDescription>
             </div>
             <Button variant="outline" className="gap-2">
               <Plus className="h-4 w-4" />
-              New Role
+              新建角色
             </Button>
           </div>
         </CardHeader>
@@ -154,10 +154,10 @@ const SystemManagement = () => {
                         {role.permissions}
                       </p>
                     </div>
-                    <Badge variant="secondary">{role.users} users</Badge>
+                    <Badge variant="secondary">{role.users} 用户</Badge>
                   </div>
                   <Button variant="outline" size="sm" className="w-full">
-                    Manage Permissions
+                    管理权限
                   </Button>
                 </CardContent>
               </Card>
@@ -173,15 +173,15 @@ const SystemManagement = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Station Basic Information (场站基础信息)
+                场站基础信息
               </CardTitle>
               <CardDescription className="mt-2">
-                Manage power generation station configurations
+                管理发电场站配置信息
               </CardDescription>
             </div>
             <Button variant="outline" className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Station
+              添加场站
             </Button>
           </div>
         </CardHeader>
@@ -203,17 +203,17 @@ const SystemManagement = () => {
                     </div>
                     <div className="grid gap-2 text-sm">
                       <div className="flex gap-4">
-                        <span className="text-muted-foreground">Capacity:</span>
+                        <span className="text-muted-foreground">装机容量:</span>
                         <span className="font-medium">{station.capacity}</span>
                       </div>
                       <div className="flex gap-4">
-                        <span className="text-muted-foreground">Location:</span>
+                        <span className="text-muted-foreground">位置:</span>
                         <span className="font-medium">{station.location}</span>
                       </div>
                     </div>
                   </div>
                   <Button variant="outline" size="sm">
-                    Edit Details
+                    编辑详情
                   </Button>
                 </div>
               </div>
@@ -227,29 +227,29 @@ const SystemManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Operation Manual & Documentation (操作手册)
+            操作手册与文档
           </CardTitle>
           <CardDescription>
-            System documentation and user guides by module
+            按功能模块分类的系统文档和用户指南
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <h4 className="font-medium mb-1">Dashboard User Guide</h4>
-              <p className="text-sm text-muted-foreground">Version 2.1 - Updated Mar 2024</p>
+              <h4 className="font-medium mb-1">数据概览使用指南</h4>
+              <p className="text-sm text-muted-foreground">版本 2.1 - 更新于 2024年3月</p>
             </div>
             <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <h4 className="font-medium mb-1">Trading Module Manual</h4>
-              <p className="text-sm text-muted-foreground">Version 1.8 - Updated Feb 2024</p>
+              <h4 className="font-medium mb-1">交易模块手册</h4>
+              <p className="text-sm text-muted-foreground">版本 1.8 - 更新于 2024年2月</p>
             </div>
             <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <h4 className="font-medium mb-1">Prediction Tools Guide</h4>
-              <p className="text-sm text-muted-foreground">Version 3.0 - Updated Mar 2024</p>
+              <h4 className="font-medium mb-1">预测工具指南</h4>
+              <p className="text-sm text-muted-foreground">版本 3.0 - 更新于 2024年3月</p>
             </div>
             <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <h4 className="font-medium mb-1">System Administration</h4>
-              <p className="text-sm text-muted-foreground">Version 1.5 - Updated Jan 2024</p>
+              <h4 className="font-medium mb-1">系统管理手册</h4>
+              <p className="text-sm text-muted-foreground">版本 1.5 - 更新于 2024年1月</p>
             </div>
           </div>
         </CardContent>

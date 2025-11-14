@@ -47,47 +47,47 @@ const Dashboard = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
+        <h1 className="text-3xl font-bold text-foreground">数据概览</h1>
         <p className="text-muted-foreground mt-2">
-          Real-time monitoring and analysis of power trading operations
+          实时监控与分析电力交易运营情况
         </p>
       </div>
 
       {/* Tabs for Generation/Retail Side */}
       <Tabs defaultValue="generation" className="w-full">
         <TabsList>
-          <TabsTrigger value="generation">Generation Side (发电侧)</TabsTrigger>
-          <TabsTrigger value="retail">Retail Side (售电侧)</TabsTrigger>
+          <TabsTrigger value="generation">发电侧</TabsTrigger>
+          <TabsTrigger value="retail">售电侧</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generation" className="space-y-6">
           {/* Key Metrics */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard
-              title="Total Revenue"
+              title="总收益"
               value="¥10.2M"
-              change="+12.5% from last month"
+              change="较上月 +12.5%"
               changeType="positive"
               icon={DollarSign}
             />
             <MetricCard
-              title="Spot Market Revenue"
+              title="现货市场收益"
               value="¥4.8M"
-              change="+8.3% from last month"
+              change="较上月 +8.3%"
               changeType="positive"
               icon={TrendingUp}
             />
             <MetricCard
-              title="Generation Volume"
+              title="发电量"
               value="28,450 MWh"
-              change="+5.2% from last month"
+              change="较上月 +5.2%"
               changeType="positive"
               icon={Zap}
             />
             <MetricCard
-              title="Average Spot Price"
+              title="平均现货价格"
               value="¥426/MWh"
-              change="-2.1% from last month"
+              change="较上月 -2.1%"
               changeType="negative"
               icon={Clock}
             />
@@ -96,9 +96,9 @@ const Dashboard = () => {
           {/* Revenue Analysis Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue Analysis (收益分析)</CardTitle>
+              <CardTitle>收益分析</CardTitle>
               <CardDescription>
-                Mid-term vs Spot Market Revenue Trends
+                中长期与现货市场收益趋势对比
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -115,7 +115,7 @@ const Dashboard = () => {
                     stackId="1"
                     stroke="hsl(var(--chart-1))" 
                     fill="hsl(var(--chart-1))"
-                    name="Mid-term Revenue (中长期收益)"
+                    name="中长期收益"
                   />
                   <Area 
                     type="monotone" 
@@ -123,7 +123,7 @@ const Dashboard = () => {
                     stackId="1"
                     stroke="hsl(var(--chart-2))" 
                     fill="hsl(var(--chart-2))"
-                    name="Spot Revenue (现货收益)"
+                    name="现货收益"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -133,9 +133,9 @@ const Dashboard = () => {
           {/* Price Trend Analysis */}
           <Card>
             <CardHeader>
-              <CardTitle>Price Trend Analysis (趋势分析)</CardTitle>
+              <CardTitle>趋势分析</CardTitle>
               <CardDescription>
-                Day-ahead vs Real-time Node Prices
+                日前与实时节点电价对比
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -151,14 +151,14 @@ const Dashboard = () => {
                     dataKey="dayAhead" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
-                    name="Day-ahead Price (日前电价)"
+                    name="日前电价"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="realTime" 
                     stroke="hsl(var(--secondary))" 
                     strokeWidth={2}
-                    name="Real-time Price (实时电价)"
+                    name="实时电价"
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -169,25 +169,25 @@ const Dashboard = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Generation Performance</CardTitle>
+                <CardTitle>发电表现</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Mid-term Trading</span>
+                  <span className="text-sm text-muted-foreground">中长期交易</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">18,250 MWh</span>
                     <ArrowUpRight className="h-4 w-4 text-success" />
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Spot Trading (Day-ahead)</span>
+                  <span className="text-sm text-muted-foreground">现货交易（日前）</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">6,420 MWh</span>
                     <ArrowUpRight className="h-4 w-4 text-success" />
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Spot Trading (Real-time)</span>
+                  <span className="text-sm text-muted-foreground">现货交易（实时）</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">3,780 MWh</span>
                     <ArrowDownRight className="h-4 w-4 text-destructive" />
@@ -198,25 +198,25 @@ const Dashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Price Performance</CardTitle>
+                <CardTitle>价格表现</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Avg Settlement Price</span>
+                  <span className="text-sm text-muted-foreground">平均结算价格</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">¥412/MWh</span>
                     <ArrowUpRight className="h-4 w-4 text-success" />
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Peak Price</span>
+                  <span className="text-sm text-muted-foreground">峰值价格</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">¥585/MWh</span>
                     <ArrowUpRight className="h-4 w-4 text-success" />
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Valley Price</span>
+                  <span className="text-sm text-muted-foreground">谷值价格</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">¥245/MWh</span>
                     <ArrowDownRight className="h-4 w-4 text-destructive" />
@@ -231,30 +231,30 @@ const Dashboard = () => {
           {/* Key Metrics for Retail */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard
-              title="Total Revenue"
+              title="总收益"
               value="¥8.5M"
-              change="+15.2% from last month"
+              change="较上月 +15.2%"
               changeType="positive"
               icon={DollarSign}
             />
             <MetricCard
-              title="Customer Base"
+              title="客户数量"
               value="2,450"
-              change="+125 new customers"
+              change="+125 新增客户"
               changeType="positive"
               icon={TrendingUp}
             />
             <MetricCard
-              title="Total Consumption"
+              title="总用电量"
               value="32,800 MWh"
-              change="+7.8% from last month"
+              change="较上月 +7.8%"
               changeType="positive"
               icon={Zap}
             />
             <MetricCard
-              title="Avg Unit Revenue"
+              title="平均单位收益"
               value="¥0.259/kWh"
-              change="+3.5% from last month"
+              change="较上月 +3.5%"
               changeType="positive"
               icon={Clock}
             />
@@ -263,9 +263,9 @@ const Dashboard = () => {
           {/* Customer Revenue Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Customer Revenue Analysis (用户收益分析)</CardTitle>
+              <CardTitle>用户收益分析</CardTitle>
               <CardDescription>
-                Revenue distribution by customer segments
+                按客户群体划分的收益分布
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -279,7 +279,7 @@ const Dashboard = () => {
                   <Bar 
                     dataKey="total" 
                     fill="hsl(var(--chart-1))"
-                    name="Total Revenue (总收益)"
+                    name="总收益"
                   />
                 </BarChart>
               </ResponsiveContainer>

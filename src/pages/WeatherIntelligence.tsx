@@ -97,9 +97,9 @@ const WeatherIntelligence = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Weather Intelligence</h1>
+        <h1 className="text-3xl font-bold text-foreground">气象情报</h1>
         <p className="text-muted-foreground mt-2">
-          Meteorological forecasts and alerts for renewable energy generation
+          新能源发电的气象预报与预警信息
         </p>
       </div>
 
@@ -108,10 +108,10 @@ const WeatherIntelligence = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
-            Weather Warnings (气象预警)
+            气象预警
           </CardTitle>
           <CardDescription>
-            Active weather alerts from National Meteorological Bureau
+            来自国家气象局的活跃天气预警
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,9 +151,9 @@ const WeatherIntelligence = () => {
       {/* 15-Day Forecast */}
       <Card>
         <CardHeader>
-          <CardTitle>15-Day Weather Forecast (气象预报)</CardTitle>
+          <CardTitle>15日气象预报</CardTitle>
           <CardDescription>
-            Key meteorological parameters for renewable energy forecasting
+            新能源发电预测关键气象参数
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -169,19 +169,19 @@ const WeatherIntelligence = () => {
                     <h3 className="font-semibold text-lg mb-3">{forecast.day}</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Temp</span>
+                        <span className="text-muted-foreground">温度</span>
                         <span className="font-medium">{forecast.temp}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Wind</span>
+                        <span className="text-muted-foreground">风速</span>
                         <span className="font-medium">{forecast.windSpeed}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Solar</span>
+                        <span className="text-muted-foreground">辐照度</span>
                         <span className="font-medium">{forecast.solar}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Humidity</span>
+                        <span className="text-muted-foreground">湿度</span>
                         <span className="font-medium">{forecast.humidity}</span>
                       </div>
                     </div>
@@ -196,9 +196,9 @@ const WeatherIntelligence = () => {
       {/* Regional Weather Map */}
       <Card>
         <CardHeader>
-          <CardTitle>Regional Weather Overview</CardTitle>
+          <CardTitle>区域天气概况</CardTitle>
           <CardDescription>
-            Current conditions across generation regions
+            各发电区域当前天气状况
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -211,17 +211,17 @@ const WeatherIntelligence = () => {
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Wind className="h-4 w-4 text-secondary" />
-                    <span className="text-sm text-muted-foreground">Wind Speed:</span>
+                    <span className="text-sm text-muted-foreground">风速:</span>
                     <span className="text-sm font-medium">{region.windSpeed}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 text-warning" />
-                    <span className="text-sm text-muted-foreground">Solar Irradiance:</span>
+                    <span className="text-sm text-muted-foreground">辐照度:</span>
                     <span className="text-sm font-medium">{region.solar}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Thermometer className="h-4 w-4 text-destructive" />
-                    <span className="text-sm text-muted-foreground">Temperature:</span>
+                    <span className="text-sm text-muted-foreground">温度:</span>
                     <span className="text-sm font-medium">{region.temp}</span>
                   </div>
                   <div className="pt-2 mt-2 border-t border-border">
@@ -237,47 +237,47 @@ const WeatherIntelligence = () => {
       {/* External Transmission Pricing */}
       <Card>
         <CardHeader>
-          <CardTitle>External Transmission Pricing Calculator (外送价格计算)</CardTitle>
+          <CardTitle>外送价格计算器</CardTitle>
           <CardDescription>
-            Calculate transmission costs considering grid tariffs and line losses
+            考虑输配电价和线损的输电成本计算
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Sending End Price</label>
+                <label className="text-sm font-medium">送端电价</label>
                 <div className="mt-1 text-2xl font-bold text-primary">¥368/MWh</div>
               </div>
               <div>
-                <label className="text-sm font-medium">Transmission Tariff</label>
+                <label className="text-sm font-medium">输配电价</label>
                 <div className="mt-1 text-lg font-semibold">¥42/MWh</div>
               </div>
               <div>
-                <label className="text-sm font-medium">Line Loss Rate</label>
+                <label className="text-sm font-medium">线损率</label>
                 <div className="mt-1 text-lg font-semibold">3.2%</div>
               </div>
             </div>
             <div className="space-y-4">
               <div className="p-4 bg-primary/10 rounded-lg border-2 border-primary">
-                <label className="text-sm font-medium text-primary">Receiving End Price</label>
+                <label className="text-sm font-medium text-primary">受端电价</label>
                 <div className="mt-1 text-3xl font-bold text-primary">¥422/MWh</div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Base Price</span>
+                  <span className="text-muted-foreground">基础电价</span>
                   <span className="font-medium">¥368/MWh</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">+ Transmission</span>
+                  <span className="text-muted-foreground">+ 输配电价</span>
                   <span className="font-medium">¥42/MWh</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">+ Loss Adjustment</span>
+                  <span className="text-muted-foreground">+ 线损调整</span>
                   <span className="font-medium">¥12/MWh</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">总计</span>
                   <span className="font-bold text-primary">¥422/MWh</span>
                 </div>
               </div>

@@ -72,9 +72,9 @@ const MarketIntelligence = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Market Intelligence</h1>
+        <h1 className="text-3xl font-bold text-foreground">市场情报</h1>
         <p className="text-muted-foreground mt-2">
-          Comprehensive market data analysis and policy information
+          全面的市场数据分析与政策资讯
         </p>
       </div>
 
@@ -83,10 +83,10 @@ const MarketIntelligence = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Policy Articles & Market News (政策文章)
+            政策文章与市场公告
           </CardTitle>
           <CardDescription>
-            Latest announcements from Ningxia Trading Center
+            宁夏交易中心最新公告通知
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -120,9 +120,9 @@ const MarketIntelligence = () => {
       {/* Market Tabs */}
       <Tabs defaultValue="spot" className="w-full">
         <TabsList>
-          <TabsTrigger value="spot">Spot Market (现货市场)</TabsTrigger>
-          <TabsTrigger value="midterm">Mid-term Trading (中长期)</TabsTrigger>
-          <TabsTrigger value="settlement">Settlement Disclosure (结算披露)</TabsTrigger>
+          <TabsTrigger value="spot">现货市场</TabsTrigger>
+          <TabsTrigger value="midterm">中长期交易</TabsTrigger>
+          <TabsTrigger value="settlement">结算披露</TabsTrigger>
         </TabsList>
 
         {/* Spot Market Tab */}
@@ -130,38 +130,38 @@ const MarketIntelligence = () => {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Provincial Spot</CardTitle>
+                <CardTitle className="text-sm font-medium">省内现货</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">¥428/MWh</div>
-                <p className="text-xs text-success mt-1">+5.2% vs yesterday</p>
+                <p className="text-xs text-success mt-1">较昨日 +5.2%</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Inter-provincial</CardTitle>
+                <CardTitle className="text-sm font-medium">省间现货</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">¥435/MWh</div>
-                <p className="text-xs text-success mt-1">+3.8% vs yesterday</p>
+                <p className="text-xs text-success mt-1">较昨日 +3.8%</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">System Load</CardTitle>
+                <CardTitle className="text-sm font-medium">系统负荷</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">18,250 MW</div>
-                <p className="text-xs text-muted-foreground mt-1">Current load</p>
+                <p className="text-xs text-muted-foreground mt-1">当前负荷</p>
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Provincial & Inter-provincial Spot Prices (省内/省间现货)</CardTitle>
+              <CardTitle>省内/省间现货电价</CardTitle>
               <CardDescription>
-                24-hour spot price comparison with system load
+                24小时现货电价对比及系统负荷
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -170,18 +170,18 @@ const MarketIntelligence = () => {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     dataKey="hour" 
-                    label={{ value: 'Hour', position: 'insideBottom', offset: -5 }}
+                    label={{ value: '小时', position: 'insideBottom', offset: -5 }}
                     className="text-xs" 
                   />
                   <YAxis 
                     yAxisId="left"
-                    label={{ value: 'Price (¥/MWh)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: '价格 (¥/MWh)', angle: -90, position: 'insideLeft' }}
                     className="text-xs" 
                   />
                   <YAxis 
                     yAxisId="right" 
                     orientation="right"
-                    label={{ value: 'Load (MW)', angle: 90, position: 'insideRight' }}
+                    label={{ value: '负荷 (MW)', angle: 90, position: 'insideRight' }}
                     className="text-xs" 
                   />
                   <Tooltip />
@@ -192,7 +192,7 @@ const MarketIntelligence = () => {
                     dataKey="provincial" 
                     stroke="hsl(var(--chart-1))" 
                     strokeWidth={2}
-                    name="Provincial Spot (省内现货)"
+                    name="省内现货"
                   />
                   <Line 
                     yAxisId="left"
@@ -200,7 +200,7 @@ const MarketIntelligence = () => {
                     dataKey="interProvincial" 
                     stroke="hsl(var(--chart-2))" 
                     strokeWidth={2}
-                    name="Inter-provincial (省间)"
+                    name="省间现货"
                   />
                   <Line 
                     yAxisId="right"
@@ -209,7 +209,7 @@ const MarketIntelligence = () => {
                     stroke="hsl(var(--muted-foreground))" 
                     strokeWidth={1}
                     strokeDasharray="5 5"
-                    name="System Load (系统负荷)"
+                    name="系统负荷"
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -221,9 +221,9 @@ const MarketIntelligence = () => {
         <TabsContent value="midterm" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Mid-to-Long Term Market Trends (中长期行情)</CardTitle>
+              <CardTitle>中长期市场行情</CardTitle>
               <CardDescription>
-                Historical price trends by energy source type
+                按能源类型统计的历史价格趋势
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,12 +237,12 @@ const MarketIntelligence = () => {
                   <Bar 
                     dataKey="firePrice" 
                     fill="hsl(var(--chart-4))"
-                    name="Coal-fired (火电)"
+                    name="火电"
                   />
                   <Bar 
                     dataKey="renewablePrice" 
                     fill="hsl(var(--chart-3))"
-                    name="Renewable (新能源)"
+                    name="新能源"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -252,19 +252,19 @@ const MarketIntelligence = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Transaction Types (交易方式)</CardTitle>
+                <CardTitle>交易方式</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Centralized Bidding (集中竞价)</span>
+                  <span className="text-sm">集中竞价</span>
                   <span className="text-sm font-medium">¥392/MWh</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Rolling Matching (滚动撮合)</span>
+                  <span className="text-sm">滚动撮合</span>
                   <span className="text-sm font-medium">¥385/MWh</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Direct Trading (直接交易)</span>
+                  <span className="text-sm">直接交易</span>
                   <span className="text-sm font-medium">¥378/MWh</span>
                 </div>
               </CardContent>
@@ -272,20 +272,20 @@ const MarketIntelligence = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Market Statistics</CardTitle>
+                <CardTitle>市场统计</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Total Traded Volume</span>
+                  <span className="text-sm">总成交量</span>
                   <span className="text-sm font-medium">125,400 MWh</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Active Participants</span>
+                  <span className="text-sm">活跃参与方</span>
                   <span className="text-sm font-medium">342</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Avg Contract Duration</span>
-                  <span className="text-sm font-medium">6.5 months</span>
+                  <span className="text-sm">平均合约时长</span>
+                  <span className="text-sm font-medium">6.5 个月</span>
                 </div>
               </CardContent>
             </Card>
@@ -296,9 +296,9 @@ const MarketIntelligence = () => {
         <TabsContent value="settlement" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Unit Settlement Disclosure (机组结算披露)</CardTitle>
+              <CardTitle>机组结算披露</CardTitle>
               <CardDescription>
-                Generation side settlement information by energy type
+                按能源类型统计的发电侧结算信息
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -308,21 +308,21 @@ const MarketIntelligence = () => {
                   <XAxis 
                     type="number" 
                     dataKey="volume" 
-                    name="Volume (MWh)"
-                    label={{ value: 'Volume (MWh)', position: 'insideBottom', offset: -5 }}
+                    name="电量 (MWh)"
+                    label={{ value: '电量 (MWh)', position: 'insideBottom', offset: -5 }}
                     className="text-xs"
                   />
                   <YAxis 
                     type="number" 
                     dataKey="price" 
-                    name="Price (¥/MWh)"
-                    label={{ value: 'Settlement Price (¥/MWh)', angle: -90, position: 'insideLeft' }}
+                    name="价格 (¥/MWh)"
+                    label={{ value: '结算价格 (¥/MWh)', angle: -90, position: 'insideLeft' }}
                     className="text-xs"
                   />
                   <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                   <Legend />
                   <Scatter 
-                    name="Energy Sources" 
+                    name="能源类型" 
                     data={settlementData} 
                     fill="hsl(var(--chart-1))"
                   />
@@ -330,7 +330,7 @@ const MarketIntelligence = () => {
               </ResponsiveContainer>
 
               <div className="mt-6 space-y-2">
-                <h4 className="font-medium text-sm">Settlement Summary by Energy Type</h4>
+                <h4 className="font-medium text-sm">按能源类型统计结算汇总</h4>
                 <div className="space-y-2">
                   {settlementData.map((item) => (
                     <div 
@@ -340,13 +340,13 @@ const MarketIntelligence = () => {
                       <span className="text-sm font-medium">{item.type}</span>
                       <div className="flex gap-6 text-sm">
                         <span className="text-muted-foreground">
-                          Volume: <span className="font-medium text-foreground">{item.volume} MWh</span>
+                          电量: <span className="font-medium text-foreground">{item.volume} MWh</span>
                         </span>
                         <span className="text-muted-foreground">
-                          Price: <span className="font-medium text-foreground">¥{item.price}/MWh</span>
+                          价格: <span className="font-medium text-foreground">¥{item.price}/MWh</span>
                         </span>
                         <span className="text-muted-foreground">
-                          Revenue: <span className="font-medium text-success">¥{item.revenue}K</span>
+                          收益: <span className="font-medium text-success">¥{item.revenue}K</span>
                         </span>
                       </div>
                     </div>
