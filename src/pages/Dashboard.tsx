@@ -47,9 +47,9 @@ const Dashboard = () => {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">数据概览</h1>
+        <h1 className="text-3xl font-bold text-foreground">首页大屏</h1>
         <p className="text-muted-foreground mt-2">
-          实时监控与分析电力交易运营情况
+          公司级业务全景视图 - 关键指标可视化
         </p>
       </div>
 
