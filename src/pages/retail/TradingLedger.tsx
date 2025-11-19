@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const tradingData = [
   {
@@ -148,11 +152,46 @@ const tradingData = [
 ];
 
 export default function TradingLedger() {
-  const [date, setDate] = useState<Date | undefined>(new Date(2024, 3, 1));
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date(2024, 3, 1));
   const [selectedCenter, setSelectedCenter] = useState("all");
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [keyword, setKeyword] = useState("");
-  const [selectedCreator, setSelectedCreator] = useState("all");
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
+
+  // 筛选后的数据
+  const filteredData = useMemo(() => {
+    return tradingData.filter((row) => {
+      // 交易中心筛选
+      if (selectedCenter !== "all") {
+        const centerMap: Record<string, string> = {
+          shanxi: "山西电力交易中心",
+          shandong: "山东电力交易中心",
+          zhejiang: "浙江电力交易中心",
+        };
+        if (row.center !== centerMap[selectedCenter]) return false;
+      }
+
+      // 关键字筛选
+      if (keyword && !row.content.toLowerCase().includes(keyword.toLowerCase())) {
+        return false;
+      }
+
+      // 日期筛选
+      if (filterDate) {
+        const filterDateStr = format(filterDate, "yyyyMMdd");
+        if (row.date !== filterDateStr) return false;
+      }
+
+      return true;
+    });
+  }, [selectedCenter, keyword, filterDate]);
+
+  const handleReset = () => {
+    setSelectedCenter("all");
+    setSelectedUnit("all");
+    setKeyword("");
+    setFilterDate(undefined);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -214,23 +253,35 @@ export default function TradingLedger() {
 
               <div>
                 <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                  创建人
+                  日期
                 </label>
-                <Select value={selectedCreator} onValueChange={setSelectedCreator}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="user1">用户1</SelectItem>
-                    <SelectItem value="user2">用户2</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filterDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterDate ? format(filterDate, "yyyy-MM-dd") : <span>选择日期</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={filterDate}
+                      onSelect={setFilterDate}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1">重 置</Button>
-                <Button className="flex-1">查 询</Button>
+                <Button variant="outline" className="flex-1" onClick={handleReset}>重 置</Button>
               </div>
             </CardContent>
           </Card>
@@ -239,8 +290,8 @@ export default function TradingLedger() {
             <CardContent className="p-4">
               <Calendar
                 mode="single"
-                selected={date}
-                onSelect={setDate}
+                selected={calendarDate}
+                onSelect={setCalendarDate}
                 className="rounded-md"
               />
             </CardContent>
@@ -282,21 +333,29 @@ export default function TradingLedger() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {tradingData.map((row, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                <Checkbox />
+                          {filteredData.length > 0 ? (
+                            filteredData.map((row, index) => (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  <Checkbox />
+                                </TableCell>
+                                <TableCell className="font-medium">{row.date}</TableCell>
+                                <TableCell>{row.center}</TableCell>
+                                <TableCell>{row.type}</TableCell>
+                                <TableCell className="text-primary hover:underline cursor-pointer">
+                                  {row.content}
+                                </TableCell>
+                                <TableCell>{row.time}</TableCell>
+                                <TableCell>{row.period}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                暂无符合条件的交易记录
                               </TableCell>
-                              <TableCell className="font-medium">{row.date}</TableCell>
-                              <TableCell>{row.center}</TableCell>
-                              <TableCell>{row.type}</TableCell>
-                              <TableCell className="text-primary hover:underline cursor-pointer">
-                                {row.content}
-                              </TableCell>
-                              <TableCell>{row.time}</TableCell>
-                              <TableCell>{row.period}</TableCell>
                             </TableRow>
-                          ))}
+                          )}
                         </TableBody>
                       </Table>
                     </div>
