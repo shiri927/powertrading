@@ -66,6 +66,7 @@ const navigation = [
       { name: "用电负荷管理", href: "/retail/load" },
       { name: "出清与结算", href: "/retail/settlement" },
       { name: "复盘分析", href: "/retail/review" },
+      { name: "交易台账", href: "/retail/trading-ledger" },
     ]
   },
   { 

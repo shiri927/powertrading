@@ -36,6 +36,7 @@ import RetailTrading from "./pages/retail/Trading";
 import RetailLoad from "./pages/retail/Load";
 import RetailSettlement from "./pages/retail/SettlementRetail";
 import RetailReview from "./pages/retail/Review";
+import TradingLedger from "./pages/retail/TradingLedger";
 
 // Price Trend pages
 import ModelOptimization from "./pages/price-trend/ModelOptimization";
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/retail/load" element={<RetailLoad />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
+            <Route path="/retail/trading-ledger" element={<TradingLedger />} />
             
             {/* Revenue Analysis Routes */}
             <Route path="/revenue/generation" element={<GenerationRevenue />} />
