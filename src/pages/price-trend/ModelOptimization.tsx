@@ -90,7 +90,7 @@ export default function ModelOptimization() {
               <SelectContent>
                 <SelectItem value="shanxi">山西省</SelectItem>
                 <SelectItem value="shandong">山东省</SelectItem>
-                <SelectItem value="hebei">河北省</SelectItem>
+                <SelectItem value="zhejiang">浙江省</SelectItem>
               </SelectContent>
             </Select>
           </div>
