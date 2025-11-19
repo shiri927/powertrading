@@ -55,7 +55,7 @@ const tradingData = [
   },
   {
     date: "20240418",
-    center: "山西电力交易中心",
+    center: "山东电力交易中心",
     type: "交易序列",
     content: "2024年5月挂牌1号曲线交易",
     time: "0900-1100",
@@ -71,7 +71,7 @@ const tradingData = [
   },
   {
     date: "20240424",
-    center: "山西电力交易中心",
+    center: "浙江电力交易中心",
     type: "交易序列",
     content: "发电商2024年5月5日晚间高峰组合交易(曲线交易)",
     time: "1300-1500",
@@ -87,7 +87,7 @@ const tradingData = [
   },
   {
     date: "20240425",
-    center: "山西电力交易中心",
+    center: "山东电力交易中心",
     type: "交易序列",
     content: "2024年5月1-10日上午时段组合交易(曲线交易)",
     time: "1000-1600",
@@ -111,7 +111,7 @@ const tradingData = [
   },
   {
     date: "20240401",
-    center: "山西电力交易中心",
+    center: "浙江电力交易中心",
     type: "交易序列",
     content: "2024年04月01日曲线交易(2024-4-4)",
     time: "1000-1600",
@@ -127,7 +127,7 @@ const tradingData = [
   },
   {
     date: "20240401",
-    center: "山西电力交易中心",
+    center: "山东电力交易中心",
     type: "交易序列",
     content: "2024年04月01日曲线交易(2024-4-6)",
     time: "1000-1600",
