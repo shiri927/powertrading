@@ -7,7 +7,8 @@ import {
   ShoppingCart,
   PieChart,
   Settings,
-  ChevronDown
+  ChevronDown,
+  LineChart
 } from "lucide-react";
 import { useState } from "react";
 
@@ -26,6 +27,15 @@ const navigation = [
       { name: "价差预测", href: "/forecast/price-difference" },
       { name: "气象情报", href: "/forecast/weather" },
       { name: "外送价格计算", href: "/forecast/transmission-price" },
+    ]
+  },
+  { 
+    name: "价格趋势预测", 
+    icon: LineChart,
+    children: [
+      { name: "模型优化分析", href: "/price-trend/model-optimization" },
+      { name: "决策收益分析", href: "/price-trend/decision-analysis" },
+      { name: "现货电价分析", href: "/price-trend/spot-analysis" },
     ]
   },
   { 

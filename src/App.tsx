@@ -37,6 +37,11 @@ import RetailLoad from "./pages/retail/Load";
 import RetailSettlement from "./pages/retail/SettlementRetail";
 import RetailReview from "./pages/retail/Review";
 
+// Price Trend pages
+import ModelOptimization from "./pages/price-trend/ModelOptimization";
+import DecisionAnalysis from "./pages/price-trend/DecisionAnalysis";
+import SpotAnalysis from "./pages/price-trend/SpotAnalysis";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -55,6 +60,11 @@ const App = () => (
             <Route path="/forecast/price-difference" element={<PriceDifference />} />
             <Route path="/forecast/weather" element={<Weather />} />
             <Route path="/forecast/transmission-price" element={<TransmissionPrice />} />
+            
+            {/* Price Trend Routes */}
+            <Route path="/price-trend/model-optimization" element={<ModelOptimization />} />
+            <Route path="/price-trend/decision-analysis" element={<DecisionAnalysis />} />
+            <Route path="/price-trend/spot-analysis" element={<SpotAnalysis />} />
             
             {/* Market Intelligence */}
             <Route path="/market" element={<MarketIntelligence />} />
