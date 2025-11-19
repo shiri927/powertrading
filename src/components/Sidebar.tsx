@@ -30,7 +30,7 @@ const navigation = [
     ]
   },
   { 
-    name: "价格趋势预测", 
+    name: "现货智能决策", 
     icon: LineChart,
     children: [
       { name: "模型优化分析", href: "/price-trend/model-optimization" },
