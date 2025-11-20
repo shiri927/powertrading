@@ -117,15 +117,13 @@ export const Sidebar = () => {
               />
             </div>
             <div className="flex flex-col justify-center flex-1 min-w-0">
-              <div className="flex items-baseline gap-1 mb-1">
-                <h1 className="text-lg font-bold text-[#00B04D] leading-none">
-                  恒源新能
-                </h1>
-                <span className="text-sm font-medium text-sidebar-foreground leading-none">
-                  电力交易平台
-                </span>
-              </div>
-              <p className="text-[10px] text-sidebar-foreground/50 font-mono leading-tight tracking-tight mt-1.5">
+              <h1 className="text-lg font-bold text-[#00B04D] leading-tight mb-0.5">
+                恒源新能
+              </h1>
+              <p className="text-sm font-medium text-sidebar-foreground leading-tight mb-2">
+                电力交易平台
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50 font-mono leading-tight tracking-tight">
                 Heengy Power Trading Platform
               </p>
             </div>
