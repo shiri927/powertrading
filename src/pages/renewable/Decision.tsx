@@ -3,6 +3,7 @@ import { Brain, TrendingUp, Settings, Lightbulb } from "lucide-react";
 import { AIForecastTab } from "./decision/AIForecastTab";
 import { StrategyConfigTab } from "./decision/StrategyConfigTab";
 import { BacktestTab } from "./decision/BacktestTab";
+import { RecommendationTab } from "./decision/RecommendationTab";
 
 const Decision = () => {
   return (
@@ -47,11 +48,7 @@ const Decision = () => {
         </TabsContent>
 
         <TabsContent value="recommendation">
-          <div className="text-center py-20 text-muted-foreground">
-            <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">智能推荐</p>
-            <p className="text-sm mt-2">Phase 4 开发中...</p>
-          </div>
+          <RecommendationTab />
         </TabsContent>
       </Tabs>
     </div>
