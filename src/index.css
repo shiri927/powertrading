@@ -18,8 +18,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
 
-    /* Primary - Hengyuan Green #00D65C */
-    --primary: 142 100% 42%;
+    /* Primary - Hengyuan Deep Green #00B04D */
+    --primary: 149 100% 35%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Cyan Blue #00ACC1 */
@@ -27,19 +27,19 @@ All colors MUST be HSL.
     --secondary-foreground: 0 0% 100%;
 
     /* Muted - Light Green Gray */
-    --muted: 140 15% 96%;
+    --muted: 140 10% 95%;
     --muted-foreground: 0 0% 38%;
 
-    /* Accent - Bright Green #00E676 */
-    --accent: 142 100% 52%;
+    /* Accent - Deep Green #00B04D */
+    --accent: 149 100% 35%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive - Professional Red #D32F2F */
     --destructive: 4 73% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Success - Same as Primary */
-    --success: 142 100% 42%;
+    /* Success - Deep Green #00A86B */
+    --success: 158 100% 33%;
     --success-foreground: 0 0% 100%;
 
     /* Warning - Amber #FFA726 */
@@ -53,22 +53,22 @@ All colors MUST be HSL.
     /* Sharper corners - Bloomberg style */
     --radius: 0.125rem;
 
-    /* Chart Colors - Green theme */
-    --chart-1: 142 100% 42%;
-    --chart-2: 142 100% 52%;
+    /* Chart Colors - Deep Green theme */
+    --chart-1: 149 100% 35%;
+    --chart-2: 158 100% 33%;
     --chart-3: 4 73% 51%;
-    --chart-4: 174 100% 38%;
-    --chart-5: 32 100% 58%;
+    --chart-4: 174 76% 33%;
+    --chart-5: 32 98% 48%;
 
     /* Sidebar - Light theme */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 142 100% 42%;
+    --sidebar-primary: 149 100% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 15% 96%;
-    --sidebar-accent-foreground: 142 100% 42%;
+    --sidebar-accent: 140 10% 95%;
+    --sidebar-accent-foreground: 149 100% 35%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 142 100% 42%;
+    --sidebar-ring: 149 100% 35%;
   }
 
   .dark {
@@ -82,8 +82,8 @@ All colors MUST be HSL.
     --popover: 140 12% 12%;
     --popover-foreground: 140 5% 95%;
 
-    /* Primary - Brighter green for dark mode */
-    --primary: 142 100% 52%;
+    /* Primary - Deep green for dark mode */
+    --primary: 149 100% 40%;
     --primary-foreground: 0 0% 10%;
 
     --secondary: 174 100% 45%;
@@ -92,13 +92,13 @@ All colors MUST be HSL.
     --muted: 140 12% 18%;
     --muted-foreground: 140 5% 65%;
 
-    --accent: 142 100% 58%;
+    --accent: 149 100% 40%;
     --accent-foreground: 0 0% 10%;
 
     --destructive: 4 73% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 100% 52%;
+    --success: 158 100% 38%;
     --success-foreground: 0 0% 10%;
 
     --warning: 32 100% 62%;
@@ -108,20 +108,20 @@ All colors MUST be HSL.
     --input: 140 12% 20%;
     --ring: 142 100% 52%;
 
-    --chart-1: 142 100% 52%;
-    --chart-2: 142 100% 58%;
+    --chart-1: 149 100% 40%;
+    --chart-2: 158 100% 38%;
     --chart-3: 4 73% 55%;
-    --chart-4: 174 100% 45%;
-    --chart-5: 32 100% 62%;
+    --chart-4: 174 76% 38%;
+    --chart-5: 32 98% 52%;
 
     --sidebar-background: 140 15% 10%;
     --sidebar-foreground: 140 5% 95%;
-    --sidebar-primary: 142 100% 52%;
+    --sidebar-primary: 149 100% 40%;
     --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 140 12% 15%;
     --sidebar-accent-foreground: 140 5% 95%;
     --sidebar-border: 140 12% 18%;
-    --sidebar-ring: 142 100% 52%;
+    --sidebar-ring: 149 100% 40%;
   }
 }
 
