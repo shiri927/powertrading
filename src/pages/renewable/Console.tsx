@@ -2,12 +2,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Plus, Upload, Download, Copy, Clock, Send } from "lucide-react";
-import { useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Terminal, Plus, Upload, Download, Copy, Clock, Send, Minus, X, Pencil, Trash2, HelpCircle, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+
+// 省间现货申报相关类型定义
+interface TimeSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  powerRatio: number | null;
+  powerFixed: number | null;
+  price: number | null;
+}
+
+interface BidScheme {
+  id: string;
+  name: string;
+  targetDate: Date | null;
+  tradingUnits: string[];
+  selectedUnitsCount: number;
+  totalUnitsCount: number;
+  limitCondition: string;
+  powerStrategy: string;
+  priceStrategy: string;
+  timeSlots: TimeSlot[];
+}
 
 // 模拟24小时申报数据
 const generateBidData = () => {
@@ -26,11 +56,73 @@ const generateBidData = () => {
   }));
 };
 
+// 生成模拟省间现货申报方案数据
+const generateMockInterProvincialSchemes = (): BidScheme[] => {
+  return [
+    {
+      id: 'scheme-1',
+      name: '单一价格，按时段申报电力方-1',
+      targetDate: new Date(),
+      tradingUnits: ['单元1', '单元2'],
+      selectedUnitsCount: 2,
+      totalUnitsCount: 5,
+      limitCondition: '日前限额 1000MWh',
+      powerStrategy: '按照最大预测申报',
+      priceStrategy: '按照最大预测申报',
+      timeSlots: [
+        {
+          id: 'slot-1-1',
+          startTime: '0015',
+          endTime: '0800',
+          powerRatio: 80,
+          powerFixed: 50,
+          price: 320.50
+        },
+        {
+          id: 'slot-1-2',
+          startTime: '0800',
+          endTime: '1200',
+          powerRatio: 100,
+          powerFixed: 75,
+          price: 450.00
+        },
+        {
+          id: 'slot-1-3',
+          startTime: '1200',
+          endTime: '2400',
+          powerRatio: 90,
+          powerFixed: 60,
+          price: 380.75
+        }
+      ]
+    }
+  ];
+};
+
 const Console = () => {
   const [bidData, setBidData] = useState(generateBidData());
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentScheme, setCurrentScheme] = useState("scheme1");
   const [tradeDirections, setTradeDirections] = useState<Record<number, number>>({});
+  
+  // 省间现货申报状态
+  const [interProvTradingCenter, setInterProvTradingCenter] = useState('shanxi');
+  const [interProvMarketType, setInterProvMarketType] = useState<'day-ahead' | 'intraday'>('day-ahead');
+  const [interProvDateRange, setInterProvDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(),
+    to: new Date(Date.now() + 86400000)
+  });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [interProvSchemes, setInterProvSchemes] = useState<BidScheme[]>(generateMockInterProvincialSchemes());
+  const [viewMode, setViewMode] = useState<'ratio' | 'fixed' | 'price'>('ratio');
+  
+  // 实时时钟更新
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const toggleRowSelection = (hour: number) => {
     setSelectedRows(prev => 
@@ -43,6 +135,80 @@ const Console = () => {
       ...prev,
       [hour]: direction
     }));
+  };
+  
+  // 省间现货申报操作函数
+  const addNewInterProvScheme = () => {
+    const newScheme: BidScheme = {
+      id: `scheme-${Date.now()}`,
+      name: `单一价格，按时段申报电力方-${interProvSchemes.length + 1}`,
+      targetDate: null,
+      tradingUnits: [],
+      selectedUnitsCount: 0,
+      totalUnitsCount: 5,
+      limitCondition: '待设置',
+      powerStrategy: '按照最大预测申报',
+      priceStrategy: '按照最大预测申报',
+      timeSlots: [
+        {
+          id: `slot-${Date.now()}-1`,
+          startTime: '0015',
+          endTime: '2400',
+          powerRatio: 100,
+          powerFixed: 50,
+          price: 350
+        }
+      ]
+    };
+    setInterProvSchemes(prev => [...prev, newScheme]);
+  };
+  
+  const removeInterProvScheme = (schemeId: string) => {
+    setInterProvSchemes(prev => prev.filter(s => s.id !== schemeId));
+  };
+  
+  const updateInterProvScheme = (schemeId: string, updates: Partial<BidScheme>) => {
+    setInterProvSchemes(prev => prev.map(s => 
+      s.id === schemeId ? { ...s, ...updates } : s
+    ));
+  };
+  
+  const addTimeSlot = (schemeId: string) => {
+    const scheme = interProvSchemes.find(s => s.id === schemeId);
+    if (!scheme) return;
+    
+    const newSlot: TimeSlot = {
+      id: `slot-${Date.now()}`,
+      startTime: '',
+      endTime: '',
+      powerRatio: null,
+      powerFixed: null,
+      price: null
+    };
+    
+    updateInterProvScheme(schemeId, {
+      timeSlots: [...scheme.timeSlots, newSlot]
+    });
+  };
+  
+  const removeTimeSlot = (schemeId: string, slotId: string) => {
+    const scheme = interProvSchemes.find(s => s.id === schemeId);
+    if (!scheme) return;
+    
+    updateInterProvScheme(schemeId, {
+      timeSlots: scheme.timeSlots.filter(s => s.id !== slotId)
+    });
+  };
+  
+  const updateTimeSlot = (schemeId: string, slotId: string, updates: Partial<TimeSlot>) => {
+    const scheme = interProvSchemes.find(s => s.id === schemeId);
+    if (!scheme) return;
+    
+    updateInterProvScheme(schemeId, {
+      timeSlots: scheme.timeSlots.map(s => 
+        s.id === slotId ? { ...s, ...updates } : s
+      )
+    });
   };
 
   return (
@@ -310,8 +476,368 @@ const Console = () => {
             </TabsContent>
             
             <TabsContent value="inter-provincial" className="space-y-4">
-              <div className="text-center py-12 text-muted-foreground">
-                省间现货申报功能开发中...
+              {/* 顶部筛选与时钟区域 */}
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-lg border">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <Select value={interProvTradingCenter} onValueChange={setInterProvTradingCenter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="shanxi">山西电力交易中心</SelectItem>
+                      <SelectItem value="shandong">山东电力交易中心</SelectItem>
+                      <SelectItem value="zhejiang">浙江电力交易中心</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant={interProvMarketType === 'day-ahead' ? 'default' : 'outline'}
+                      onClick={() => setInterProvMarketType('day-ahead')}
+                      size="sm"
+                    >
+                      日前
+                    </Button>
+                    <Button 
+                      variant={interProvMarketType === 'intraday' ? 'default' : 'outline'}
+                      onClick={() => setInterProvMarketType('intraday')}
+                      size="sm"
+                    >
+                      日内
+                    </Button>
+                  </div>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-64 justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {interProvDateRange.from && interProvDateRange.to ? (
+                          <>
+                            {format(interProvDateRange.from, "yyyy-MM-dd", { locale: zhCN })} 至{" "}
+                            {format(interProvDateRange.to, "yyyy-MM-dd", { locale: zhCN })}
+                          </>
+                        ) : (
+                          <span>选择日期范围</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={interProvDateRange.from}
+                        onSelect={(date) => date && setInterProvDateRange(prev => ({ ...prev, from: date }))}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button className="bg-[#00B04D] hover:bg-[#009644]">
+                    查询
+                  </Button>
+                </div>
+                
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-foreground font-mono">
+                    {format(currentTime, "HH:mm:ss")}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(currentTime, "yyyy年MM月dd日 EEEE", { locale: zhCN })}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 操作按钮栏 */}
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-lg border">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-sm">方案组1</Badge>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={addNewInterProvScheme}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    新增
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">限额查询</Button>
+                  <Button variant="outline" size="sm">挂单状态</Button>
+                  <Button variant="outline" size="sm">保存</Button>
+                  <Button variant="outline" size="sm">
+                    <Clock className="h-4 w-4 mr-1" />
+                    立即申报
+                  </Button>
+                  <Button className="bg-[#00B04D] hover:bg-[#009644]" size="sm">
+                    <Send className="h-4 w-4 mr-1" />
+                    生效申报
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-1" />
+                    导出
+                  </Button>
+                </div>
+              </div>
+              
+              {/* 视图控制区域 */}
+              <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-lg border">
+                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as any)}>
+                  <ToggleGroupItem value="ratio" aria-label="电力比例">
+                    电力比例（%）
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="fixed" aria-label="电力固定值">
+                    电力固定值（MWh）
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="price" aria-label="电价">
+                    电价（元/MWh）
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                
+                <Button variant="outline" size="sm" className="border-[#00B04D] text-[#00B04D] hover:bg-[#F1F8F4]">
+                  模板配置
+                </Button>
+              </div>
+              
+              {/* 方案卡片网格 */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {interProvSchemes.map((scheme) => (
+                  <Card key={scheme.id} className="overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between pb-3 bg-[#F8FBFA]">
+                      <CardTitle className="text-base font-semibold">{scheme.name}</CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => removeInterProvScheme(scheme.id)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      {/* 基本配置区 */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">标的日</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal h-9 text-xs">
+                                <CalendarIcon className="mr-2 h-3 w-3" />
+                                {scheme.targetDate ? format(scheme.targetDate, "yyyy-MM-dd") : "请选择日期"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={scheme.targetDate || undefined}
+                                onSelect={(date) => updateInterProvScheme(scheme.id, { targetDate: date || null })}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">交易单元</Label>
+                          <Select 
+                            value={scheme.selectedUnitsCount.toString()}
+                            onValueChange={(value) => updateInterProvScheme(scheme.id, { selectedUnitsCount: parseInt(value) })}
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder={`${scheme.selectedUnitsCount}/${scheme.totalUnitsCount} 已交易单元`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: scheme.totalUnitsCount + 1 }, (_, i) => (
+                                <SelectItem key={i} value={i.toString()}>
+                                  {i}/{scheme.totalUnitsCount} 已交易单元
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-1.5 col-span-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs">限额条件</Label>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <HelpCircle className="h-3 w-3 text-red-500 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">限额条件说明：交易单元的最大电量限制</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Input 
+                            value={scheme.limitCondition}
+                            onChange={(e) => updateInterProvScheme(scheme.id, { limitCondition: e.target.value })}
+                            className="h-9 text-xs"
+                          />
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">电力</Label>
+                          <Select 
+                            value={scheme.powerStrategy}
+                            onValueChange={(value) => updateInterProvScheme(scheme.id, { powerStrategy: value })}
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="按照最大预测申报">按照最大预测申报</SelectItem>
+                              <SelectItem value="按比例申报">按比例申报</SelectItem>
+                              <SelectItem value="固定值申报">固定值申报</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">电价</Label>
+                          <Select 
+                            value={scheme.priceStrategy}
+                            onValueChange={(value) => updateInterProvScheme(scheme.id, { priceStrategy: value })}
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="按照最大预测申报">按照最大预测申报</SelectItem>
+                              <SelectItem value="固定价格">固定价格</SelectItem>
+                              <SelectItem value="分段价格">分段价格</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      {/* 时段数据表格 */}
+                      <div className="rounded-md border max-h-[300px] overflow-y-auto">
+                        <table className="w-full">
+                          <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                            <tr className="border-b">
+                              <th className="h-10 px-2 text-left align-middle font-semibold text-gray-700 text-xs">时间段</th>
+                              {viewMode !== 'price' && (
+                                <>
+                                  {viewMode === 'ratio' && (
+                                    <th className="h-10 px-2 text-right align-middle font-semibold text-gray-700 text-xs">比例(%)</th>
+                                  )}
+                                  {viewMode === 'fixed' && (
+                                    <th className="h-10 px-2 text-right align-middle font-semibold text-gray-700 text-xs">固定值(MW)</th>
+                                  )}
+                                </>
+                              )}
+                              <th className="h-10 px-2 text-right align-middle font-semibold text-gray-700 text-xs">电价(元/MWh)</th>
+                              <th className="h-10 px-2 text-center align-middle font-semibold text-gray-700 text-xs">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {scheme.timeSlots.map((slot) => (
+                              <tr key={slot.id} className="border-b transition-colors hover:bg-[#F8FBFA]">
+                                <td className="p-2 align-middle">
+                                  <div className="flex items-center gap-1">
+                                    <Input 
+                                      type="text"
+                                      value={slot.startTime}
+                                      onChange={(e) => updateTimeSlot(scheme.id, slot.id, { startTime: e.target.value })}
+                                      placeholder="0015"
+                                      className="w-14 h-8 text-xs font-mono text-center"
+                                      maxLength={4}
+                                    />
+                                    <span className="text-xs text-muted-foreground">-</span>
+                                    <Input 
+                                      type="text"
+                                      value={slot.endTime}
+                                      onChange={(e) => updateTimeSlot(scheme.id, slot.id, { endTime: e.target.value })}
+                                      placeholder="2400"
+                                      className="w-14 h-8 text-xs font-mono text-center"
+                                      maxLength={4}
+                                    />
+                                  </div>
+                                </td>
+                                {viewMode !== 'price' && (
+                                  <>
+                                    {viewMode === 'ratio' && (
+                                      <td className="p-2 align-middle">
+                                        <Input 
+                                          type="number"
+                                          value={slot.powerRatio ?? ''}
+                                          onChange={(e) => updateTimeSlot(scheme.id, slot.id, { powerRatio: e.target.value ? parseFloat(e.target.value) : null })}
+                                          className="w-20 h-8 text-xs font-mono text-right"
+                                        />
+                                      </td>
+                                    )}
+                                    {viewMode === 'fixed' && (
+                                      <td className="p-2 align-middle">
+                                        <Input 
+                                          type="number"
+                                          value={slot.powerFixed ?? ''}
+                                          onChange={(e) => updateTimeSlot(scheme.id, slot.id, { powerFixed: e.target.value ? parseFloat(e.target.value) : null })}
+                                          className="w-20 h-8 text-xs font-mono text-right"
+                                        />
+                                      </td>
+                                    )}
+                                  </>
+                                )}
+                                <td className="p-2 align-middle">
+                                  <Input 
+                                    type="number"
+                                    value={slot.price ?? ''}
+                                    onChange={(e) => updateTimeSlot(scheme.id, slot.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                                    className="w-24 h-8 text-xs font-mono text-right"
+                                    step="0.01"
+                                  />
+                                </td>
+                                <td className="p-2 align-middle">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                      onClick={() => removeTimeSlot(scheme.id, slot.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* 添加时段按钮 */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => addTimeSlot(scheme.id)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        新增
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {/* 添加新方案卡片按钮 */}
+                <Card 
+                  className="border-2 border-dashed border-gray-300 hover:border-[#00B04D] hover:bg-[#F8FBFA] cursor-pointer transition-colors min-h-[400px] flex items-center justify-center"
+                  onClick={addNewInterProvScheme}
+                >
+                  <div className="text-center">
+                    <Plus className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">添加新方案</p>
+                  </div>
+                </Card>
               </div>
             </TabsContent>
             
