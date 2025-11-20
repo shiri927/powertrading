@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TradingStrategy, PRESET_STRATEGIES } from '@/lib/trading/strategy-types';
 import { StrategyCard } from '@/components/strategy/StrategyCard';
 import { StrategyEditor } from '@/components/strategy/StrategyEditor';
@@ -7,26 +7,48 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, FileDown, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTradingStore } from '@/store/tradingStore';
 
 export const StrategyConfigTab = () => {
-  const [strategies, setStrategies] = useState<TradingStrategy[]>(
-    PRESET_STRATEGIES.map((s, i) => ({
-      ...s,
-      id: `preset_${i}`,
-      isActive: i === 0, // 第一个默认激活
-    }))
+  const { strategies, setStrategies, addStrategy, updateStrategy, deleteStrategy, toggleStrategyActive } = useTradingStore();
+  
+  // 初始化策略（仅首次）
+  useEffect(() => {
+    if (strategies.length === 0) {
+      const initialStrategies = PRESET_STRATEGIES.map((s, i) => ({
+        ...s,
+        id: `preset_${i}`,
+        isActive: i === 0,
+      }));
+      setStrategies(initialStrategies);
+    }
+  }, []);
+
+  const [selectedStrategy, setSelectedStrategy] = useState<TradingStrategy | null>(
+    strategies.length > 0 ? strategies[0] : null
   );
-  const [selectedStrategy, setSelectedStrategy] = useState<TradingStrategy | null>(strategies[0]);
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'create'>('view');
+
+  // 当策略列表变化时，更新选中策略
+  useEffect(() => {
+    if (selectedStrategy) {
+      const updated = strategies.find(s => s.id === selectedStrategy.id);
+      if (updated) {
+        setSelectedStrategy(updated);
+      }
+    } else if (strategies.length > 0 && !selectedStrategy) {
+      setSelectedStrategy(strategies[0]);
+    }
+  }, [strategies]);
 
   const handleSaveStrategy = (strategy: TradingStrategy) => {
     if (editMode === 'create') {
-      setStrategies([...strategies, strategy]);
+      addStrategy(strategy);
       toast.success('策略创建成功', {
         description: `策略"${strategy.name}"已添加到策略库`,
       });
     } else {
-      setStrategies(strategies.map(s => s.id === strategy.id ? strategy : s));
+      updateStrategy(strategy.id, strategy);
       toast.success('策略保存成功', {
         description: `策略"${strategy.name}"已更新`,
       });
@@ -36,15 +58,16 @@ export const StrategyConfigTab = () => {
   };
 
   const handleDeleteStrategy = (strategyId: string) => {
-    setStrategies(strategies.filter(s => s.id !== strategyId));
+    deleteStrategy(strategyId);
     setSelectedStrategy(null);
     setEditMode('view');
     toast.success('策略已删除');
   };
 
   const handleToggleActive = (strategy: TradingStrategy) => {
+    toggleStrategyActive(strategy.id);
+    
     const updatedStrategy = { ...strategy, isActive: !strategy.isActive };
-    setStrategies(strategies.map(s => s.id === strategy.id ? updatedStrategy : s));
     setSelectedStrategy(updatedStrategy);
     
     if (updatedStrategy.isActive) {
