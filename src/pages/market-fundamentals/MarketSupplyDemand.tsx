@@ -1,107 +1,414 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Activity } from "lucide-react";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { CalendarIcon, Download, ArrowUpDown, BarChart3, Table2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-const supplyDemandData = [
-  { hour: 0, supply: 15200, demand: 12500, reserve: 2700 },
-  { hour: 4, supply: 12800, demand: 10200, reserve: 2600 },
-  { hour: 8, supply: 18500, demand: 15800, reserve: 2700 },
-  { hour: 12, supply: 21200, demand: 18500, reserve: 2700 },
-  { hour: 16, supply: 22800, demand: 19800, reserve: 3000 },
-  { hour: 20, supply: 20100, demand: 17200, reserve: 2900 },
-  { hour: 23, supply: 16500, demand: 13800, reserve: 2700 },
+const tabs = [
+  { id: "thermal-space", label: "火电竞价空间" },
+  { id: "total-generation", label: "发电总出力" },
+  { id: "renewable-load", label: "新能源负荷" },
+  { id: "dispatched-load", label: "统调负荷" },
+  { id: "transmission-plan", label: "外送电计划" },
+  { id: "non-market-generation", label: "非市场化机组出力" },
+  { id: "renewable-load-inter", label: "新能源负荷（省间）" },
+  { id: "dispatched-load-inter", label: "统调负荷（省间）" },
+];
+
+const chartData = Array.from({ length: 24 }, (_, i) => ({
+  time: `${String(i).padStart(2, '0')}:00`,
+  dayAhead: 15000 - i * 200 + Math.random() * 1000,
+  realTime: 14500 - i * 180 + Math.random() * 1000,
+  forecast: 14800 - i * 190 + Math.random() * 1000,
+  actual: 14600 - i * 185 + Math.random() * 1000,
+}));
+
+const tableData = [
+  { date: "2024-11-02", maxValue: 13618.830, maxTime: "00:00", minValue: -14799.940, minTime: "12:15", avgValue: 3493.746, avgTime: "全时段" },
+  { date: "2024-11-03", maxValue: 14120.450, maxTime: "01:30", minValue: -13890.120, minTime: "13:00", avgValue: 3650.890, avgTime: "全时段" },
+  { date: "2024-11-04", maxValue: 13890.670, maxTime: "02:15", minValue: -14200.340, minTime: "11:45", avgValue: 3580.120, avgTime: "全时段" },
 ];
 
 const MarketSupplyDemand = () => {
+  const [activeTab, setActiveTab] = useState("thermal-space");
+  const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  const [timeGranularity, setTimeGranularity] = useState("96");
+  const [dataDisplay, setDataDisplay] = useState("all");
+  const [priceControl, setPriceControl] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState("trend");
+  const [displayFormat, setDisplayFormat] = useState("tiled");
+  const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleDownload = () => {
+    console.log("下载数据");
+  };
+
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">市场供需</h1>
         <p className="text-muted-foreground mt-2">
-          市场供需平衡与备用容量分析
+          市场供需平衡与分析
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              当前供电
-            </CardTitle>
-            <CardDescription>实时供电能力</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">21,200</div>
-            <p className="text-sm text-muted-foreground mt-1">兆瓦</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-chart-2" />
-              当前负荷
-            </CardTitle>
-            <CardDescription>实时电力需求</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-chart-2">18,500</div>
-            <p className="text-sm text-muted-foreground mt-1">兆瓦</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>备用容量</CardTitle>
-            <CardDescription>供需差额</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-chart-3">2,700</div>
-            <p className="text-sm text-muted-foreground mt-1">兆瓦</p>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>24小时供需平衡</CardTitle>
-          <CardDescription>供电、需求与备用容量趋势</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={supplyDemandData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="hour" 
-                label={{ value: '时段 (小时)', position: 'insideBottom', offset: -5 }}
-              />
-              <YAxis label={{ value: '功率 (兆瓦)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="supply" 
-                stroke="hsl(var(--primary))" 
-                name="供电" 
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="demand" 
-                stroke="hsl(var(--chart-2))" 
-                name="需求" 
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="reserve" 
-                stroke="hsl(var(--chart-3))" 
-                name="备用容量" 
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <CardContent className="pt-6">
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-8 w-full mb-6">
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {/* Query Filters */}
+            <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">选择日期</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange ? format(dateRange, "yyyy-MM-dd") : "选择日期"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">时间颗粒度</span>
+                <Select value={timeGranularity} onValueChange={setTimeGranularity}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="96">96点(15min)</SelectItem>
+                    <SelectItem value="24">24点(1h)</SelectItem>
+                    <SelectItem value="day">日</SelectItem>
+                    <SelectItem value="month">月</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">数据展示</span>
+                <Select value={dataDisplay} onValueChange={setDataDisplay}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="day-ahead">日前</SelectItem>
+                    <SelectItem value="intraday">日内</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={priceControl ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriceControl(!priceControl)}
+                >
+                  价格调控
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">分析方式</span>
+                <div className="flex gap-1 border rounded-md">
+                  <Button
+                    variant={analysisMode === "trend" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setAnalysisMode("trend")}
+                  >
+                    趋势
+                  </Button>
+                  <Button
+                    variant={analysisMode === "comparison" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setAnalysisMode("comparison")}
+                  >
+                    对比
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">展示形式</span>
+                <div className="flex gap-1 border rounded-md">
+                  <Button
+                    variant={displayFormat === "tiled" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDisplayFormat("tiled")}
+                  >
+                    平铺展示
+                  </Button>
+                  <Button
+                    variant={displayFormat === "grouped" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDisplayFormat("grouped")}
+                  >
+                    分组聚合
+                  </Button>
+                  <Button
+                    variant={displayFormat === "summary" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDisplayFormat("summary")}
+                  >
+                    汇总聚合
+                  </Button>
+                </div>
+              </div>
+
+              <div className="ml-auto flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode(viewMode === "chart" ? "table" : "chart")}
+                >
+                  {viewMode === "chart" ? <Table2 className="h-4 w-4 mr-2" /> : <BarChart3 className="h-4 w-4 mr-2" />}
+                  {viewMode === "chart" ? "图表" : "表格"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDownload}>
+                  <Download className="h-4 w-4 mr-2" />
+                  下载数据
+                </Button>
+              </div>
+            </div>
+
+            {/* Content for each tab */}
+            {tabs.map((tab) => (
+              <TabsContent key={tab.id} value={tab.id} className="space-y-6">
+                {/* Metric Cards */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-normal text-muted-foreground">最大值(MW)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-primary">13,618.830</div>
+                      <p className="text-xs text-muted-foreground mt-1">时刻: 00:00</p>
+                      <p className="text-xs text-chart-2 mt-1">日期: 16,888.000</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-normal text-muted-foreground">最小值(MW)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-destructive">-14,799.940</div>
+                      <p className="text-xs text-muted-foreground mt-1">时刻: 12:15</p>
+                      <p className="text-xs text-chart-2 mt-1">日期: -17,655.000</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-normal text-muted-foreground">平均值(MW)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-chart-3">3,493.746</div>
+                      <p className="text-xs text-muted-foreground mt-1">时刻: 全时段</p>
+                      <p className="text-xs text-chart-2 mt-1">日期: 6,947.115</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Charts */}
+                {viewMode === "chart" ? (
+                  <div className="space-y-4">
+                    {/* Line Chart */}
+                    <Card>
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base">出力/MW</CardTitle>
+                          <div className="text-sm text-muted-foreground">
+                            火电竞价空间-日前 | 火电竞价空间-实时 | 正偏差 | 负偏差
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="time" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="dayAhead"
+                              stroke="hsl(var(--primary))"
+                              name="火电竞价空间-日前"
+                              strokeWidth={2}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="realTime"
+                              stroke="hsl(var(--chart-2))"
+                              name="火电竞价空间-实时"
+                              strokeWidth={2}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
+                    {/* Bar Chart */}
+                    <Card>
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base">偏差值</CardTitle>
+                          <div className="flex gap-4">
+                            <Select defaultValue="day-ahead">
+                              <SelectTrigger className="w-48">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="day-ahead">火电竞价空间-日前</SelectItem>
+                                <SelectItem value="real-time">火电竞价空间-实时</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select defaultValue="realtime">
+                              <SelectTrigger className="w-48">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="realtime">火电竞价空间-实时</SelectItem>
+                                <SelectItem value="day-ahead">火电竞价空间-日前</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm">
+                              对标分析
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="time" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="forecast" fill="hsl(var(--chart-3))" name="正偏差" />
+                            <Bar dataKey="actual" fill="hsl(var(--chart-4))" name="负偏差" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  /* Table View */
+                  <Card>
+                    <CardContent className="pt-6">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort("date")}>
+                                日期
+                                <ArrowUpDown className="h-4 w-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead>
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort("maxValue")}>
+                                最大值(MW)
+                                <ArrowUpDown className="h-4 w-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead>时刻</TableHead>
+                            <TableHead>
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort("minValue")}>
+                                最小值(MW)
+                                <ArrowUpDown className="h-4 w-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead>时刻</TableHead>
+                            <TableHead>
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort("avgValue")}>
+                                平均值(MW)
+                                <ArrowUpDown className="h-4 w-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead>时刻</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tableData.map((row, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{row.date}</TableCell>
+                              <TableCell className="font-medium">{row.maxValue.toLocaleString()}</TableCell>
+                              <TableCell>{row.maxTime}</TableCell>
+                              <TableCell className="font-medium text-destructive">{row.minValue.toLocaleString()}</TableCell>
+                              <TableCell>{row.minTime}</TableCell>
+                              <TableCell className="font-medium">{row.avgValue.toLocaleString()}</TableCell>
+                              <TableCell>{row.avgTime}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+
+                      {/* Pagination */}
+                      <div className="flex items-center justify-center gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          上一页
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          第 {currentPage} 页
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                        >
+                          下一页
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
         </CardContent>
       </Card>
     </div>
