@@ -1972,6 +1972,801 @@ const IntraProvincialReview = () => {
   );
 };
 
+// ============= 预测功率调整复盘数据结构 =============
+
+interface ForecastAdjustmentData {
+  date: string;
+  timePoint: string;
+  tradingUnit: string;
+  tradingCenter: string;
+  comprehensiveSettlement: number;
+  mediumLongTermRevenue: number;
+  spotRevenue: number;
+  recoveryFee: number;
+  assessmentFee: number;
+  deviationElectricityFee: number;
+  comprehensiveDeductionRevenue: number;
+  comprehensiveDeductionPrice: number;
+  originalForecast: number;
+  declaredCurve: number;
+  actualOutput: number;
+  adjustmentRatio: number;
+  deviationRatio: number;
+}
+
+interface ForecastAdjustmentTreeNode {
+  key: string;
+  label: string;
+  level: number;
+  isExpanded: boolean;
+  comprehensiveSettlement: number;
+  mediumLongTermRevenue: number;
+  spotRevenue: number;
+  recoveryFee: number;
+  assessmentFee: number;
+  deviationElectricityFee: number;
+  comprehensiveDeductionRevenue: number;
+  comprehensiveDeductionPrice: number;
+  children?: ForecastAdjustmentTreeNode[];
+}
+
+type ForecastAggregationDimension = 'tradingUnit' | 'date' | 'timePoint';
+
+// 生成预测功率调整复盘模拟数据
+const generateForecastAdjustmentData = (
+  tradingUnits: string[],
+  granularity: '24' | '96'
+): ForecastAdjustmentData[] => {
+  const data: ForecastAdjustmentData[] = [];
+  const dates = ['20240506', '20240508', '20240516', '20240520'];
+  const timePoints = granularity === '24' 
+    ? Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0') + '00')
+    : Array.from({ length: 96 }, (_, i) => {
+        const hour = Math.floor(i / 4).toString().padStart(2, '0');
+        const minute = ((i % 4) * 15).toString().padStart(2, '0');
+        return hour + minute;
+      });
+  
+  dates.forEach(date => {
+    tradingUnits.forEach(unit => {
+      timePoints.forEach(timePoint => {
+        const hour = parseInt(timePoint.substring(0, 2));
+        const isPeakHour = hour >= 8 && hour <= 22;
+        
+        const mediumLongTermRev = (Math.random() * 50 - 25) * (isPeakHour ? 1.2 : 0.8);
+        const spotRev = (Math.random() * 40 - 10) * (isPeakHour ? 1.3 : 0.7);
+        const recoveryFee = -(Math.random() * 20 + 10);
+        const assessmentFee = -(Math.random() * 10);
+        const comprehensiveSettlement = mediumLongTermRev + spotRev + recoveryFee + assessmentFee;
+        
+        const deviationElectricityFee = Math.abs(assessmentFee) * 0.8;
+        const comprehensiveDeductionRevenue = comprehensiveSettlement - deviationElectricityFee;
+        const comprehensiveDeductionPrice = 200 + Math.random() * 100;
+        
+        data.push({
+          date,
+          timePoint,
+          tradingUnit: unit,
+          tradingCenter: '交易中心1',
+          comprehensiveSettlement,
+          mediumLongTermRevenue: mediumLongTermRev,
+          spotRevenue: spotRev,
+          recoveryFee,
+          assessmentFee,
+          deviationElectricityFee,
+          comprehensiveDeductionRevenue,
+          comprehensiveDeductionPrice,
+          originalForecast: 100 + Math.random() * 50,
+          declaredCurve: 100 + Math.random() * 50,
+          actualOutput: 100 + Math.random() * 50,
+          adjustmentRatio: Math.random() * 20 - 10,
+          deviationRatio: Math.random() * 15,
+        });
+      });
+    });
+  });
+  
+  return data;
+};
+
+// 构建树形数据
+const buildForecastTreeData = (
+  rawData: ForecastAdjustmentData[],
+  dimension: ForecastAggregationDimension
+): ForecastAdjustmentTreeNode[] => {
+  const totalNode: ForecastAdjustmentTreeNode = {
+    key: 'total',
+    label: '合计',
+    level: 0,
+    isExpanded: false,
+    comprehensiveSettlement: 0,
+    mediumLongTermRevenue: 0,
+    spotRevenue: 0,
+    recoveryFee: 0,
+    assessmentFee: 0,
+    deviationElectricityFee: 0,
+    comprehensiveDeductionRevenue: 0,
+    comprehensiveDeductionPrice: 0,
+  };
+  
+  rawData.forEach(item => {
+    totalNode.comprehensiveSettlement += item.comprehensiveSettlement;
+    totalNode.mediumLongTermRevenue += item.mediumLongTermRevenue;
+    totalNode.spotRevenue += item.spotRevenue;
+    totalNode.recoveryFee += item.recoveryFee;
+    totalNode.assessmentFee += item.assessmentFee;
+    totalNode.deviationElectricityFee += item.deviationElectricityFee;
+    totalNode.comprehensiveDeductionRevenue += item.comprehensiveDeductionRevenue;
+  });
+  
+  totalNode.comprehensiveDeductionPrice = rawData.length > 0
+    ? rawData.reduce((sum, item) => sum + item.comprehensiveDeductionPrice, 0) / rawData.length
+    : 0;
+  
+  if (dimension === 'date') {
+    const grouped = rawData.reduce((acc, item) => {
+      if (!acc[item.date]) acc[item.date] = [];
+      acc[item.date].push(item);
+      return acc;
+    }, {} as Record<string, ForecastAdjustmentData[]>);
+    
+    totalNode.children = Object.entries(grouped).map(([date, items]) => ({
+      key: date,
+      label: date,
+      level: 1,
+      isExpanded: false,
+      comprehensiveSettlement: items.reduce((sum, item) => sum + item.comprehensiveSettlement, 0),
+      mediumLongTermRevenue: items.reduce((sum, item) => sum + item.mediumLongTermRevenue, 0),
+      spotRevenue: items.reduce((sum, item) => sum + item.spotRevenue, 0),
+      recoveryFee: items.reduce((sum, item) => sum + item.recoveryFee, 0),
+      assessmentFee: items.reduce((sum, item) => sum + item.assessmentFee, 0),
+      deviationElectricityFee: items.reduce((sum, item) => sum + item.deviationElectricityFee, 0),
+      comprehensiveDeductionRevenue: items.reduce((sum, item) => sum + item.comprehensiveDeductionRevenue, 0),
+      comprehensiveDeductionPrice: items.reduce((sum, item) => sum + item.comprehensiveDeductionPrice, 0) / items.length,
+      children: items.map(item => ({
+        key: `${date}-${item.timePoint}`,
+        label: item.timePoint,
+        level: 2,
+        isExpanded: false,
+        comprehensiveSettlement: item.comprehensiveSettlement,
+        mediumLongTermRevenue: item.mediumLongTermRevenue,
+        spotRevenue: item.spotRevenue,
+        recoveryFee: item.recoveryFee,
+        assessmentFee: item.assessmentFee,
+        deviationElectricityFee: item.deviationElectricityFee,
+        comprehensiveDeductionRevenue: item.comprehensiveDeductionRevenue,
+        comprehensiveDeductionPrice: item.comprehensiveDeductionPrice,
+      })),
+    }));
+  } else if (dimension === 'tradingUnit') {
+    const grouped = rawData.reduce((acc, item) => {
+      if (!acc[item.tradingUnit]) acc[item.tradingUnit] = [];
+      acc[item.tradingUnit].push(item);
+      return acc;
+    }, {} as Record<string, ForecastAdjustmentData[]>);
+    
+    totalNode.children = Object.entries(grouped).map(([unit, items]) => ({
+      key: unit,
+      label: unit,
+      level: 1,
+      isExpanded: false,
+      comprehensiveSettlement: items.reduce((sum, item) => sum + item.comprehensiveSettlement, 0),
+      mediumLongTermRevenue: items.reduce((sum, item) => sum + item.mediumLongTermRevenue, 0),
+      spotRevenue: items.reduce((sum, item) => sum + item.spotRevenue, 0),
+      recoveryFee: items.reduce((sum, item) => sum + item.recoveryFee, 0),
+      assessmentFee: items.reduce((sum, item) => sum + item.assessmentFee, 0),
+      deviationElectricityFee: items.reduce((sum, item) => sum + item.deviationElectricityFee, 0),
+      comprehensiveDeductionRevenue: items.reduce((sum, item) => sum + item.comprehensiveDeductionRevenue, 0),
+      comprehensiveDeductionPrice: items.reduce((sum, item) => sum + item.comprehensiveDeductionPrice, 0) / items.length,
+      children: items.map(item => ({
+        key: `${unit}-${item.date}-${item.timePoint}`,
+        label: `${item.date} ${item.timePoint}`,
+        level: 2,
+        isExpanded: false,
+        comprehensiveSettlement: item.comprehensiveSettlement,
+        mediumLongTermRevenue: item.mediumLongTermRevenue,
+        spotRevenue: item.spotRevenue,
+        recoveryFee: item.recoveryFee,
+        assessmentFee: item.assessmentFee,
+        deviationElectricityFee: item.deviationElectricityFee,
+        comprehensiveDeductionRevenue: item.comprehensiveDeductionRevenue,
+        comprehensiveDeductionPrice: item.comprehensiveDeductionPrice,
+      })),
+    }));
+  } else {
+    const grouped = rawData.reduce((acc, item) => {
+      if (!acc[item.timePoint]) acc[item.timePoint] = [];
+      acc[item.timePoint].push(item);
+      return acc;
+    }, {} as Record<string, ForecastAdjustmentData[]>);
+    
+    totalNode.children = Object.entries(grouped).map(([timePoint, items]) => ({
+      key: timePoint,
+      label: timePoint,
+      level: 1,
+      isExpanded: false,
+      comprehensiveSettlement: items.reduce((sum, item) => sum + item.comprehensiveSettlement, 0),
+      mediumLongTermRevenue: items.reduce((sum, item) => sum + item.mediumLongTermRevenue, 0),
+      spotRevenue: items.reduce((sum, item) => sum + item.spotRevenue, 0),
+      recoveryFee: items.reduce((sum, item) => sum + item.recoveryFee, 0),
+      assessmentFee: items.reduce((sum, item) => sum + item.assessmentFee, 0),
+      deviationElectricityFee: items.reduce((sum, item) => sum + item.deviationElectricityFee, 0),
+      comprehensiveDeductionRevenue: items.reduce((sum, item) => sum + item.comprehensiveDeductionRevenue, 0),
+      comprehensiveDeductionPrice: items.reduce((sum, item) => sum + item.comprehensiveDeductionPrice, 0) / items.length,
+      children: items.map(item => ({
+        key: `${timePoint}-${item.date}-${item.tradingUnit}`,
+        label: `${item.date} ${item.tradingUnit}`,
+        level: 2,
+        isExpanded: false,
+        comprehensiveSettlement: item.comprehensiveSettlement,
+        mediumLongTermRevenue: item.mediumLongTermRevenue,
+        spotRevenue: item.spotRevenue,
+        recoveryFee: item.recoveryFee,
+        assessmentFee: item.assessmentFee,
+        deviationElectricityFee: item.deviationElectricityFee,
+        comprehensiveDeductionRevenue: item.comprehensiveDeductionRevenue,
+        comprehensiveDeductionPrice: item.comprehensiveDeductionPrice,
+      })),
+    }));
+  }
+  
+  return [totalNode];
+};
+
+// 提取图表数据
+const extractForecastChartData = (
+  rawData: ForecastAdjustmentData[]
+) => {
+  const grouped = rawData.reduce((acc, item) => {
+    if (!acc[item.timePoint]) {
+      acc[item.timePoint] = {
+        timePoint: item.timePoint,
+        comprehensiveSettlement: 0,
+        mediumLongTermRevenue: 0,
+        spotRevenue: 0,
+        recoveryFee: 0,
+        assessmentFee: 0,
+        deviationElectricityFee: 0,
+        comprehensiveDeductionPrice: 0,
+        avgPrice: 0,
+        count: 0,
+      };
+    }
+    acc[item.timePoint].comprehensiveSettlement += item.comprehensiveSettlement;
+    acc[item.timePoint].mediumLongTermRevenue += item.mediumLongTermRevenue;
+    acc[item.timePoint].spotRevenue += item.spotRevenue;
+    acc[item.timePoint].recoveryFee += item.recoveryFee;
+    acc[item.timePoint].assessmentFee += item.assessmentFee;
+    acc[item.timePoint].deviationElectricityFee += item.deviationElectricityFee;
+    acc[item.timePoint].comprehensiveDeductionPrice += item.comprehensiveDeductionPrice;
+    acc[item.timePoint].count += 1;
+    return acc;
+  }, {} as Record<string, any>);
+  
+  return Object.values(grouped).map((item: any) => ({
+    ...item,
+    comprehensiveDeductionPrice: item.comprehensiveDeductionPrice / item.count,
+    avgPrice: (item.comprehensiveDeductionPrice / item.count) * (0.95 + Math.random() * 0.1),
+  })).sort((a: any, b: any) => a.timePoint.localeCompare(b.timePoint));
+};
+
+// 树表行组件
+interface ForecastTreeRowProps {
+  node: ForecastAdjustmentTreeNode;
+  isExpanded: boolean;
+  onToggle: (key: string) => void;
+  getValueColor: (value: number) => string;
+  level: number;
+}
+
+const ForecastTreeRow = ({ node, isExpanded, onToggle, getValueColor, level }: ForecastTreeRowProps) => {
+  const hasChildren = node.children && node.children.length > 0;
+  
+  return (
+    <>
+      <tr className="hover:bg-[#F8FBFA] border-b border-gray-100">
+        <td className="p-2">
+          <div style={{ paddingLeft: `${level * 12}px` }} className="flex items-center gap-1">
+            {hasChildren && (
+              <button onClick={() => onToggle(node.key)} className="p-0">
+                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              </button>
+            )}
+            <span className={cn(level === 0 && "font-bold")}>{node.label}</span>
+          </div>
+        </td>
+        <td className={cn("text-right p-2 font-mono", getValueColor(node.comprehensiveSettlement))}>
+          {node.comprehensiveSettlement.toFixed(2)}
+        </td>
+      </tr>
+      
+      {isExpanded && hasChildren && node.children!.map((child) => (
+        <ForecastTreeRow 
+          key={child.key} 
+          node={child} 
+          isExpanded={isExpanded}
+          onToggle={onToggle}
+          getValueColor={getValueColor}
+          level={level + 1}
+        />
+      ))}
+    </>
+  );
+};
+
+// 预测功率调整复盘组件
+const ForecastAdjustmentReview = () => {
+  const [tradingCenter, setTradingCenter] = useState('all');
+  const [selectedUnit, setSelectedUnit] = useState('all');
+  const [granularity, setGranularity] = useState<'24' | '96'>('24');
+  const [dimension, setDimension] = useState<ForecastAggregationDimension>('date');
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['total']));
+  
+  const tradingUnits = ['十二回路一期', '达坂城一期', '达坂城二期', '小草湖一期', '小草湖二期'];
+  
+  const rawData = useMemo(() => 
+    generateForecastAdjustmentData(tradingUnits, granularity),
+    [granularity]
+  );
+  
+  const treeData = useMemo(() => 
+    buildForecastTreeData(rawData, dimension),
+    [rawData, dimension]
+  );
+  
+  const chartData = useMemo(() => 
+    extractForecastChartData(rawData),
+    [rawData]
+  );
+  
+  const toggleExpand = (key: string) => {
+    setExpandedKeys(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+  
+  const handleQuery = () => {
+    console.log('Query with filters:', { tradingCenter, selectedUnit, granularity });
+  };
+  
+  const handleReset = () => {
+    setTradingCenter('all');
+    setSelectedUnit('all');
+  };
+  
+  const handleAggregation = () => {
+    setExpandedKeys(new Set(['total']));
+  };
+  
+  const getValueColor = (value: number) => {
+    if (value > 0) return "text-[#00B04D]";
+    if (value < 0) return "text-red-500";
+    return "";
+  };
+  
+  // 计算指标卡数据
+  const metrics = useMemo(() => {
+    const total = rawData.reduce((acc, item) => ({
+      comprehensiveSettlement: acc.comprehensiveSettlement + item.comprehensiveSettlement,
+      mediumLongTermRevenue: acc.mediumLongTermRevenue + item.mediumLongTermRevenue,
+      spotRevenue: acc.spotRevenue + item.spotRevenue,
+      recoveryFee: acc.recoveryFee + item.recoveryFee,
+      assessmentFee: acc.assessmentFee + item.assessmentFee,
+      deviationElectricityFee: acc.deviationElectricityFee + item.deviationElectricityFee,
+      comprehensiveDeductionRevenue: acc.comprehensiveDeductionRevenue + item.comprehensiveDeductionRevenue,
+      comprehensiveDeductionPrice: acc.comprehensiveDeductionPrice + item.comprehensiveDeductionPrice,
+    }), {
+      comprehensiveSettlement: 0,
+      mediumLongTermRevenue: 0,
+      spotRevenue: 0,
+      recoveryFee: 0,
+      assessmentFee: 0,
+      deviationElectricityFee: 0,
+      comprehensiveDeductionRevenue: 0,
+      comprehensiveDeductionPrice: 0,
+    });
+    
+    return {
+      ...total,
+      comprehensiveDeductionPrice: total.comprehensiveDeductionPrice / rawData.length,
+    };
+  }, [rawData]);
+  
+  return (
+    <div className="space-y-6">
+      {/* 指标卡片 */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">综合结算</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.comprehensiveSettlement))}>
+                {metrics.comprehensiveSettlement.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">调整后综合结算金额</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">中长期收入</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.mediumLongTermRevenue))}>
+                {metrics.mediumLongTermRevenue.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">中长期合同收入</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">现货收入</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.spotRevenue))}>
+                {metrics.spotRevenue.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">现货市场交易收入</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">回收费用</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.recoveryFee))}>
+                {metrics.recoveryFee.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">日/月回收费用</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">考核费用</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.assessmentFee))}>
+                {metrics.assessmentFee.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">偏差考核费用</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">偏差电费</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.deviationElectricityFee))}>
+                {metrics.deviationElectricityFee.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">偏差电费组成</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">综合扣费收入</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className={cn("text-2xl font-bold font-mono", getValueColor(metrics.comprehensiveDeductionRevenue))}>
+                {metrics.comprehensiveDeductionRevenue.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">万元</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">扣除费用后收入</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">综合扣费电价</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold font-mono text-[#00B04D]">
+                {metrics.comprehensiveDeductionPrice.toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">元/MWh</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">综合扣费后电价</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* 筛选控制栏 */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <Select value={tradingCenter} onValueChange={setTradingCenter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="全部交易中心" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部交易中心</SelectItem>
+                <SelectItem value="center1">交易中心1</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="全部交易单元" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部交易单元</SelectItem>
+                {tradingUnits.map(unit => (
+                  <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 text-sm">
+              <span className="font-mono">20240501</span>
+              <span>-</span>
+              <span className="font-mono">20240520</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-[#F1F8F4] rounded px-3 py-1">
+              <button 
+                className={cn("text-sm px-2 py-1 rounded", granularity === '24' && "font-bold text-[#00B04D] bg-white")}
+                onClick={() => setGranularity('24')}
+              >
+                24
+              </button>
+              <button 
+                className={cn("text-sm px-2 py-1 rounded", granularity === '96' && "font-bold text-[#00B04D] bg-white")}
+                onClick={() => setGranularity('96')}
+              >
+                96
+              </button>
+            </div>
+            
+            <Button onClick={handleQuery} size="sm">查询</Button>
+            <Button variant="outline" onClick={handleReset} size="sm">重置</Button>
+            
+            <Button variant="outline" size="sm" className="ml-auto">
+              <Download className="w-4 h-4 mr-2" />
+              导出
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* 主内容区：左侧树表 + 右侧图表 */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* 左侧：聚合维度选择和树表 (25%) */}
+        <div className="col-span-3">
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <div className="text-sm font-medium mb-2">聚合维度的选择</div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'tradingUnit' ? 'default' : 'outline'}
+                  onClick={() => setDimension('tradingUnit')}
+                  className="w-full justify-start"
+                >
+                  交易单元
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'date' ? 'default' : 'outline'}
+                  onClick={() => setDimension('date')}
+                  className="w-full justify-start"
+                >
+                  日期
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'timePoint' ? 'default' : 'outline'}
+                  onClick={() => setDimension('timePoint')}
+                  className="w-full justify-start"
+                >
+                  时点
+                </Button>
+              </div>
+              <Button className="w-full mt-2" size="sm" onClick={handleAggregation}>
+                聚合
+              </Button>
+            </CardHeader>
+            
+            <CardContent>
+              <ScrollArea className="h-[700px]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-[#F1F8F4] z-10">
+                      <tr>
+                        <th className="text-left p-2 border-b-2 border-[#00B04D]">维度</th>
+                        <th className="text-right p-2 border-b-2 border-[#00B04D]">综合结算</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {treeData.map(node => (
+                        <ForecastTreeRow 
+                          key={node.key} 
+                          node={node} 
+                          isExpanded={expandedKeys.has(node.key)}
+                          onToggle={toggleExpand}
+                          getValueColor={getValueColor}
+                          level={0}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* 右侧：三个图表 (75%) */}
+        <div className="col-span-9 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">综合结算电收入</CardTitle>
+              <CardDescription className="text-xs">各收入组成及费用分析</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{
+                comprehensiveSettlement: { label: "综合结算电收入", color: "#20B2AA" },
+                mediumLongTermRevenue: { label: "中长期收入", color: "#FFA500" },
+                spotRevenue: { label: "现货收入", color: "#00B04D" },
+                recoveryFee: { label: "回收费用", color: "#FF6B6B" },
+                assessmentFee: { label: "考核费用", color: "#9333EA" },
+              }} className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} label={{ value: '收入 (元)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="comprehensiveSettlement" 
+                      fill="#20B2AA" 
+                      stroke="#20B2AA"
+                      fillOpacity={0.3}
+                      name="综合结算电收入"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="mediumLongTermRevenue" 
+                      stroke="#FFA500" 
+                      strokeWidth={2}
+                      name="中长期收入"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="spotRevenue" 
+                      stroke="#00B04D" 
+                      strokeWidth={2}
+                      name="现货收入"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="recoveryFee" 
+                      stroke="#FF6B6B" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="回收费用"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="assessmentFee" 
+                      stroke="#9333EA" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="考核费用"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">偏差比例电收入</CardTitle>
+              <CardDescription className="text-xs">偏差电费趋势分析</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{
+                deviationElectricityFee: { label: "偏差电费", color: "#00B04D" },
+              }} className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} label={{ value: '偏差电费 (元)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="deviationElectricityFee" 
+                      fill="#00B04D" 
+                      stroke="#00B04D"
+                      fillOpacity={0.6}
+                      name="偏差电费"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">综合扣费电价</CardTitle>
+              <CardDescription className="text-xs">扣费后电价变化趋势</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{
+                comprehensiveDeductionPrice: { label: "综合扣费电价", color: "#FFA500" },
+                avgPrice: { label: "平均电价", color: "#20B2AA" },
+              }} className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} label={{ value: '电价 (元/MWh)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="comprehensiveDeductionPrice" 
+                      stroke="#FFA500" 
+                      strokeWidth={2}
+                      name="综合扣费电价"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="avgPrice" 
+                      stroke="#20B2AA" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="平均电价"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Review = () => {
   const [activeTab, setActiveTab] = useState("medium-long-term");
 
@@ -2004,6 +2799,7 @@ const Review = () => {
           <TabsTrigger value="medium-long-term">中长期策略复盘</TabsTrigger>
           <TabsTrigger value="intra-provincial">省内现货复盘</TabsTrigger>
           <TabsTrigger value="inter-provincial">省间现货复盘</TabsTrigger>
+          <TabsTrigger value="forecast-adjustment">预测功率调整复盘</TabsTrigger>
         </TabsList>
 
         <TabsContent value="medium-long-term" className="mt-6">
@@ -2016,6 +2812,10 @@ const Review = () => {
 
         <TabsContent value="inter-provincial" className="mt-6">
           <InterProvincialReview />
+        </TabsContent>
+
+        <TabsContent value="forecast-adjustment" className="mt-6">
+          <ForecastAdjustmentReview />
         </TabsContent>
       </Tabs>
     </div>
