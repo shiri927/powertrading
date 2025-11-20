@@ -79,33 +79,33 @@ const Clearing = () => {
   const tableData = generateTableData();
 
   return (
-    <div className="p-8 space-y-6 bg-[#1a1d21] min-h-screen">
+    <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white">出清管理</h1>
-        <p className="text-gray-400 mt-2">
+        <h1 className="text-3xl font-bold text-foreground">出清管理</h1>
+        <p className="text-muted-foreground mt-2">
           分时段交易、省内外现货出清结果管理
         </p>
       </div>
 
       {/* 价格图表 */}
-      <Card className="bg-[#25282d] border-[#3a3d45]">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white text-lg">出清电价</CardTitle>
+          <CardTitle className="text-lg">出清电价</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={priceChartConfig} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={priceData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3d45" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
                   dataKey="time" 
-                  stroke="#9ca3af"
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
                 />
                 <YAxis 
-                  stroke="#9ca3af"
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
-                  label={{ value: '电价 (元/MWh)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
+                  label={{ value: '电价 (元/MWh)', angle: -90, position: 'insideLeft' }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
@@ -146,24 +146,24 @@ const Clearing = () => {
       </Card>
 
       {/* 电量图表 */}
-      <Card className="bg-[#25282d] border-[#3a3d45]">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white text-lg">出清电量</CardTitle>
+          <CardTitle className="text-lg">出清电量</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={volumeChartConfig} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={volumeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3d45" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
                   dataKey="time" 
-                  stroke="#9ca3af"
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
                 />
                 <YAxis 
-                  stroke="#9ca3af"
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
-                  label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
+                  label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft' }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
@@ -202,55 +202,52 @@ const Clearing = () => {
       </Card>
 
       {/* 数据表格 */}
-      <Card className="bg-[#25282d] border-[#3a3d45]">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white text-lg">详细数据</CardTitle>
+          <CardTitle className="text-lg">详细数据</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-[#3a3d45]">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#2d3139] hover:bg-[#2d3139] border-[#3a3d45]">
-                  <TableHead className="text-gray-300 font-semibold text-xs">时段</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">日前出清电价</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">实时出清电价</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">日前电价</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">实时电价</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">日前出清电量</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">实时出清电量</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">日前电量</TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-xs text-right">实时电量</TableHead>
+                <TableRow className="bg-[#F1F8F4] hover:bg-[#F1F8F4]">
+                  <TableHead className="font-semibold text-xs">时段</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">日前出清电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">实时出清电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">日前电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">实时电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">日前出清电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">实时出清电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">日前电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right">实时电量</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tableData.map((row, index) => (
-                  <TableRow 
-                    key={index} 
-                    className="bg-[#25282d] hover:bg-[#2d3139] border-[#3a3d45]"
-                  >
-                    <TableCell className="text-gray-300 font-medium">{row.time}</TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{row.time}</TableCell>
+                    <TableCell className="font-mono text-right text-xs">
                       {row.dayAheadClearPrice.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.realTimeClearPrice.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.dayAheadPrice.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.realTimePrice.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.dayAheadClearVolume.toFixed(0)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.realTimeClearVolume.toFixed(0)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.dayAheadVolume.toFixed(0)}
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono text-right text-xs">
+                    <TableCell className="font-mono text-right text-xs">
                       {row.realTimeVolume.toFixed(0)}
                     </TableCell>
                   </TableRow>
