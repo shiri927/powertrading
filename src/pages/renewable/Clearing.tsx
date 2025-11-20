@@ -207,7 +207,7 @@ const Clearing = () => {
           <CardTitle className="text-lg">详细数据</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border max-h-[500px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-[#F1F8F4] hover:bg-[#F1F8F4]">
