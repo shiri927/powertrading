@@ -107,7 +107,7 @@ const generateMockRollingSchemes = (): RollingScheme[] => {
       schemeNumber: '20250217',
       schemeName: '零售策略1',
       tradingDate: '2025年02月17日滚动交易(2025-2-19)',
-      tradingUnit: '零售单元',
+      tradingUnit: '交易单元',
       timePoints: generateRollingTimePoints()
     }
   ];
@@ -120,7 +120,7 @@ const generateMockIntraProvincialSchemes = (): BidScheme[] => {
       id: 'scheme-1',
       name: '单一价格，按时段申报电力方-1',
       targetDate: new Date(),
-      tradingUnits: ['零售单元1', '零售单元2'],
+      tradingUnits: ['交易单元1', '交易单元2'],
       selectedUnitsCount: 2,
       totalUnitsCount: 5,
       limitCondition: '自动分配',
@@ -167,7 +167,7 @@ const Console = () => {
   const [rollingTradingDate, setRollingTradingDate] = useState('2025年02月17日滚动交易(2025-2-19)');
   const [rollingSchemes, setRollingSchemes] = useState<RollingScheme[]>(generateMockRollingSchemes());
   const [activeRollingSchemeId, setActiveRollingSchemeId] = useState('rolling-scheme-1');
-  const [rollingTradingUnit, setRollingTradingUnit] = useState('零售单元');
+  const [rollingTradingUnit, setRollingTradingUnit] = useState('交易单元');
   const [strategyMode, setStrategyMode] = useState<'ratio' | 'fixed'>('ratio');
   const [showUnitSection, setShowUnitSection] = useState(true);
   
@@ -423,15 +423,15 @@ const Console = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm mb-2 block">零售单元</Label>
+                  <Label className="text-sm mb-2 block">交易单元</Label>
                   <Select defaultValue="unit1">
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unit1">零售单元1</SelectItem>
-                      <SelectItem value="unit2">零售单元2</SelectItem>
-                      <SelectItem value="unit3">零售单元3</SelectItem>
+                      <SelectItem value="unit1">交易单元1</SelectItem>
+                      <SelectItem value="unit2">交易单元2</SelectItem>
+                      <SelectItem value="unit3">交易单元3</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -554,15 +554,15 @@ const Console = () => {
                   />
                 </div>
                 <div>
-                  <Label className="text-sm mb-2 block">零售单元</Label>
+                  <Label className="text-sm mb-2 block">交易单元</Label>
                   <Select value={rollingTradingUnit} onValueChange={setRollingTradingUnit}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="零售单元">零售单元</SelectItem>
-                      <SelectItem value="零售单元1">零售单元1</SelectItem>
-                      <SelectItem value="零售单元2">零售单元2</SelectItem>
+                      <SelectItem value="交易单元">交易单元</SelectItem>
+                      <SelectItem value="交易单元1">交易单元1</SelectItem>
+                      <SelectItem value="交易单元2">交易单元2</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -857,7 +857,7 @@ const Console = () => {
                         <div className="flex items-center gap-3">
                           <CardTitle className="text-base">{scheme.name}</CardTitle>
                           <Badge variant="outline">
-                            {scheme.selectedUnitsCount}/{scheme.totalUnitsCount} 零售单元
+                            {scheme.selectedUnitsCount}/{scheme.totalUnitsCount} 交易单元
                           </Badge>
                         </div>
                         <div className="flex gap-2">
@@ -894,14 +894,47 @@ const Console = () => {
                         </div>
                         
                         <div className="space-y-1.5">
-                          <Label className="text-xs">限制条件</Label>
+                          <Label className="text-xs">交易单元</Label>
+                          <Select 
+                            value={scheme.selectedUnitsCount.toString()}
+                            onValueChange={(value) => updateIntraProvScheme(scheme.id, { selectedUnitsCount: parseInt(value) })}
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder={`${scheme.selectedUnitsCount}/${scheme.totalUnitsCount} 已交易单元`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: scheme.totalUnitsCount + 1 }, (_, i) => (
+                                <SelectItem key={i} value={i.toString()}>
+                                  {i}/{scheme.totalUnitsCount} 已交易单元
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-1.5 col-span-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs">限额条件</Label>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <HelpCircle className="h-3 w-3 text-red-500 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">限额条件说明：交易单元的最大电量限制</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <Input 
                             value={scheme.limitCondition}
                             onChange={(e) => updateIntraProvScheme(scheme.id, { limitCondition: e.target.value })}
                             className="h-9 text-xs"
                           />
                         </div>
-                        
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label className="text-xs">电力</Label>
                           <Select 
