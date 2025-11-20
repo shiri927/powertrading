@@ -74,7 +74,7 @@ const PricePrediction = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-success">92.4%</div>
+                <div className="text-2xl font-bold font-mono text-success">92.4%</div>
                 <p className="text-xs text-muted-foreground mt-1">过去7天平均</p>
               </CardContent>
             </Card>
@@ -83,7 +83,7 @@ const PricePrediction = () => {
                 <CardTitle className="text-sm font-medium">明日峰值价格</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">¥518/MWh</div>
+                <div className="text-2xl font-bold font-mono">¥518/MWh</div>
                 <p className="text-xs text-warning mt-1">预计出现在16:00</p>
               </CardContent>
             </Card>
@@ -92,7 +92,7 @@ const PricePrediction = () => {
                 <CardTitle className="text-sm font-medium">明日谷值价格</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">¥252/MWh</div>
+                <div className="text-2xl font-bold font-mono">¥252/MWh</div>
                 <p className="text-xs text-muted-foreground mt-1">预计出现在04:00</p>
               </CardContent>
             </Card>

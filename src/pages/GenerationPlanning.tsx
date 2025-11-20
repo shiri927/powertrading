@@ -80,7 +80,7 @@ const GenerationPlanning = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{planOverview.totalUnits}</div>
+            <div className="text-2xl font-bold font-mono">{planOverview.totalUnits}</div>
             <p className="text-xs text-muted-foreground mt-1">交易单元</p>
           </CardContent>
         </Card>
@@ -90,8 +90,8 @@ const GenerationPlanning = () => {
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{planOverview.completed}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-2xl font-bold font-mono text-success">{planOverview.completed}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
               {((planOverview.completed / planOverview.totalUnits) * 100).toFixed(1)}% 完成率
             </p>
           </CardContent>
@@ -102,7 +102,7 @@ const GenerationPlanning = () => {
             <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{planOverview.pending}</div>
+            <div className="text-2xl font-bold font-mono text-warning">{planOverview.pending}</div>
             <p className="text-xs text-muted-foreground mt-1">待发布计划</p>
           </CardContent>
         </Card>

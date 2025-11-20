@@ -99,7 +99,7 @@ const SystemManagement = () => {
               >
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-primary">
+                    <span className="text-sm font-semibold font-mono text-primary">
                       {account.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>

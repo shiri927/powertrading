@@ -73,7 +73,7 @@ const Generation = () => {
             <CardTitle className="text-sm font-medium">总收益</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">
+            <div className="text-2xl font-bold font-mono text-success">
               ¥{(totalRevenue / 1000).toFixed(2)}M
             </div>
             <p className="text-xs text-muted-foreground mt-1">年累计</p>
@@ -85,10 +85,10 @@ const Generation = () => {
               <CardTitle className="text-sm font-medium">{item.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold font-mono">
                 ¥{(item.value / 1000).toFixed(2)}M
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
                 占比 {((item.value / totalRevenue) * 100).toFixed(1)}%
               </p>
             </CardContent>

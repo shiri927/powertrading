@@ -26,10 +26,10 @@ export const MetricCard = ({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold font-mono">{value}</div>
         {change && (
           <p className={cn(
-            "text-xs mt-1",
+            "text-xs mt-1 font-mono",
             changeType === "positive" && "text-success",
             changeType === "negative" && "text-destructive",
             changeType === "neutral" && "text-muted-foreground"
