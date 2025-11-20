@@ -10,6 +10,8 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { CalendarIcon, Download, ArrowUpDown, BarChart3, Table2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DateRangeDisplay } from "@/components/DateRangeDisplay";
+import { validateLoadValue } from "@/lib/data-validation";
 
 const tabs = [
   { id: "thermal-space", label: "火电竞价空间" },
@@ -31,9 +33,9 @@ const chartData = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 const tableData = [
-  { date: "2024-11-02", maxValue: 13618.830, maxTime: "00:00", minValue: -14799.940, minTime: "12:15", avgValue: 3493.746, avgTime: "全时段" },
-  { date: "2024-11-03", maxValue: 14120.450, maxTime: "01:30", minValue: -13890.120, minTime: "13:00", avgValue: 3650.890, avgTime: "全时段" },
-  { date: "2024-11-04", maxValue: 13890.670, maxTime: "02:15", minValue: -14200.340, minTime: "11:45", avgValue: 3580.120, avgTime: "全时段" },
+  { date: "2024-11-02", maxValue: 13618.830, maxTime: "00:00", minValue: 2800.120, minTime: "12:15", avgValue: 8209.475, avgTime: "全时段" },
+  { date: "2024-11-03", maxValue: 14120.450, maxTime: "01:30", minValue: 3200.450, minTime: "13:00", avgValue: 8660.450, avgTime: "全时段" },
+  { date: "2024-11-04", maxValue: 13890.670, maxTime: "02:15", minValue: 2950.780, minTime: "11:45", avgValue: 8420.725, avgTime: "全时段" },
 ];
 
 const MarketSupplyDemand = () => {
@@ -70,6 +72,13 @@ const MarketSupplyDemand = () => {
           市场供需平衡与分析
         </p>
       </div>
+
+      <DateRangeDisplay
+        startDate={new Date(2025, 10, 1)}
+        endDate={new Date(2025, 10, 20)}
+        lastUpdated={new Date()}
+        className="px-4 py-3 bg-muted/20 rounded-lg"
+      />
 
       <Card>
         <CardContent className="pt-6">

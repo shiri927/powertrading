@@ -16,6 +16,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from "recharts";
+import { DateRangeDisplay } from "@/components/DateRangeDisplay";
 
 // 月度收益数据
 const monthlyRevenue = [
@@ -56,6 +57,14 @@ const Generation = () => {
           多维度发电收益分析与趋势追踪
         </p>
       </div>
+
+      <DateRangeDisplay
+        startDate={new Date(2025, 0, 1)}
+        endDate={new Date(2025, 5, 30)}
+        lastUpdated={new Date()}
+        label="统计周期"
+        className="px-4 py-3 bg-muted/20 rounded-lg"
+      />
 
       {/* 收益概览 */}
       <div className="grid gap-4 md:grid-cols-4">

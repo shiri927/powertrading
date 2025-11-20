@@ -23,6 +23,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import { DateRangeDisplay } from "@/components/DateRangeDisplay";
 
 const revenueData = [
   { month: "Jan", midTerm: 4200, spot: 2400, total: 6600 },
@@ -53,6 +54,13 @@ const Dashboard = () => {
         </p>
       </div>
 
+      <DateRangeDisplay
+        startDate={new Date(2025, 10, 1)}
+        endDate={new Date(2025, 10, 20)}
+        lastUpdated={new Date()}
+        className="px-4 py-3 bg-muted/20 rounded-lg"
+      />
+
       {/* Tabs for Generation/Retail Side */}
       <Tabs defaultValue="generation" className="w-full">
         <TabsList>
@@ -69,6 +77,7 @@ const Dashboard = () => {
               change="较上月 +12.5%"
               changeType="positive"
               icon={DollarSign}
+              description="本月累计"
             />
             <MetricCard
               title="现货市场收益"
@@ -76,6 +85,7 @@ const Dashboard = () => {
               change="较上月 +8.3%"
               changeType="positive"
               icon={TrendingUp}
+              description="本月累计"
             />
             <MetricCard
               title="发电量"
@@ -83,6 +93,7 @@ const Dashboard = () => {
               change="较上月 +5.2%"
               changeType="positive"
               icon={Zap}
+              description="本月累计"
             />
             <MetricCard
               title="平均现货价格"
@@ -90,6 +101,7 @@ const Dashboard = () => {
               change="较上月 -2.1%"
               changeType="negative"
               icon={Clock}
+              description="本月平均"
             />
           </div>
 
@@ -236,6 +248,7 @@ const Dashboard = () => {
               change="较上月 +15.2%"
               changeType="positive"
               icon={DollarSign}
+              description="本月累计"
             />
             <MetricCard
               title="客户数量"
@@ -243,6 +256,7 @@ const Dashboard = () => {
               change="+125 新增客户"
               changeType="positive"
               icon={TrendingUp}
+              description="当前活跃"
             />
             <MetricCard
               title="总用电量"
@@ -250,6 +264,7 @@ const Dashboard = () => {
               change="较上月 +7.8%"
               changeType="positive"
               icon={Zap}
+              description="本月累计"
             />
             <MetricCard
               title="平均单位收益"
@@ -257,6 +272,7 @@ const Dashboard = () => {
               change="较上月 +3.5%"
               changeType="positive"
               icon={Clock}
+              description="本月平均"
             />
           </div>
 
