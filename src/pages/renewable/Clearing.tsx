@@ -209,17 +209,17 @@ const Clearing = () => {
         <CardContent>
           <div className="rounded-md border max-h-[500px] overflow-y-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10">
                 <TableRow className="bg-[#F1F8F4] hover:bg-[#F1F8F4]">
-                  <TableHead className="font-semibold text-xs">时段</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">日前出清电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">实时出清电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">日前电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">实时电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">日前出清电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">实时出清电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">日前电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right">实时电量</TableHead>
+                  <TableHead className="font-semibold text-xs bg-[#F1F8F4]">时段</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前出清电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时出清电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时电价</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前出清电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时出清电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前电量</TableHead>
+                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时电量</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
