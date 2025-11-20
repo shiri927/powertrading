@@ -40,6 +40,12 @@ import RetailSettlement from "./pages/retail/SettlementRetail";
 import RetailReview from "./pages/retail/Review";
 import TradingLedger from "./pages/retail/TradingLedger";
 
+// Retail Trading pages
+import CustomerManagement from "./pages/retail/trading/CustomerManagement";
+import EnergyManagement from "./pages/retail/trading/EnergyManagement";
+import PackageSimulation from "./pages/retail/trading/PackageSimulation";
+import ExecutionTracking from "./pages/retail/trading/ExecutionTracking";
+
 // Retail Decision pages
 import MediumLongTerm from "./pages/retail/decision/MediumLongTerm";
 import InterProvincial from "./pages/retail/decision/InterProvincial";
@@ -89,6 +95,10 @@ const App = () => (
             <Route path="/retail/decision/green-certificate" element={<GreenCertificate />} />
             <Route path="/retail/console" element={<RetailConsole />} />
             <Route path="/retail/trading" element={<RetailTrading />} />
+            <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
+            <Route path="/retail/trading/energy-management" element={<EnergyManagement />} />
+            <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
+            <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/load" element={<RetailLoad />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
