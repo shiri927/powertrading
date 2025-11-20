@@ -6,25 +6,729 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, Calendar as CalendarIcon, Download, Filter } from "lucide-react";
-import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Calendar as CalendarIcon, 
+  Download, 
+  Filter, 
+  ChevronRight, 
+  ChevronDown,
+  FileText,
+  DollarSign,
+  Zap,
+  TrendingUpIcon
+} from "lucide-react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart } from "recharts";
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  Area, 
+  AreaChart, 
+  ComposedChart 
+} from "recharts";
+import { cn } from "@/lib/utils";
 
-// 中长期策略复盘数据
-const generateMediumLongTermData = () => {
-  return Array.from({ length: 12 }, (_, i) => ({
-    month: `${i + 1}月`,
-    plannedVolume: 800 + Math.random() * 200,
-    actualVolume: 750 + Math.random() * 250,
-    plannedRevenue: 400 + Math.random() * 100,
-    actualRevenue: 380 + Math.random() * 120,
-    deviationRate: (Math.random() * 20 - 10).toFixed(2),
-  }));
+// ============= 数据结构定义 =============
+
+interface PositionContract {
+  id: string;
+  tradingUnit: string;
+  contractType: string;
+  startDate: string;
+  endDate: string;
+  contractVolume: number;
+  contractPrice: number;
+  totalValue: number;
+}
+
+interface TradingUnitNode {
+  id: string;
+  name: string;
+  type: 'group' | 'station' | 'unit';
+  children?: TradingUnitNode[];
+  contracts: PositionContract[];
+}
+
+interface TimeSeriesPosition {
+  time: string;
+  price: number;
+  volume: number;
+  revenue: number;
+}
+
+// ============= 模拟数据生成 =============
+
+const generateTradingUnitTree = (): TradingUnitNode[] => {
+  return [
+    {
+      id: '1',
+      name: '新庄厂/场站电池组合同',
+      type: 'station',
+      contracts: [],
+      children: [
+        {
+          id: '1-1',
+          name: '十二回路一期',
+          type: 'unit',
+          contracts: generateContracts('十二回路一期', 8),
+        },
+      ],
+    },
+    {
+      id: '2',
+      name: '达坂城厂/场站电池组合同',
+      type: 'station',
+      contracts: [],
+      children: [
+        {
+          id: '2-1',
+          name: '达坂城一期',
+          type: 'unit',
+          contracts: generateContracts('达坂城一期', 10),
+        },
+        {
+          id: '2-2',
+          name: '达坂城二期',
+          type: 'unit',
+          contracts: generateContracts('达坂城二期', 7),
+        },
+      ],
+    },
+    {
+      id: '3',
+      name: '叶青城厂/场站电池组合同',
+      type: 'station',
+      contracts: [],
+      children: [
+        {
+          id: '3-1',
+          name: '小草湖一期',
+          type: 'unit',
+          contracts: generateContracts('小草湖一期', 9),
+        },
+        {
+          id: '3-2',
+          name: '小草湖二期',
+          type: 'unit',
+          contracts: generateContracts('小草湖二期', 6),
+        },
+      ],
+    },
+    {
+      id: '4',
+      name: '新疆能建新能源有限公司',
+      type: 'unit',
+      contracts: generateContracts('新疆能建新能源有限公司', 12),
+    },
+  ];
 };
 
-// 省内现货复盘数据
+const generateContracts = (unitName: string, count: number): PositionContract[] => {
+  const types = ['月度交易', '旬交易', '日滚动交易'];
+  return Array.from({ length: count }, (_, i) => {
+    const volume = 500 + Math.random() * 1000;
+    const price = 250 + Math.random() * 150;
+    return {
+      id: `${unitName}-${i + 1}`,
+      tradingUnit: unitName,
+      contractType: types[Math.floor(Math.random() * types.length)],
+      startDate: `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-01`,
+      endDate: `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-28`,
+      contractVolume: volume,
+      contractPrice: price,
+      totalValue: volume * price,
+    };
+  });
+};
+
+const generateTimeSeriesData = (
+  selectedUnits: string[],
+  allNodes: TradingUnitNode[],
+  granularity: string,
+  dateRange: { from: Date | undefined; to: Date | undefined }
+): TimeSeriesPosition[] => {
+  const contracts = getAllContracts(selectedUnits, allNodes);
+  const points = granularity === '24point' ? 24 : granularity === 'hour' ? 96 : granularity === 'day' ? 30 : 12;
+  
+  return Array.from({ length: points }, (_, i) => {
+    const basePrice = 280 + Math.random() * 120;
+    const baseVolume = contracts.reduce((sum, c) => sum + c.contractVolume, 0) / points;
+    const volume = baseVolume * (0.8 + Math.random() * 0.4);
+    
+    let timeLabel = '';
+    if (granularity === '24point') {
+      timeLabel = `${String(i).padStart(2, '0')}:00`;
+    } else if (granularity === 'hour') {
+      const hour = Math.floor(i / 4);
+      const minute = (i % 4) * 15;
+      timeLabel = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    } else if (granularity === 'day') {
+      timeLabel = `${i + 1}日`;
+    } else {
+      timeLabel = `${i + 1}月`;
+    }
+    
+    return {
+      time: timeLabel,
+      price: basePrice,
+      volume: volume,
+      revenue: basePrice * volume,
+    };
+  });
+};
+
+const getAllContracts = (selectedIds: string[], nodes: TradingUnitNode[]): PositionContract[] => {
+  let contracts: PositionContract[] = [];
+  
+  const traverse = (node: TradingUnitNode) => {
+    if (selectedIds.includes(node.id)) {
+      contracts = [...contracts, ...node.contracts];
+    }
+    if (node.children) {
+      node.children.forEach(traverse);
+    }
+  };
+  
+  nodes.forEach(traverse);
+  return contracts;
+};
+
+// ============= 树形选择组件 =============
+
+const TradingUnitTree = ({ 
+  nodes, 
+  selectedIds, 
+  onSelectionChange 
+}: { 
+  nodes: TradingUnitNode[];
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+}) => {
+  const [expandedIds, setExpandedIds] = useState<string[]>(['1', '2', '3']);
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleCheckChange = (nodeId: string, checked: boolean) => {
+    const node = findNode(nodeId, nodes);
+    if (!node) return;
+
+    let newSelectedIds = [...selectedIds];
+    const allChildIds = getAllChildIds(node);
+    
+    if (checked) {
+      newSelectedIds = [...new Set([...newSelectedIds, nodeId, ...allChildIds])];
+    } else {
+      newSelectedIds = newSelectedIds.filter(id => 
+        id !== nodeId && !allChildIds.includes(id)
+      );
+    }
+    
+    onSelectionChange(newSelectedIds);
+  };
+
+  const findNode = (id: string, nodes: TradingUnitNode[]): TradingUnitNode | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNode(id, node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const getAllChildIds = (node: TradingUnitNode): string[] => {
+    let ids: string[] = [];
+    if (node.children) {
+      node.children.forEach(child => {
+        ids.push(child.id);
+        ids = [...ids, ...getAllChildIds(child)];
+      });
+    }
+    return ids;
+  };
+
+  const renderNode = (node: TradingUnitNode, level: number = 0) => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedIds.includes(node.id);
+    const isChecked = selectedIds.includes(node.id);
+
+    return (
+      <div key={node.id}>
+        <div 
+          className={cn(
+            "flex items-center gap-2 py-2 px-2 hover:bg-[#F8FBFA] rounded cursor-pointer",
+            level > 0 && "ml-6"
+          )}
+        >
+          {hasChildren ? (
+            <button
+              onClick={() => toggleExpand(node.id)}
+              className="flex-shrink-0 w-4 h-4"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+          ) : (
+            <div className="w-4" />
+          )}
+          
+          <Checkbox
+            checked={isChecked}
+            onCheckedChange={(checked) => handleCheckChange(node.id, checked as boolean)}
+            className="flex-shrink-0"
+          />
+          
+          <span className="text-sm flex-1">{node.name}</span>
+          
+          {node.contracts.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {node.contracts.length}
+            </Badge>
+          )}
+        </div>
+        
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children!.map(child => renderNode(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-1">
+      {nodes.map(node => renderNode(node))}
+    </div>
+  );
+};
+
+// ============= 详情表格对话框 =============
+
+const PositionDetailDialog = ({ 
+  contracts 
+}: { 
+  contracts: PositionContract[] 
+}) => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <FileText className="w-4 h-4 mr-2" />
+          查询持仓明细
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-6xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>持仓合同明细</DialogTitle>
+          <DialogDescription>
+            共 {contracts.length} 条持仓合同记录
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="h-[60vh]">
+          <Table>
+            <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
+              <TableRow>
+                <TableHead>合同编号</TableHead>
+                <TableHead>交易单元</TableHead>
+                <TableHead>合同类型</TableHead>
+                <TableHead>起始日期</TableHead>
+                <TableHead>结束日期</TableHead>
+                <TableHead className="text-right">合同电量(MWh)</TableHead>
+                <TableHead className="text-right">合同电价(元/MWh)</TableHead>
+                <TableHead className="text-right">总价值(元)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contracts.map((contract) => (
+                <TableRow key={contract.id} className="hover:bg-[#F8FBFA]">
+                  <TableCell className="font-mono">{contract.id}</TableCell>
+                  <TableCell>{contract.tradingUnit}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{contract.contractType}</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono">{contract.startDate}</TableCell>
+                  <TableCell className="font-mono">{contract.endDate}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    {contract.contractVolume.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {contract.contractPrice.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {contract.totalValue.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============= 中长期策略复盘主组件 =============
+
+const MediumLongTermReview = () => {
+  const [tradingUnitTree] = useState<TradingUnitNode[]>(generateTradingUnitTree());
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(['1-1', '2-1']);
+  const [contractType, setContractType] = useState<string>('all');
+  const [granularity, setGranularity] = useState<string>('day');
+  const [mergeDisplay, setMergeDisplay] = useState(true);
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: new Date(2025, 0, 1),
+    to: new Date(2025, 11, 31),
+  });
+
+  const selectedContracts = useMemo(() => {
+    const contracts = getAllContracts(selectedUnitIds, tradingUnitTree);
+    if (contractType === 'all') return contracts;
+    return contracts.filter(c => c.contractType === contractType);
+  }, [selectedUnitIds, contractType, tradingUnitTree]);
+
+  const timeSeriesData = useMemo(() => {
+    return generateTimeSeriesData(selectedUnitIds, tradingUnitTree, granularity, dateRange);
+  }, [selectedUnitIds, granularity, dateRange, tradingUnitTree]);
+
+  const stats = useMemo(() => {
+    const totalValue = selectedContracts.reduce((sum, c) => sum + c.totalValue, 0);
+    const totalVolume = selectedContracts.reduce((sum, c) => sum + c.contractVolume, 0);
+    const avgPrice = totalVolume > 0 ? totalValue / totalVolume : 0;
+    
+    return {
+      totalValue,
+      totalVolume,
+      avgPrice,
+    };
+  }, [selectedContracts]);
+
+  return (
+    <div className="flex gap-6">
+      {/* 左侧持仓总览 */}
+      <div className="w-[280px] flex-shrink-0">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">持仓总览</CardTitle>
+            <CardDescription className="text-xs">
+              选择交易单元查看持仓分析
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <TradingUnitTree
+                nodes={tradingUnitTree}
+                selectedIds={selectedUnitIds}
+                onSelectionChange={setSelectedUnitIds}
+              />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 右侧主区域 */}
+      <div className="flex-1 space-y-6">
+        {/* 筛选控制区 */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <Label className="text-xs mb-2 block">起止日期</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange.from && dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "yyyy-MM-dd", { locale: zhCN })} -{" "}
+                          {format(dateRange.to, "yyyy-MM-dd", { locale: zhCN })}
+                        </>
+                      ) : (
+                        <span>选择日期范围</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="range"
+                      selected={{ from: dateRange.from, to: dateRange.to }}
+                      onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                      locale={zhCN}
+                      numberOfMonths={2}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="w-[180px]">
+                <Label className="text-xs mb-2 block">合同类型</Label>
+                <Select value={contractType} onValueChange={setContractType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="月度交易">月度交易</SelectItem>
+                    <SelectItem value="旬交易">旬交易</SelectItem>
+                    <SelectItem value="日滚动交易">日滚动交易</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button>
+                <Filter className="w-4 h-4 mr-2" />
+                查询
+              </Button>
+
+              <PositionDetailDialog contracts={selectedContracts} />
+
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                导出
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 统计指标卡片 */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-[#00B04D]" />
+                持仓总电价
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono">
+                ¥{(stats.totalValue / 10000).toFixed(2)}万
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                已选中 {selectedContracts.length} 个合同
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#00B04D]" />
+                持仓总电量
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono">
+                {(stats.totalVolume / 1000).toFixed(2)}GWh
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                合计 {stats.totalVolume.toFixed(2)} MWh
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUpIcon className="w-4 h-4 text-[#00B04D]" />
+                持仓均价
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono">
+                {stats.avgPrice.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                元/MWh
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 图表区域标题 */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold">
+            场站交易单元选择：
+            <span className="text-[#00B04D] ml-2">
+              {selectedUnitIds.length > 0 
+                ? `已选 ${selectedUnitIds.length} 个单元` 
+                : '请在左侧选择交易单元'}
+            </span>
+          </h3>
+        </div>
+
+        {/* 图表控制区 */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Label className="text-sm">时间粒度：</Label>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'hour', label: '96点15分钟' },
+                    { value: 'day', label: '日' },
+                    { value: 'month', label: '月' },
+                    { value: '24point', label: '24点2时' },
+                  ].map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={granularity === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setGranularity(option.value)}
+                      className={cn(
+                        granularity === option.value && "bg-[#00B04D] hover:bg-[#00A86B]"
+                      )}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">合并展示</Label>
+                <Switch
+                  checked={mergeDisplay}
+                  onCheckedChange={setMergeDisplay}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 电价折线图 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">持仓电价分析</CardTitle>
+            <CardDescription className="text-xs">单位：元/MWh</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fontSize: 12 }}
+                  stroke="#888"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  stroke="#888"
+                  label={{ 
+                    value: '电价 (元/MWh)', 
+                    angle: -90, 
+                    position: 'insideLeft',
+                    style: { fontSize: 12 }
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid #E8F0EC',
+                    borderRadius: '6px'
+                  }}
+                  formatter={(value: number) => [`${value.toFixed(2)} 元/MWh`, '电价']}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: 12 }}
+                  iconType="line"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="price" 
+                  stroke="#00B04D" 
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#00B04D' }}
+                  activeDot={{ r: 5 }}
+                  name="持仓电价"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* 电量面积图 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">持仓电量分析</CardTitle>
+            <CardDescription className="text-xs">单位：MWh</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fontSize: 12 }}
+                  stroke="#888"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  stroke="#888"
+                  label={{ 
+                    value: '电量 (MWh)', 
+                    angle: -90, 
+                    position: 'insideLeft',
+                    style: { fontSize: 12 }
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid #E8F0EC',
+                    borderRadius: '6px'
+                  }}
+                  formatter={(value: number) => [`${value.toFixed(2)} MWh`, '电量']}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: 12 }}
+                  iconType="rect"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="volume" 
+                  stroke="#00B04D" 
+                  strokeWidth={2}
+                  fill="#00B04D"
+                  fillOpacity={0.3}
+                  name="持仓电量"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// ============= 省内现货复盘数据 =============
+
 const generateIntraProvincialData = () => {
   return Array.from({ length: 30 }, (_, i) => ({
     date: `${i + 1}日`,
@@ -36,7 +740,8 @@ const generateIntraProvincialData = () => {
   }));
 };
 
-// 省间现货复盘数据
+// ============= 省间现货复盘数据 =============
+
 const generateInterProvincialData = () => {
   return Array.from({ length: 30 }, (_, i) => ({
     date: `${i + 1}日`,
@@ -48,26 +753,17 @@ const generateInterProvincialData = () => {
   }));
 };
 
+// ============= 主页面组件 =============
+
 const Review = () => {
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
-  });
   const [activeTab, setActiveTab] = useState("medium-long-term");
 
-  const mediumLongTermData = generateMediumLongTermData();
   const intraProvincialData = generateIntraProvincialData();
   const interProvincialData = generateInterProvincialData();
 
-  // 计算统计指标
+  // 简化的省内/省间统计
   const calculateStats = (data: any[], type: string) => {
-    if (type === "medium-long-term") {
-      const totalPlanned = data.reduce((sum, item) => sum + item.plannedVolume, 0);
-      const totalActual = data.reduce((sum, item) => sum + item.actualVolume, 0);
-      const avgDeviation = data.reduce((sum, item) => sum + parseFloat(item.deviationRate), 0) / data.length;
-      const totalRevenue = data.reduce((sum, item) => sum + item.actualRevenue, 0);
-      return { totalPlanned, totalActual, avgDeviation, totalRevenue };
-    } else if (type === "intra-provincial") {
+    if (type === "intra-provincial") {
       const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
       const avgPriceDeviation = data.reduce((sum, item) => sum + Math.abs(item.predictedPrice - item.actualPrice), 0) / data.length;
       const totalClearingVolume = data.reduce((sum, item) => sum + item.clearingVolume, 0);
@@ -82,290 +778,87 @@ const Review = () => {
     }
   };
 
+  const intraStats = calculateStats(intraProvincialData, "intra-provincial");
+  const interStats = calculateStats(interProvincialData, "inter-provincial");
+
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">复盘分析</h1>
+        <h1 className="text-3xl font-bold">复盘分析</h1>
         <p className="text-muted-foreground mt-2">
-          交易策略复盘与收益优化分析
+          新能源发电交易策略复盘与收益优化
         </p>
       </div>
 
-      {/* 筛选控制区 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-end gap-4 flex-wrap">
-            <div className="space-y-2">
-              <Label className="text-sm">交易中心</Label>
-              <Select defaultValue="shanxi">
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="shanxi">山西电力交易中心</SelectItem>
-                  <SelectItem value="shandong">山东电力交易中心</SelectItem>
-                  <SelectItem value="zhejiang">浙江电力交易中心</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">交易单元</Label>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部单元</SelectItem>
-                  <SelectItem value="unit1">交易单元1</SelectItem>
-                  <SelectItem value="unit2">交易单元2</SelectItem>
-                  <SelectItem value="unit3">交易单元3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">时间范围</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-64 justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "PPP", { locale: zhCN })} -{" "}
-                          {format(dateRange.to, "PPP", { locale: zhCN })}
-                        </>
-                      ) : (
-                        format(dateRange.from, "PPP", { locale: zhCN })
-                      )
-                    ) : (
-                      <span>选择日期范围</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={(range) => setDateRange(range as any)}
-                    numberOfMonths={2}
-                    locale={zhCN}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <Button>
-              <Filter className="h-4 w-4 mr-2" />
-              查询
-            </Button>
-
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              导出报告
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tab切换区 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-[#F1F8F4]">
           <TabsTrigger value="medium-long-term">中长期策略复盘</TabsTrigger>
           <TabsTrigger value="intra-provincial">省内现货复盘</TabsTrigger>
           <TabsTrigger value="inter-provincial">省间现货复盘</TabsTrigger>
         </TabsList>
 
-        {/* 中长期策略复盘 */}
-        <TabsContent value="medium-long-term" className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>计划电量(MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(mediumLongTermData, "medium-long-term").totalPlanned.toFixed(0)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>实际电量(MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(mediumLongTermData, "medium-long-term").totalActual.toFixed(0)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>平均偏差率</CardDescription>
-                <CardTitle className="text-2xl font-mono flex items-center gap-2">
-                  {calculateStats(mediumLongTermData, "medium-long-term").avgDeviation.toFixed(2)}%
-                  {calculateStats(mediumLongTermData, "medium-long-term").avgDeviation > 0 ? (
-                    <TrendingUp className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-green-500" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>累计收益(万元)</CardDescription>
-                <CardTitle className="text-2xl font-mono text-[#00B04D]">
-                  {calculateStats(mediumLongTermData, "medium-long-term").totalRevenue.toFixed(0)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>月度执行情况对比</CardTitle>
-              <CardDescription>计划电量与实际电量对比分析</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart data={mediumLongTermData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                    labelStyle={{ color: '#111827', fontWeight: 600 }}
-                  />
-                  <Legend />
-                  <Bar dataKey="plannedVolume" name="计划电量(MWh)" fill="#94A3B8" />
-                  <Bar dataKey="actualVolume" name="实际电量(MWh)" fill="#00B04D" />
-                  <Line type="monotone" dataKey="deviationRate" name="偏差率(%)" stroke="#EF4444" strokeWidth={2} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>收益分析</CardTitle>
-              <CardDescription>计划收益与实际收益对比</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={mediumLongTermData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
-                  <Legend />
-                  <Area type="monotone" dataKey="plannedRevenue" name="计划收益(万元)" stroke="#94A3B8" fill="#94A3B8" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="actualRevenue" name="实际收益(万元)" stroke="#00B04D" fill="#00B04D" fillOpacity={0.6} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>详细数据表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border max-h-[400px] overflow-y-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                    <tr className="border-b">
-                      <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-sm">月份</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">计划电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">实际电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">偏差率(%)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">计划收益(万元)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">实际收益(万元)</th>
-                      <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-sm">执行状态</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mediumLongTermData.map((row, index) => (
-                      <tr key={index} className="border-b hover:bg-[#F8FBFA] transition-colors">
-                        <td className="p-4 text-sm">{row.month}</td>
-                        <td className="p-4 text-sm font-mono text-right">{row.plannedVolume.toFixed(2)}</td>
-                        <td className="p-4 text-sm font-mono text-right">{row.actualVolume.toFixed(2)}</td>
-                        <td className="p-4 text-sm font-mono text-right">
-                          <span className={parseFloat(row.deviationRate) > 0 ? 'text-red-600' : 'text-green-600'}>
-                            {row.deviationRate}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm font-mono text-right">{row.plannedRevenue.toFixed(2)}</td>
-                        <td className="p-4 text-sm font-mono text-right">{row.actualRevenue.toFixed(2)}</td>
-                        <td className="p-4 text-center">
-                          <Badge variant={Math.abs(parseFloat(row.deviationRate)) < 5 ? "default" : "secondary"}>
-                            {Math.abs(parseFloat(row.deviationRate)) < 5 ? "正常" : "偏差较大"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="medium-long-term" className="mt-6">
+          <MediumLongTermReview />
         </TabsContent>
 
-        {/* 省内现货复盘 */}
-        <TabsContent value="intra-provincial" className="space-y-6">
+        <TabsContent value="intra-provincial" className="mt-6 space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>累计收益(元)</CardDescription>
-                <CardTitle className="text-2xl font-mono text-[#00B04D]">
-                  {calculateStats(intraProvincialData, "intra-provincial").totalRevenue.toFixed(0)}
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">总收益</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  ¥{(intraStats.totalRevenue / 10000).toFixed(2)}万
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>平均价格偏差(元/MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(intraProvincialData, "intra-provincial").avgPriceDeviation.toFixed(2)}
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">出清率</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {intraStats.clearingRate.toFixed(1)}%
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>出清电量(MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(intraProvincialData, "intra-provincial").totalClearingVolume.toFixed(0)}
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">出清总电量</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {intraStats.totalClearingVolume.toFixed(0)}MWh
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>出清率</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(intraProvincialData, "intra-provincial").clearingRate.toFixed(2)}%
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">平均价差</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {intraStats.avgPriceDeviation.toFixed(2)}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>价格预测准确度分析</CardTitle>
-              <CardDescription>预测电价与实际出清价对比</CardDescription>
+              <CardTitle>省内现货价格对比</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={intraProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="predictedPrice" name="预测电价(元/MWh)" stroke="#94A3B8" strokeWidth={2} />
-                  <Line type="monotone" dataKey="actualPrice" name="实际电价(元/MWh)" stroke="#00B04D" strokeWidth={2} />
+                  <Line type="monotone" dataKey="predictedPrice" stroke="#00B04D" name="预测价格" strokeWidth={2} />
+                  <Line type="monotone" dataKey="actualPrice" stroke="#FF6B6B" name="实际价格" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -373,147 +866,82 @@ const Review = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>申报与出清电量对比</CardTitle>
-              <CardDescription>每日申报电量与实际出清电量</CardDescription>
+              <CardTitle>出清电量分析</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={intraProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
                   <Legend />
-                  <Bar dataKey="bidVolume" name="申报电量(MWh)" fill="#94A3B8" />
-                  <Bar dataKey="clearingVolume" name="出清电量(MWh)" fill="#00B04D" />
+                  <Bar dataKey="bidVolume" fill="#00B04D" name="申报电量" />
+                  <Bar dataKey="clearingVolume" fill="#00A86B" name="出清电量" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>收益趋势</CardTitle>
-              <CardDescription>每日收益变化趋势</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={intraProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
-                  <Legend />
-                  <Area type="monotone" dataKey="revenue" name="收益(元)" stroke="#00B04D" fill="#00B04D" fillOpacity={0.6} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>详细数据表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border max-h-[400px] overflow-y-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                    <tr className="border-b">
-                      <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-sm">日期</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">预测电价(元/MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">实际电价(元/MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">申报电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">出清电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">收益(元)</th>
-                      <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-sm">出清率</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {intraProvincialData.map((row, index) => {
-                      const clearingRate = (row.clearingVolume / row.bidVolume * 100);
-                      return (
-                        <tr key={index} className="border-b hover:bg-[#F8FBFA] transition-colors">
-                          <td className="p-4 text-sm">{row.date}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.predictedPrice.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.actualPrice.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.bidVolume.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.clearingVolume.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right text-[#00B04D]">{row.revenue.toFixed(2)}</td>
-                          <td className="p-4 text-center">
-                            <Badge variant={clearingRate > 80 ? "default" : "secondary"}>
-                              {clearingRate.toFixed(1)}%
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
-        {/* 省间现货复盘 */}
-        <TabsContent value="inter-provincial" className="space-y-6">
+        <TabsContent value="inter-provincial" className="mt-6 space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>累计盈亏(元)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  <span className={calculateStats(interProvincialData, "inter-provincial").totalProfit > 0 ? 'text-[#00B04D]' : 'text-red-600'}>
-                    {calculateStats(interProvincialData, "inter-provincial").totalProfit.toFixed(0)}
-                  </span>
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">总利润</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  ¥{(interStats.totalProfit / 10000).toFixed(2)}万
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>出清电量(MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(interProvincialData, "inter-provincial").totalClearingVolume.toFixed(0)}
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">出清率</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {interStats.clearingRate.toFixed(1)}%
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>平均价格偏差(元/MWh)</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(interProvincialData, "inter-provincial").avgPriceDeviation.toFixed(2)}
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">出清总电量</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {interStats.totalClearingVolume.toFixed(0)}MWh
+                </div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>出清率</CardDescription>
-                <CardTitle className="text-2xl font-mono">
-                  {calculateStats(interProvincialData, "inter-provincial").clearingRate.toFixed(2)}%
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">平均价差</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {interStats.avgPriceDeviation.toFixed(2)}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>申报价格与出清价格对比</CardTitle>
-              <CardDescription>每日申报价格与实际出清价格走势</CardDescription>
+              <CardTitle>省间现货价格对比</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={interProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="bidPrice" name="申报价格(元/MWh)" stroke="#94A3B8" strokeWidth={2} />
-                  <Line type="monotone" dataKey="clearingPrice" name="出清价格(元/MWh)" stroke="#00B04D" strokeWidth={2} />
+                  <Line type="monotone" dataKey="bidPrice" stroke="#00B04D" name="申报价格" strokeWidth={2} />
+                  <Line type="monotone" dataKey="clearingPrice" stroke="#FF6B6B" name="出清价格" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -521,91 +949,21 @@ const Review = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>申报与出清电量对比</CardTitle>
-              <CardDescription>每日申报电量与实际出清电量</CardDescription>
+              <CardTitle>出清电量与利润分析</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={interProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
+              <ResponsiveContainer width="100%" height={350}>
+                <ComposedChart data={interProvincialData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                  <XAxis dataKey="date" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip />
                   <Legend />
-                  <Bar dataKey="bidVolume" name="申报电量(MWh)" fill="#94A3B8" />
-                  <Bar dataKey="clearingVolume" name="出清电量(MWh)" fill="#00B04D" />
-                </BarChart>
+                  <Bar yAxisId="left" dataKey="clearingVolume" fill="#00B04D" name="出清电量" />
+                  <Line yAxisId="right" type="monotone" dataKey="profit" stroke="#FF6B6B" name="利润" strokeWidth={2} />
+                </ComposedChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>盈亏分析</CardTitle>
-              <CardDescription>每日盈亏情况</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={interProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="profit" name="盈亏(元)" fill="#00B04D" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>详细数据表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border max-h-[400px] overflow-y-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                    <tr className="border-b">
-                      <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-sm">日期</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">申报价格(元/MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">出清价格(元/MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">申报电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">出清电量(MWh)</th>
-                      <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-sm">盈亏(元)</th>
-                      <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-sm">状态</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {interProvincialData.map((row, index) => {
-                      const profit = parseFloat(row.profit);
-                      return (
-                        <tr key={index} className="border-b hover:bg-[#F8FBFA] transition-colors">
-                          <td className="p-4 text-sm">{row.date}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.bidPrice.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.clearingPrice.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.bidVolume.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">{row.clearingVolume.toFixed(2)}</td>
-                          <td className="p-4 text-sm font-mono text-right">
-                            <span className={profit > 0 ? 'text-[#00B04D]' : 'text-red-600'}>
-                              {profit.toFixed(2)}
-                            </span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <Badge variant={profit > 0 ? "default" : "destructive"}>
-                              {profit > 0 ? "盈利" : "亏损"}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
