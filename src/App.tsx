@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import MarketIntelligence from "./pages/MarketIntelligence";
 import SystemManagement from "./pages/SystemManagement";
 import NotFound from "./pages/NotFound";
 
@@ -13,8 +12,16 @@ import NotFound from "./pages/NotFound";
 import SupplyDemand from "./pages/forecast/SupplyDemand";
 import SpotPrice from "./pages/PricePrediction";
 import PriceDifference from "./pages/forecast/PriceDifference";
-import Weather from "./pages/WeatherIntelligence";
 import TransmissionPrice from "./pages/forecast/TransmissionPrice";
+
+// Market Fundamentals pages
+import MarketQuotes from "./pages/market-fundamentals/MarketQuotes";
+import MarketClearing from "./pages/market-fundamentals/MarketClearing";
+import MarketSupplyDemand from "./pages/market-fundamentals/MarketSupplyDemand";
+import WeatherData from "./pages/market-fundamentals/WeatherData";
+import GridSystem from "./pages/market-fundamentals/GridSystem";
+import EnergyQuotes from "./pages/market-fundamentals/EnergyQuotes";
+import NewsPolicy from "./pages/market-fundamentals/NewsPolicy";
 
 // Revenue pages
 import GenerationRevenue from "./pages/revenue/Generation";
@@ -59,7 +66,6 @@ const App = () => (
             <Route path="/forecast/supply-demand" element={<SupplyDemand />} />
             <Route path="/forecast/spot-price" element={<SpotPrice />} />
             <Route path="/forecast/price-difference" element={<PriceDifference />} />
-            <Route path="/forecast/weather" element={<Weather />} />
             <Route path="/forecast/transmission-price" element={<TransmissionPrice />} />
             
             {/* Price Trend Routes */}
@@ -67,8 +73,14 @@ const App = () => (
             <Route path="/price-trend/decision-analysis" element={<DecisionAnalysis />} />
             <Route path="/price-trend/spot-analysis" element={<SpotAnalysis />} />
             
-            {/* Market Intelligence */}
-            <Route path="/market" element={<MarketIntelligence />} />
+            {/* Market Fundamentals Routes */}
+            <Route path="/market-fundamentals/quotes" element={<MarketQuotes />} />
+            <Route path="/market-fundamentals/clearing" element={<MarketClearing />} />
+            <Route path="/market-fundamentals/supply-demand" element={<MarketSupplyDemand />} />
+            <Route path="/market-fundamentals/weather" element={<WeatherData />} />
+            <Route path="/market-fundamentals/grid" element={<GridSystem />} />
+            <Route path="/market-fundamentals/energy" element={<EnergyQuotes />} />
+            <Route path="/market-fundamentals/news-policy" element={<NewsPolicy />} />
             
             {/* Renewable Energy Routes */}
             <Route path="/renewable/base-data" element={<RenewableBaseData />} />
