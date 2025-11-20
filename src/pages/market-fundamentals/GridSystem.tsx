@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowUpDown, Play, Pause } from "lucide-react";
+import gridStructureMap from "@/assets/grid-structure-map.png";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
@@ -433,6 +434,8 @@ const GridSystem = () => {
     switch (activeTab) {
       case "maintenance":
         return "查看输变电设备检修计划和临时检修信息";
+      case "structure":
+        return "展示全省网架图信息，包括潮流、热力、断面等多种模式";
       case "constraint":
         return "监测电网断面约束和传输容量限制";
       case "balance":
@@ -462,8 +465,9 @@ const GridSystem = () => {
             setActiveTab(value);
             resetPage();
           }}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="maintenance">输变电设备检修</TabsTrigger>
+              <TabsTrigger value="structure">网架结构</TabsTrigger>
               <TabsTrigger value="constraint">断面约束</TabsTrigger>
               <TabsTrigger value="balance">省内电力平衡裕度</TabsTrigger>
               <TabsTrigger value="capacity">通道容量</TabsTrigger>
@@ -659,6 +663,236 @@ const GridSystem = () => {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </TabsContent>
+
+            {/* 网架结构 */}
+            <TabsContent value="structure" className="mt-6">
+              {/* 查询筛选区域 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* 日期选择 */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange.from ? (
+                        format(dateRange.from, "yyyy-MM-dd", { locale: zhCN })
+                      ) : (
+                        <span>选择日期</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateRange.from}
+                      onSelect={(date) => {
+                        if (date) {
+                          setDateRange({ from: date, to: date });
+                          resetPage();
+                        }
+                      }}
+                      locale={zhCN}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                {/* 节点/线路/断面搜索 */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="搜索节点、线路、断面"
+                    value={searchKeyword}
+                    onChange={(e) => {
+                      setSearchKeyword(e.target.value);
+                      resetPage();
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+
+                {/* 通道/属地选择 */}
+                <Select value={channelLocation} onValueChange={(value) => {
+                  setChannelLocation(value);
+                  resetPage();
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择通道/属地" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="全部">全部</SelectItem>
+                    <SelectItem value="临汾">临汾</SelectItem>
+                    <SelectItem value="太原">太原</SelectItem>
+                    <SelectItem value="大同">大同</SelectItem>
+                    <SelectItem value="晋城">晋城</SelectItem>
+                    <SelectItem value="长治">长治</SelectItem>
+                    <SelectItem value="运城">运城</SelectItem>
+                    <SelectItem value="朔州">朔州</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 地图展示区域 */}
+              <div className="relative rounded-lg border bg-background overflow-hidden">
+                <div className="relative h-[600px]">
+                  {/* 地图图片 */}
+                  <img 
+                    src={gridStructureMap} 
+                    alt="电网网架结构图" 
+                    className="w-full h-full object-contain"
+                  />
+                  
+                  {/* 右侧控制面板 */}
+                  <div className="absolute right-4 top-4 space-y-2 bg-background/95 backdrop-blur-sm border rounded-lg p-3 shadow-lg">
+                    <div className="text-sm font-medium mb-2">展示模式</div>
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        潮流
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        热力
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        断面
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 底部播放控制 */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-background/95 backdrop-blur-sm border rounded-lg p-2 shadow-lg">
+                    <Button variant="ghost" size="sm">
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <div className="text-sm text-muted-foreground px-2">
+                      2025-01-20 00:00
+                    </div>
+                  </div>
+                </div>
+
+                {/* 图例说明 */}
+                <div className="border-t p-4 bg-muted/30">
+                  <div className="flex flex-wrap items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span>检修中</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      <span>断面越限预警</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-0.5 bg-green-500"></div>
+                      <span>正常潮流</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-0.5 bg-orange-500"></div>
+                      <span>高负荷潮流</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-pink-500 border-2 border-pink-300"></div>
+                      <span>关键节点</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 节点信息表格 */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">节点详细信息</h3>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">序号</TableHead>
+                        <TableHead className="w-[150px]">节点名称</TableHead>
+                        <TableHead className="w-[100px]">电压等级</TableHead>
+                        <TableHead className="w-[120px]">节点价格(元/MWh)</TableHead>
+                        <TableHead className="w-[120px]">潮流(MW)</TableHead>
+                        <TableHead className="w-[100px]">状态</TableHead>
+                        <TableHead className="min-w-[200px]">备注</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>1</TableCell>
+                        <TableCell>临汾变电站</TableCell>
+                        <TableCell>500kV</TableCell>
+                        <TableCell>285.6</TableCell>
+                        <TableCell>1250</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-300">
+                            正常
+                          </Badge>
+                        </TableCell>
+                        <TableCell>主网枢纽节点</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>2</TableCell>
+                        <TableCell>太原北变</TableCell>
+                        <TableCell>220kV</TableCell>
+                        <TableCell>292.3</TableCell>
+                        <TableCell>890</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-300">
+                            高负荷
+                          </Badge>
+                        </TableCell>
+                        <TableCell>负荷较高，需关注</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>3</TableCell>
+                        <TableCell>大同东变</TableCell>
+                        <TableCell>220kV</TableCell>
+                        <TableCell>278.9</TableCell>
+                        <TableCell>760</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-300">
+                            正常
+                          </Badge>
+                        </TableCell>
+                        <TableCell>运行平稳</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>4</TableCell>
+                        <TableCell>晋城变</TableCell>
+                        <TableCell>110kV</TableCell>
+                        <TableCell>295.7</TableCell>
+                        <TableCell>420</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-300">
+                            检修中
+                          </Badge>
+                        </TableCell>
+                        <TableCell>计划检修，预计1月25日恢复</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>5</TableCell>
+                        <TableCell>长治变</TableCell>
+                        <TableCell>500kV</TableCell>
+                        <TableCell>283.4</TableCell>
+                        <TableCell>1100</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-300">
+                            正常
+                          </Badge>
+                        </TableCell>
+                        <TableCell>重要枢纽站点</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
