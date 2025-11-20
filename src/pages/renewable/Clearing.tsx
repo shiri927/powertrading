@@ -207,9 +207,9 @@ const Clearing = () => {
           <CardTitle className="text-lg">详细数据</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border max-h-[500px] overflow-y-auto">
+          <div className="rounded-md border max-h-[500px] overflow-y-auto relative">
             <Table>
-              <TableHeader className="sticky top-0 z-10">
+              <TableHeader className="sticky top-0 z-10 bg-[#F1F8F4]">
                 <TableRow className="bg-[#F1F8F4] hover:bg-[#F1F8F4]">
                   <TableHead className="font-semibold text-xs bg-[#F1F8F4]">时段</TableHead>
                   <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前出清电价</TableHead>
