@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 // 生成价格数据
@@ -208,52 +207,52 @@ const Clearing = () => {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border max-h-[500px] overflow-y-auto relative">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-[#F1F8F4]">
-                <TableRow className="bg-[#F1F8F4] hover:bg-[#F1F8F4]">
-                  <TableHead className="font-semibold text-xs bg-[#F1F8F4]">时段</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前出清电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时出清电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时电价</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前出清电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时出清电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">日前电量</TableHead>
-                  <TableHead className="font-semibold text-xs text-right bg-[#F1F8F4]">实时电量</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <table className="w-full caption-bottom text-sm">
+              <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                <tr className="border-b bg-[#F1F8F4]">
+                  <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">时段</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电价</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电价</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电价</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电价</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电量</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电量</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电量</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电量</th>
+                </tr>
+              </thead>
+              <tbody>
                 {tableData.map((row, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{row.time}</TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                  <tr key={index} className="border-b transition-colors hover:bg-[#F8FBFA]">
+                    <td className="p-4 align-middle font-medium">{row.time}</td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.dayAheadClearPrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.realTimeClearPrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.dayAheadPrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.realTimePrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.dayAheadClearVolume.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.realTimeClearVolume.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.dayAheadVolume.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="font-mono text-right text-xs">
+                    </td>
+                    <td className="p-4 align-middle text-right font-mono text-xs">
                       {row.realTimeVolume.toFixed(0)}
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
