@@ -63,7 +63,7 @@ const navigation = [
     ]
   },
   { 
-    name: "售电业务", 
+    name: "售电业务侧", 
     icon: ShoppingCart,
     children: [
       { name: "基础数据", href: "/retail/base-data" },
