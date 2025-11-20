@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, TrendingUp, Settings, Lightbulb } from "lucide-react";
 import { AIForecastTab } from "./decision/AIForecastTab";
 import { StrategyConfigTab } from "./decision/StrategyConfigTab";
+import { BacktestTab } from "./decision/BacktestTab";
 
 const Decision = () => {
   return (
@@ -42,11 +43,7 @@ const Decision = () => {
         </TabsContent>
 
         <TabsContent value="backtest">
-          <div className="text-center py-20 text-muted-foreground">
-            <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">回测与模拟</p>
-            <p className="text-sm mt-2">Phase 3 开发中...</p>
-          </div>
+          <BacktestTab />
         </TabsContent>
 
         <TabsContent value="recommendation">
