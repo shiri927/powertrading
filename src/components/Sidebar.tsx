@@ -62,7 +62,16 @@ const navigation = [
         ]
       },
       { name: "交易操作台", href: "/retail/console" },
-      { name: "零售交易", href: "/retail/trading" },
+      { 
+        name: "零售交易",
+        icon: ShoppingCart,
+        children: [
+          { name: "客户管理", href: "/retail/trading/customer-management" },
+          { name: "用能管理", href: "/retail/trading/energy-management" },
+          { name: "套餐模拟计算", href: "/retail/trading/package-simulation" },
+          { name: "零售执行情况追踪", href: "/retail/trading/execution-tracking" },
+        ]
+      },
       { name: "用电负荷管理", href: "/retail/load" },
       { name: "出清与结算", href: "/retail/settlement" },
       { name: "复盘分析", href: "/retail/review" },
