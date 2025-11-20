@@ -898,6 +898,641 @@ const aggregateIntraData = (
 
 // ============= 省间现货复盘数据 =============
 
+// ============= 省间现货复盘数据结构 =============
+
+interface InterSpotReviewData {
+  date: string;
+  timePoint: string;
+  tradingUnit: string;
+  dayAheadVolume: number;
+  dayAheadPrice: number;
+  dayAheadRevenue: number;
+  intraDayVolume: number;
+  intraDayPrice: number;
+  intraDayRevenue: number;
+  intraProvincialRealTimePrice: number;
+  profitLossDiff: number;
+}
+
+interface InterTreeNode {
+  key: string;
+  label: string;
+  level: number;
+  dayAheadVolume: number;
+  dayAheadPrice: number;
+  intraDayVolume: number;
+  intraDayPrice: number;
+  intraProvincialPrice: number;
+  profitLossDiff: number;
+  children?: InterTreeNode[];
+}
+
+type InterAggregationDimension = 'tradingUnit' | 'date' | 'timePoint';
+
+// ============= 省间现货复盘数据生成 =============
+
+const generateInterSpotReviewData = (
+  startDate: string,
+  endDate: string,
+  tradingUnits: string[],
+  granularity: '24' | '96'
+): InterSpotReviewData[] => {
+  const data: InterSpotReviewData[] = [];
+  const dates = ['20240506', '20240516', '20240520'];
+  const sampleTimePoints = ['1015', '1030', '1045', '1100', '1115', '1130', '1145', '1200'];
+  
+  dates.forEach(date => {
+    tradingUnits.forEach(unit => {
+      sampleTimePoints.forEach(timePoint => {
+        const dayAheadVolume = 0.1 + Math.random() * 0.4;
+        const intraDayVolume = 0.05 + Math.random() * 0.25;
+        const dayAheadPrice = 180 + Math.random() * 80;
+        const intraDayPrice = 200 + Math.random() * 60;
+        const intraProvincialPrice = 190 + Math.random() * 70;
+        
+        const dayAheadRevenue = dayAheadVolume * dayAheadPrice;
+        const intraDayRevenue = intraDayVolume * intraDayPrice;
+        const interRevenue = dayAheadRevenue + intraDayRevenue;
+        const assumedIntraRevenue = (dayAheadVolume + intraDayVolume) * intraProvincialPrice;
+        const profitLossDiff = interRevenue - assumedIntraRevenue;
+        
+        data.push({
+          date,
+          timePoint,
+          tradingUnit: unit,
+          dayAheadVolume,
+          dayAheadPrice,
+          dayAheadRevenue,
+          intraDayVolume,
+          intraDayPrice,
+          intraDayRevenue,
+          intraProvincialRealTimePrice: intraProvincialPrice,
+          profitLossDiff,
+        });
+      });
+    });
+  });
+  
+  return data;
+};
+
+const buildInterTreeData = (
+  rawData: InterSpotReviewData[],
+  dimension: InterAggregationDimension
+): InterTreeNode[] => {
+  const totalNode: InterTreeNode = {
+    key: 'total',
+    label: '合计',
+    level: 0,
+    dayAheadVolume: 0,
+    intraDayVolume: 0,
+    dayAheadPrice: 0,
+    intraDayPrice: 0,
+    intraProvincialPrice: 0,
+    profitLossDiff: 0,
+  };
+  
+  let totalDayAheadRevenue = 0;
+  let totalIntraDayRevenue = 0;
+  let totalIntraProvincialCost = 0;
+  
+  rawData.forEach(item => {
+    totalNode.dayAheadVolume += item.dayAheadVolume;
+    totalNode.intraDayVolume += item.intraDayVolume;
+    totalNode.profitLossDiff += item.profitLossDiff;
+    totalDayAheadRevenue += item.dayAheadRevenue;
+    totalIntraDayRevenue += item.intraDayRevenue;
+    totalIntraProvincialCost += (item.dayAheadVolume + item.intraDayVolume) * item.intraProvincialRealTimePrice;
+  });
+  
+  totalNode.dayAheadPrice = totalNode.dayAheadVolume > 0 ? totalDayAheadRevenue / totalNode.dayAheadVolume : 0;
+  totalNode.intraDayPrice = totalNode.intraDayVolume > 0 ? totalIntraDayRevenue / totalNode.intraDayVolume : 0;
+  totalNode.intraProvincialPrice = (totalNode.dayAheadVolume + totalNode.intraDayVolume) > 0 
+    ? totalIntraProvincialCost / (totalNode.dayAheadVolume + totalNode.intraDayVolume) : 0;
+  
+  if (dimension === 'date') {
+    const grouped = rawData.reduce((acc, item) => {
+      if (!acc[item.date]) acc[item.date] = [];
+      acc[item.date].push(item);
+      return acc;
+    }, {} as Record<string, InterSpotReviewData[]>);
+    
+    const children: InterTreeNode[] = Object.entries(grouped).map(([date, items]) => {
+      let dateDayAheadRevenue = 0;
+      let dateIntraDayRevenue = 0;
+      let dateIntraProvincialCost = 0;
+      
+      const dateNode: InterTreeNode = {
+        key: date,
+        label: date,
+        level: 1,
+        dayAheadVolume: items.reduce((sum, item) => sum + item.dayAheadVolume, 0),
+        intraDayVolume: items.reduce((sum, item) => sum + item.intraDayVolume, 0),
+        profitLossDiff: items.reduce((sum, item) => sum + item.profitLossDiff, 0),
+        dayAheadPrice: 0,
+        intraDayPrice: 0,
+        intraProvincialPrice: 0,
+      };
+      
+      items.forEach(item => {
+        dateDayAheadRevenue += item.dayAheadRevenue;
+        dateIntraDayRevenue += item.intraDayRevenue;
+        dateIntraProvincialCost += (item.dayAheadVolume + item.intraDayVolume) * item.intraProvincialRealTimePrice;
+      });
+      
+      dateNode.dayAheadPrice = dateNode.dayAheadVolume > 0 ? dateDayAheadRevenue / dateNode.dayAheadVolume : 0;
+      dateNode.intraDayPrice = dateNode.intraDayVolume > 0 ? dateIntraDayRevenue / dateNode.intraDayVolume : 0;
+      dateNode.intraProvincialPrice = (dateNode.dayAheadVolume + dateNode.intraDayVolume) > 0 
+        ? dateIntraProvincialCost / (dateNode.dayAheadVolume + dateNode.intraDayVolume) : 0;
+      
+      dateNode.children = items.map(item => ({
+        key: `${date}-${item.timePoint}`,
+        label: item.timePoint,
+        level: 2,
+        dayAheadVolume: item.dayAheadVolume,
+        dayAheadPrice: item.dayAheadPrice,
+        intraDayVolume: item.intraDayVolume,
+        intraDayPrice: item.intraDayPrice,
+        intraProvincialPrice: item.intraProvincialRealTimePrice,
+        profitLossDiff: item.profitLossDiff,
+      }));
+      
+      return dateNode;
+    });
+    
+    totalNode.children = children;
+  } else if (dimension === 'tradingUnit') {
+    const grouped = rawData.reduce((acc, item) => {
+      if (!acc[item.tradingUnit]) acc[item.tradingUnit] = [];
+      acc[item.tradingUnit].push(item);
+      return acc;
+    }, {} as Record<string, InterSpotReviewData[]>);
+    
+    const children: InterTreeNode[] = Object.entries(grouped).map(([unit, items]) => {
+      let unitDayAheadRevenue = 0;
+      let unitIntraDayRevenue = 0;
+      let unitIntraProvincialCost = 0;
+      
+      const unitNode: InterTreeNode = {
+        key: unit,
+        label: unit,
+        level: 1,
+        dayAheadVolume: items.reduce((sum, item) => sum + item.dayAheadVolume, 0),
+        intraDayVolume: items.reduce((sum, item) => sum + item.intraDayVolume, 0),
+        profitLossDiff: items.reduce((sum, item) => sum + item.profitLossDiff, 0),
+        dayAheadPrice: 0,
+        intraDayPrice: 0,
+        intraProvincialPrice: 0,
+      };
+      
+      items.forEach(item => {
+        unitDayAheadRevenue += item.dayAheadRevenue;
+        unitIntraDayRevenue += item.intraDayRevenue;
+        unitIntraProvincialCost += (item.dayAheadVolume + item.intraDayVolume) * item.intraProvincialRealTimePrice;
+      });
+      
+      unitNode.dayAheadPrice = unitNode.dayAheadVolume > 0 ? unitDayAheadRevenue / unitNode.dayAheadVolume : 0;
+      unitNode.intraDayPrice = unitNode.intraDayVolume > 0 ? unitIntraDayRevenue / unitNode.intraDayVolume : 0;
+      unitNode.intraProvincialPrice = (unitNode.dayAheadVolume + unitNode.intraDayVolume) > 0 
+        ? unitIntraProvincialCost / (unitNode.dayAheadVolume + unitNode.intraDayVolume) : 0;
+      
+      const dateGrouped = items.reduce((acc, item) => {
+        if (!acc[item.date]) acc[item.date] = [];
+        acc[item.date].push(item);
+        return acc;
+      }, {} as Record<string, InterSpotReviewData[]>);
+      
+      unitNode.children = Object.entries(dateGrouped).map(([date, dateItems]) => {
+        let dateDayAheadRevenue = 0;
+        let dateIntraDayRevenue = 0;
+        let dateIntraProvincialCost = 0;
+        
+        const dateNode: InterTreeNode = {
+          key: `${unit}-${date}`,
+          label: date,
+          level: 2,
+          dayAheadVolume: dateItems.reduce((sum, item) => sum + item.dayAheadVolume, 0),
+          intraDayVolume: dateItems.reduce((sum, item) => sum + item.intraDayVolume, 0),
+          profitLossDiff: dateItems.reduce((sum, item) => sum + item.profitLossDiff, 0),
+          dayAheadPrice: 0,
+          intraDayPrice: 0,
+          intraProvincialPrice: 0,
+        };
+        
+        dateItems.forEach(item => {
+          dateDayAheadRevenue += item.dayAheadRevenue;
+          dateIntraDayRevenue += item.intraDayRevenue;
+          dateIntraProvincialCost += (item.dayAheadVolume + item.intraDayVolume) * item.intraProvincialRealTimePrice;
+        });
+        
+        dateNode.dayAheadPrice = dateNode.dayAheadVolume > 0 ? dateDayAheadRevenue / dateNode.dayAheadVolume : 0;
+        dateNode.intraDayPrice = dateNode.intraDayVolume > 0 ? dateIntraDayRevenue / dateNode.intraDayVolume : 0;
+        dateNode.intraProvincialPrice = (dateNode.dayAheadVolume + dateNode.intraDayVolume) > 0 
+          ? dateIntraProvincialCost / (dateNode.dayAheadVolume + dateNode.intraDayVolume) : 0;
+        
+        return dateNode;
+      });
+      
+      return unitNode;
+    });
+    
+    totalNode.children = children;
+  }
+  
+  return [totalNode];
+};
+
+const extractChartData = (
+  rawData: InterSpotReviewData[],
+  selectedKey: string,
+  dimension: InterAggregationDimension
+) => {
+  let filteredData = rawData;
+  
+  if (dimension === 'date' && selectedKey !== 'all') {
+    filteredData = rawData.filter(item => item.date === selectedKey);
+  } else if (dimension === 'tradingUnit' && selectedKey !== 'all') {
+    filteredData = rawData.filter(item => item.tradingUnit === selectedKey);
+  }
+  
+  const grouped = filteredData.reduce((acc, item) => {
+    if (!acc[item.timePoint]) {
+      acc[item.timePoint] = {
+        timePoint: item.timePoint,
+        dayAheadVolume: 0,
+        dayAheadPrice: 0,
+        dayAheadPriceSum: 0,
+        intraDayVolume: 0,
+        intraDayPrice: 0,
+        intraDayPriceSum: 0,
+        intraProvincialPrice: 0,
+        intraProvincialPriceSum: 0,
+        profitLossDiff: 0,
+        count: 0,
+      };
+    }
+    acc[item.timePoint].dayAheadVolume += item.dayAheadVolume;
+    acc[item.timePoint].intraDayVolume += item.intraDayVolume;
+    acc[item.timePoint].profitLossDiff += item.profitLossDiff;
+    acc[item.timePoint].dayAheadPriceSum += item.dayAheadPrice;
+    acc[item.timePoint].intraDayPriceSum += item.intraDayPrice;
+    acc[item.timePoint].intraProvincialPriceSum += item.intraProvincialRealTimePrice;
+    acc[item.timePoint].count += 1;
+    return acc;
+  }, {} as Record<string, any>);
+  
+  Object.values(grouped).forEach((item: any) => {
+    item.dayAheadPrice = item.dayAheadPriceSum / item.count;
+    item.intraDayPrice = item.intraDayPriceSum / item.count;
+    item.intraProvincialPrice = item.intraProvincialPriceSum / item.count;
+  });
+  
+  return Object.values(grouped).sort((a: any, b: any) => 
+    a.timePoint.localeCompare(b.timePoint)
+  );
+};
+
+const InterTreeRow = ({ node, isExpanded, onToggle, level = 0 }: {
+  node: InterTreeNode;
+  isExpanded: boolean;
+  onToggle: (key: string) => void;
+  level?: number;
+}) => {
+  const hasChildren = node.children && node.children.length > 0;
+  
+  return (
+    <>
+      <TableRow className="hover:bg-[#F8FBFA]">
+        <TableCell className="text-xs">
+          <div style={{ paddingLeft: `${level * 16}px` }} className="flex items-center gap-1">
+            {hasChildren && (
+              <button onClick={() => onToggle(node.key)} className="p-0.5 hover:bg-[#E8F0EC] rounded">
+                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              </button>
+            )}
+            <span className={cn(node.level === 0 && "font-semibold")}>{node.label}</span>
+          </div>
+        </TableCell>
+        <TableCell className="text-xs text-right font-mono">{node.dayAheadVolume.toFixed(3)}</TableCell>
+        <TableCell className="text-xs text-right font-mono">{node.dayAheadPrice.toFixed(2)}</TableCell>
+        <TableCell className="text-xs text-right font-mono">{node.intraDayVolume.toFixed(3)}</TableCell>
+        <TableCell className="text-xs text-right font-mono">{node.intraDayPrice.toFixed(2)}</TableCell>
+        <TableCell className="text-xs text-right font-mono">{node.intraProvincialPrice.toFixed(2)}</TableCell>
+        <TableCell className={cn(
+          "text-xs text-right font-mono font-semibold",
+          node.profitLossDiff > 0 ? "text-[#00B04D]" : "text-red-500"
+        )}>
+          {node.profitLossDiff > 0 ? '+' : ''}{node.profitLossDiff.toFixed(2)}
+        </TableCell>
+      </TableRow>
+      
+      {isExpanded && hasChildren && node.children!.map((child) => (
+        <InterTreeRow 
+          key={child.key} 
+          node={child} 
+          isExpanded={isExpanded}
+          onToggle={onToggle}
+          level={level + 1}
+        />
+      ))}
+    </>
+  );
+};
+
+const InterProvincialReview = () => {
+  const [tradingCenter, setTradingCenter] = useState('all');
+  const [selectedUnits, setSelectedUnits] = useState(['全部交易单元']);
+  const [granularity, setGranularity] = useState<'24' | '96'>('96');
+  const [dimension, setDimension] = useState<InterAggregationDimension>('date');
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['total']));
+  const [selectedChartKey, setSelectedChartKey] = useState('20240506');
+  
+  const rawData = useMemo(() => 
+    generateInterSpotReviewData('20240501', '20240520', ['交易单元1', '交易单元2'], granularity),
+    [granularity]
+  );
+  
+  const treeData = useMemo(() => 
+    buildInterTreeData(rawData, dimension),
+    [rawData, dimension]
+  );
+  
+  const chartData = useMemo(() => 
+    extractChartData(rawData, selectedChartKey, dimension),
+    [rawData, selectedChartKey, dimension]
+  );
+  
+  const toggleExpand = (key: string) => {
+    setExpandedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+  
+  const dimensionOptions = useMemo(() => {
+    if (dimension === 'date') {
+      return Array.from(new Set(rawData.map(item => item.date)));
+    } else if (dimension === 'tradingUnit') {
+      return Array.from(new Set(rawData.map(item => item.tradingUnit)));
+    }
+    return [];
+  }, [rawData, dimension]);
+  
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <Select value={tradingCenter} onValueChange={setTradingCenter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部交易单元</SelectItem>
+                <SelectItem value="center1">交易中心1</SelectItem>
+                <SelectItem value="center2">交易中心2</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <div className="flex items-center gap-2 text-sm">
+              <input 
+                type="text" 
+                value="20240501" 
+                className="border border-border rounded px-2 py-1 w-24 text-xs"
+                readOnly
+              />
+              <span>-</span>
+              <input 
+                type="text" 
+                value="20240520" 
+                className="border border-border rounded px-2 py-1 w-24 text-xs"
+                readOnly
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 bg-[#F1F8F4] rounded px-3 py-1">
+              <span className="text-sm text-muted-foreground">24</span>
+              <span className="text-sm font-bold text-[#00B04D]">96</span>
+            </div>
+            
+            <Button size="sm">查询</Button>
+            <Button size="sm" variant="outline">置宽</Button>
+            
+            <Button variant="outline" size="sm" className="ml-auto">
+              <Download className="w-4 h-4 mr-2" />
+              导出
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-3">
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <div className="text-sm font-medium mb-2">聚合维度的选择</div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'tradingUnit' ? 'default' : 'outline'}
+                  onClick={() => setDimension('tradingUnit')}
+                  className="text-xs"
+                >
+                  交易单元
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'date' ? 'default' : 'outline'}
+                  onClick={() => setDimension('date')}
+                  className="text-xs"
+                >
+                  日期
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={dimension === 'timePoint' ? 'default' : 'outline'}
+                  onClick={() => setDimension('timePoint')}
+                  className="text-xs"
+                >
+                  时点
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs">+</Button>
+              </div>
+              <Button className="w-full mt-2" size="sm">聚合</Button>
+            </CardHeader>
+            
+            <CardContent>
+              <div className="text-xs font-medium mb-2 text-muted-foreground">省间日前/省间日内</div>
+              <ScrollArea className="h-[700px]">
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
+                      <TableRow>
+                        <TableHead className="text-xs">聚合维度</TableHead>
+                        <TableHead className="text-xs text-center border-l" colSpan={2}>省间日前</TableHead>
+                        <TableHead className="text-xs text-center border-l" colSpan={2}>省间日内</TableHead>
+                        <TableHead className="text-xs text-right border-l">省内实时电价</TableHead>
+                        <TableHead className="text-xs text-right border-l">盈亏差额</TableHead>
+                      </TableRow>
+                      <TableRow className="bg-[#F1F8F4]">
+                        <TableHead className="text-xs h-8"></TableHead>
+                        <TableHead className="text-xs text-right h-8 border-l">电量</TableHead>
+                        <TableHead className="text-xs text-right h-8">电价</TableHead>
+                        <TableHead className="text-xs text-right h-8 border-l">电量</TableHead>
+                        <TableHead className="text-xs text-right h-8">电价</TableHead>
+                        <TableHead className="text-xs text-right h-8 border-l"></TableHead>
+                        <TableHead className="text-xs text-right h-8 border-l"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {treeData.map(node => (
+                        <InterTreeRow 
+                          key={node.key} 
+                          node={node} 
+                          isExpanded={expandedKeys.has(node.key)}
+                          onToggle={toggleExpand}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="col-span-9">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">全景汇总</CardTitle>
+                <Select value={selectedChartKey} onValueChange={setSelectedChartKey}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    {dimensionOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium mb-3">盈亏差额</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis 
+                      dataKey="timePoint" 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                      label={{ value: '盈亏差额 单位：元', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 11, backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 4 }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="profitLossDiff" fill="#FFA500" name="盈亏差额" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-3">电价对比</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis 
+                      dataKey="timePoint" 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                      label={{ value: '电价对比 单位：元/MWh', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 11, backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 4 }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="dayAheadPrice" 
+                      stroke="#20B2AA" 
+                      strokeWidth={2} 
+                      name="省间日前电价"
+                      dot={{ r: 3 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="intraDayPrice" 
+                      stroke="#FF4500" 
+                      strokeWidth={2} 
+                      name="省间日内电价"
+                      dot={{ r: 3 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="intraProvincialPrice" 
+                      stroke="#FFA500" 
+                      strokeWidth={2} 
+                      name="省内实时电价"
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-3">省间成交电量</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                    <XAxis 
+                      dataKey="timePoint" 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11 }}
+                      stroke="#666"
+                      label={{ value: '省间成交电量 单位：MWh', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 11, backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 4 }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="dayAheadVolume" fill="#1E90FF" name="省间日前" />
+                    <Bar dataKey="intraDayVolume" fill="#FF6B6B" name="省间日内" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const generateInterProvincialData = () => {
   return Array.from({ length: 30 }, (_, i) => ({
     date: `${i + 1}日`,
@@ -1379,88 +2014,8 @@ const Review = () => {
           <IntraProvincialReview />
         </TabsContent>
 
-        <TabsContent value="inter-provincial" className="mt-6 space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">总利润</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  ¥{(interStats.totalProfit / 10000).toFixed(2)}万
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">出清率</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {interStats.clearingRate.toFixed(1)}%
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">出清总电量</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {interStats.totalClearingVolume.toFixed(0)}MWh
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">平均价差</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {interStats.avgPriceDeviation.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>省间现货价格对比</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={interProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="bidPrice" stroke="#00B04D" name="申报价格" strokeWidth={2} />
-                  <Line type="monotone" dataKey="clearingPrice" stroke="#FF6B6B" name="出清价格" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>出清电量与利润分析</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart data={interProvincialData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-                  <XAxis dataKey="date" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="clearingVolume" fill="#00B04D" name="出清电量" />
-                  <Line yAxisId="right" type="monotone" dataKey="profit" stroke="#FF6B6B" name="利润" strokeWidth={2} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <TabsContent value="inter-provincial" className="mt-6">
+          <InterProvincialReview />
         </TabsContent>
       </Tabs>
     </div>
