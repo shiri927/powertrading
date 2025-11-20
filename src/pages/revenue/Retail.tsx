@@ -61,7 +61,7 @@ const Retail = () => {
             <CardTitle className="text-sm font-medium">总收入</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">
+            <div className="text-2xl font-bold font-mono text-success">
               ¥{(totalRevenue / 1000).toFixed(2)}M
             </div>
             <p className="text-xs text-muted-foreground mt-1">年累计</p>
@@ -72,7 +72,7 @@ const Retail = () => {
             <CardTitle className="text-sm font-medium">服务用户</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userRevenue.length}</div>
+            <div className="text-2xl font-bold font-mono">{userRevenue.length}</div>
             <p className="text-xs text-muted-foreground mt-1">活跃用户</p>
           </CardContent>
         </Card>
@@ -81,7 +81,7 @@ const Retail = () => {
             <CardTitle className="text-sm font-medium">平均收入</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold font-mono">
               ¥{(totalRevenue / userRevenue.length).toFixed(0)}K
             </div>
             <p className="text-xs text-muted-foreground mt-1">每户年均</p>
@@ -92,7 +92,7 @@ const Retail = () => {
             <CardTitle className="text-sm font-medium">套餐类型</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{packageRevenue.length}</div>
+            <div className="text-2xl font-bold font-mono">{packageRevenue.length}</div>
             <p className="text-xs text-muted-foreground mt-1">在售套餐</p>
           </CardContent>
         </Card>
