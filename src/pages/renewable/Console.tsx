@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Terminal } from "lucide-react";
 
 const Console = () => {
@@ -22,9 +23,38 @@ const Console = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            交易操作台功能开发中...
-          </div>
+          <Tabs defaultValue="centralized" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="centralized">集中竞价申报</TabsTrigger>
+              <TabsTrigger value="rolling">日滚动交易申报</TabsTrigger>
+              <TabsTrigger value="inter-provincial">省间现货申报</TabsTrigger>
+              <TabsTrigger value="intra-provincial">省内现货申报</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="centralized" className="space-y-4">
+              <div className="text-center py-12 text-muted-foreground">
+                集中竞价申报功能开发中...
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="rolling" className="space-y-4">
+              <div className="text-center py-12 text-muted-foreground">
+                日滚动交易申报功能开发中...
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="inter-provincial" className="space-y-4">
+              <div className="text-center py-12 text-muted-foreground">
+                省间现货申报功能开发中...
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="intra-provincial" className="space-y-4">
+              <div className="text-center py-12 text-muted-foreground">
+                省内现货申报功能开发中...
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
