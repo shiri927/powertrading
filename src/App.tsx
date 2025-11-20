@@ -29,6 +29,7 @@ import RenewableConsole from "./pages/renewable/Console";
 import RenewableClearing from "./pages/renewable/Clearing";
 import RenewableSettlement from "./pages/renewable/Settlement";
 import RenewableReview from "./pages/renewable/Review";
+import RenewableTradingLedger from "./pages/renewable/TradingLedger";
 
 // Retail pages
 import RetailBaseData from "./pages/retail/BaseData";
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/renewable/clearing" element={<RenewableClearing />} />
             <Route path="/renewable/settlement" element={<RenewableSettlement />} />
             <Route path="/renewable/review" element={<RenewableReview />} />
+            <Route path="/renewable/trading-ledger" element={<RenewableTradingLedger />} />
             
             {/* Retail Routes */}
             <Route path="/retail/base-data" element={<RetailBaseData />} />
