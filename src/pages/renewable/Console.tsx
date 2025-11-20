@@ -30,11 +30,19 @@ const Console = () => {
   const [bidData, setBidData] = useState(generateBidData());
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentScheme, setCurrentScheme] = useState("scheme1");
+  const [tradeDirections, setTradeDirections] = useState<Record<number, number>>({});
 
   const toggleRowSelection = (hour: number) => {
     setSelectedRows(prev => 
       prev.includes(hour) ? prev.filter(h => h !== hour) : [...prev, hour]
     );
+  };
+
+  const setTradeDirection = (hour: number, direction: number) => {
+    setTradeDirections(prev => ({
+      ...prev,
+      [hour]: direction
+    }));
   };
 
   return (
@@ -101,14 +109,14 @@ const Console = () => {
                   onClick={() => setCurrentScheme("scheme1")}
                   size="sm"
                 >
-                  时光盘1
+                  交易员1
                 </Button>
                 <Button 
                   variant={currentScheme === "scheme2" ? "default" : "ghost"}
                   onClick={() => setCurrentScheme("scheme2")}
                   size="sm"
                 >
-                  时光盘2
+                  交易员2
                 </Button>
                 <Button variant="ghost" size="sm">
                   <Plus className="h-4 w-4 mr-1" />
@@ -166,8 +174,13 @@ const Console = () => {
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="w-12"></TableHead>
-                      <TableHead className="w-16">序号</TableHead>
-                      <TableHead>交易方向</TableHead>
+                      <TableHead className="w-16">时点</TableHead>
+                      <TableHead>
+                        交易方向
+                        <div className="text-xs text-muted-foreground font-normal mt-1">
+                          (卖出、不交易、买入、无策略)
+                        </div>
+                      </TableHead>
                       <TableHead>价格上限<br />(元/MWh)</TableHead>
                       <TableHead>价格下限<br />(元/MWh)</TableHead>
                       <TableHead>买入期能<br />(%)</TableHead>
@@ -195,20 +208,40 @@ const Console = () => {
                           <div className="flex gap-1">
                             <Button 
                               size="sm" 
-                              variant={row.bidStatus === "pending" ? "destructive" : "outline"}
+                              variant={tradeDirections[row.hour] === 0 ? "destructive" : "outline"}
                               className="h-6 w-6 p-0 rounded-full"
+                              onClick={() => setTradeDirection(row.hour, 0)}
+                              title="卖出"
                             >
-                              {row.bidStatus === "pending" ? "O" : "O"}
+                              卖
                             </Button>
                             <Button 
                               size="sm" 
-                              variant={row.bidStatus === "success" ? "default" : "outline"}
+                              variant={tradeDirections[row.hour] === 1 ? "secondary" : "outline"}
                               className="h-6 w-6 p-0 rounded-full"
+                              onClick={() => setTradeDirection(row.hour, 1)}
+                              title="不交易"
                             >
-                              {row.bidStatus === "success" ? "√" : "O"}
+                              无
                             </Button>
-                            <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-full">O</Button>
-                            <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-full">O</Button>
+                            <Button 
+                              size="sm" 
+                              variant={tradeDirections[row.hour] === 2 ? "default" : "outline"}
+                              className="h-6 w-6 p-0 rounded-full"
+                              onClick={() => setTradeDirection(row.hour, 2)}
+                              title="买入"
+                            >
+                              买
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={tradeDirections[row.hour] === 3 ? "ghost" : "outline"}
+                              className="h-6 w-6 p-0 rounded-full"
+                              onClick={() => setTradeDirection(row.hour, 3)}
+                              title="无策略"
+                            >
+                              -
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>{row.priceUp}</TableCell>
