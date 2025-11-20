@@ -20,25 +20,6 @@ const navigation = [
     icon: LayoutDashboard 
   },
   { 
-    name: "预测数据", 
-    icon: TrendingUp,
-    children: [
-      { name: "市场供需预测", href: "/forecast/supply-demand" },
-      { name: "现货电价预测", href: "/forecast/spot-price" },
-      { name: "价差预测", href: "/forecast/price-difference" },
-      { name: "外送价格计算", href: "/forecast/transmission-price" },
-    ]
-  },
-  { 
-    name: "现货智能决策", 
-    icon: LineChart,
-    children: [
-      { name: "模型优化分析", href: "/price-trend/model-optimization" },
-      { name: "决策收益分析", href: "/price-trend/decision-analysis" },
-      { name: "现货电价分析", href: "/price-trend/spot-analysis" },
-    ]
-  },
-  { 
     name: "市场与基本面数据", 
     icon: BarChart3,
     children: [
@@ -68,7 +49,16 @@ const navigation = [
     icon: ShoppingCart,
     children: [
       { name: "基础数据", href: "/retail/base-data" },
-      { name: "交易决策", href: "/retail/decision" },
+      { 
+        name: "交易决策", 
+        icon: ShoppingCart,
+        children: [
+          { name: "中长期交易策略", href: "/retail/decision/medium-long-term" },
+          { name: "省间现货策略", href: "/retail/decision/inter-provincial" },
+          { name: "省内现货策略", href: "/retail/decision/intra-provincial" },
+          { name: "绿证交易策略", href: "/retail/decision/green-certificate" },
+        ]
+      },
       { name: "交易操作台", href: "/retail/console" },
       { name: "零售交易", href: "/retail/trading" },
       { name: "用电负荷管理", href: "/retail/load" },
@@ -156,14 +146,45 @@ export const Sidebar = () => {
                   {expandedItems.includes(item.name) && item.children && (
                     <div className="ml-8 mt-1 space-y-1">
                       {item.children.map((child) => (
-                        <NavLink
-                          key={child.name}
-                          to={child.href}
-                          className="block px-3 py-2 text-sm text-sidebar-foreground/70 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                        >
-                          {child.name}
-                        </NavLink>
+                        <div key={child.name}>
+                          {child.href ? (
+                            <NavLink
+                              to={child.href}
+                              className="block px-3 py-2 text-sm text-sidebar-foreground/70 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            >
+                              {child.name}
+                            </NavLink>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => toggleExpand(child.name)}
+                                className="flex items-center justify-between w-full px-3 py-2 text-sm text-sidebar-foreground/70 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                              >
+                                <span>{child.name}</span>
+                                <ChevronDown 
+                                  className={`h-3 w-3 transition-transform ${
+                                    expandedItems.includes(child.name) ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                              {expandedItems.includes(child.name) && child.children && (
+                                <div className="ml-4 mt-1 space-y-1">
+                                  {child.children.map((grandchild) => (
+                                    <NavLink
+                                      key={grandchild.name}
+                                      to={grandchild.href}
+                                      className="block px-3 py-2 text-xs text-sidebar-foreground/60 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                    >
+                                      {grandchild.name}
+                                    </NavLink>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}

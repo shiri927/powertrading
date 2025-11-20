@@ -8,11 +8,6 @@ import Dashboard from "./pages/Dashboard";
 import SystemManagement from "./pages/SystemManagement";
 import NotFound from "./pages/NotFound";
 
-// Forecast pages
-import SupplyDemand from "./pages/forecast/SupplyDemand";
-import SpotPrice from "./pages/PricePrediction";
-import PriceDifference from "./pages/forecast/PriceDifference";
-import TransmissionPrice from "./pages/forecast/TransmissionPrice";
 
 // Market Fundamentals pages
 import MarketQuotes from "./pages/market-fundamentals/MarketQuotes";
@@ -37,7 +32,6 @@ import RenewableReview from "./pages/renewable/Review";
 
 // Retail pages
 import RetailBaseData from "./pages/retail/BaseData";
-import RetailDecision from "./pages/retail/Decision";
 import RetailConsole from "./pages/retail/Console";
 import RetailTrading from "./pages/retail/Trading";
 import RetailLoad from "./pages/retail/Load";
@@ -45,10 +39,11 @@ import RetailSettlement from "./pages/retail/SettlementRetail";
 import RetailReview from "./pages/retail/Review";
 import TradingLedger from "./pages/retail/TradingLedger";
 
-// Price Trend pages
-import ModelOptimization from "./pages/price-trend/ModelOptimization";
-import DecisionAnalysis from "./pages/price-trend/DecisionAnalysis";
-import SpotAnalysis from "./pages/price-trend/SpotAnalysis";
+// Retail Decision pages
+import MediumLongTerm from "./pages/retail/decision/MediumLongTerm";
+import InterProvincial from "./pages/retail/decision/InterProvincial";
+import IntraProvincial from "./pages/retail/decision/IntraProvincial";
+import GreenCertificate from "./pages/retail/decision/GreenCertificate";
 
 // Reports pages
 import ReportManagement from "./pages/reports/ReportManagement";
@@ -66,16 +61,6 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             
-            {/* Forecast Routes */}
-            <Route path="/forecast/supply-demand" element={<SupplyDemand />} />
-            <Route path="/forecast/spot-price" element={<SpotPrice />} />
-            <Route path="/forecast/price-difference" element={<PriceDifference />} />
-            <Route path="/forecast/transmission-price" element={<TransmissionPrice />} />
-            
-            {/* Price Trend Routes */}
-            <Route path="/price-trend/model-optimization" element={<ModelOptimization />} />
-            <Route path="/price-trend/decision-analysis" element={<DecisionAnalysis />} />
-            <Route path="/price-trend/spot-analysis" element={<SpotAnalysis />} />
             
             {/* Market Fundamentals Routes */}
             <Route path="/market-fundamentals/quotes" element={<MarketQuotes />} />
@@ -94,9 +79,12 @@ const App = () => (
             <Route path="/renewable/settlement" element={<RenewableSettlement />} />
             <Route path="/renewable/review" element={<RenewableReview />} />
             
-            {/* Retail Business Routes */}
+            {/* Retail Routes */}
             <Route path="/retail/base-data" element={<RetailBaseData />} />
-            <Route path="/retail/decision" element={<RetailDecision />} />
+            <Route path="/retail/decision/medium-long-term" element={<MediumLongTerm />} />
+            <Route path="/retail/decision/inter-provincial" element={<InterProvincial />} />
+            <Route path="/retail/decision/intra-provincial" element={<IntraProvincial />} />
+            <Route path="/retail/decision/green-certificate" element={<GreenCertificate />} />
             <Route path="/retail/console" element={<RetailConsole />} />
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/load" element={<RetailLoad />} />
