@@ -12,6 +12,7 @@ import {
   FileText
 } from "lucide-react";
 import { useState } from "react";
+import heengyLogo from "@/assets/heengy-logo.png";
 
 const navigation = [
   { 
@@ -106,12 +107,24 @@ export const Sidebar = () => {
     <div className="w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground">
-            电力交易平台
-          </h1>
-          <p className="text-sm text-sidebar-foreground/60 mt-1">
-            Power Trading Platform
+        <div className="p-6 border-b border-sidebar-border bg-sidebar">
+          <div className="flex items-center gap-3 mb-3">
+            <img 
+              src={heengyLogo} 
+              alt="Heengy Logo" 
+              className="h-12 w-12 object-contain"
+            />
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold text-sidebar-foreground leading-tight">
+                恒源新能
+              </h1>
+              <p className="text-xs text-[#00B04D] font-semibold">
+                电力交易平台
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-sidebar-foreground/50 font-mono">
+            Heengy Power Trading Platform
           </p>
         </div>
 
