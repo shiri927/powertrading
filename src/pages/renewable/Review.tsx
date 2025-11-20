@@ -6,22 +6,83 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, Calendar as CalendarIcon, Download, Filter } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, TrendingDown, Calendar as CalendarIcon, Download, Filter, FileText } from "lucide-react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart } from "recharts";
+import { TradingUnitTree, TradingUnitNode } from "@/components/TradingUnitTree";
+import { MetricCard } from "@/components/MetricCard";
+import { Switch } from "@/components/ui/switch";
 
-// 中长期策略复盘数据
-const generateMediumLongTermData = () => {
-  return Array.from({ length: 12 }, (_, i) => ({
-    month: `${i + 1}月`,
-    plannedVolume: 800 + Math.random() * 200,
-    actualVolume: 750 + Math.random() * 250,
-    plannedRevenue: 400 + Math.random() * 100,
-    actualRevenue: 380 + Math.random() * 120,
-    deviationRate: (Math.random() * 20 - 10).toFixed(2),
-  }));
+// 生成交易单元树形结构数据
+const generateTradingUnitTree = (): TradingUnitNode[] => {
+  return [
+    {
+      id: "all",
+      name: "全部",
+      type: "group",
+      contractCount: 45,
+      children: [
+        {
+          id: "group-1",
+          name: "新庄厂/场站电池组合同",
+          type: "station",
+          contractCount: 15,
+          children: [
+            { id: "unit-1-1", name: "十二回路一期", type: "unit", contractCount: 8 },
+            { id: "unit-1-2", name: "达坂城厂/场站电池组合同", type: "unit", contractCount: 7 },
+          ],
+        },
+        {
+          id: "group-2",
+          name: "叶青城厂/场站电池组合同",
+          type: "station",
+          contractCount: 18,
+          children: [
+            { id: "unit-2-1", name: "小草湖一期", type: "unit", contractCount: 9 },
+            { id: "unit-2-2", name: "小草湖二期", type: "unit", contractCount: 9 },
+          ],
+        },
+        {
+          id: "group-3",
+          name: "新疆能建新能源有限公司",
+          type: "station",
+          contractCount: 12,
+          children: [
+            { id: "unit-3-1", name: "达坂城一期", type: "unit", contractCount: 6 },
+            { id: "unit-3-2", name: "达坂城二期", type: "unit", contractCount: 6 },
+          ],
+        },
+      ],
+    },
+  ];
+};
+
+// 生成时序持仓数据
+const generateTimeSeriesData = (granularity: string, selectedCount: number) => {
+  const baseMultiplier = selectedCount || 1;
+  
+  if (granularity === "hour" || granularity === "24point") {
+    const points = granularity === "hour" ? 24 : 24;
+    return Array.from({ length: points }, (_, i) => ({
+      time: `${i}:00`,
+      price: 280 + Math.random() * 100 * baseMultiplier,
+      volume: 45 + Math.random() * 25 * baseMultiplier,
+    }));
+  } else if (granularity === "day") {
+    return Array.from({ length: 30 }, (_, i) => ({
+      time: `${i + 1}日`,
+      price: 280 + Math.random() * 100 * baseMultiplier,
+      volume: 1000 + Math.random() * 500 * baseMultiplier,
+    }));
+  } else {
+    return Array.from({ length: 12 }, (_, i) => ({
+      time: `${i + 1}月`,
+      price: 280 + Math.random() * 100 * baseMultiplier,
+      volume: 30000 + Math.random() * 15000 * baseMultiplier,
+    }));
+  }
 };
 
 // 省内现货复盘数据
@@ -50,14 +111,39 @@ const generateInterProvincialData = () => {
 
 const Review = () => {
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
+    from: new Date(2024, 0, 1),
+    to: new Date(2024, 11, 31),
   });
   const [activeTab, setActiveTab] = useState("medium-long-term");
+  
+  // 中长期策略复盘状态
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(["all"]);
+  const [contractType, setContractType] = useState("all");
+  const [granularity, setGranularity] = useState("month");
+  const [mergeDisplay, setMergeDisplay] = useState(true);
+  const tradingUnitTree = useMemo(() => generateTradingUnitTree(), []);
 
-  const mediumLongTermData = generateMediumLongTermData();
   const intraProvincialData = generateIntraProvincialData();
   const interProvincialData = generateInterProvincialData();
+  
+  // 生成中长期时序数据
+  const timeSeriesData = useMemo(
+    () => generateTimeSeriesData(granularity, selectedUnitIds.length),
+    [granularity, selectedUnitIds]
+  );
+  
+  // 计算统计指标
+  const positionStats = useMemo(() => {
+    const basePrice = 285000;
+    const baseVolume = 850000;
+    const multiplier = selectedUnitIds.length;
+    
+    return {
+      totalPrice: basePrice * multiplier,
+      totalVolume: baseVolume * multiplier,
+      avgPrice: 335.29,
+    };
+  }, [selectedUnitIds]);
 
   // 计算统计指标
   const calculateStats = (data: any[], type: string) => {
