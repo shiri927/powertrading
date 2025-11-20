@@ -164,7 +164,7 @@ const Settlement = () => {
     
     const rows: JSX.Element[] = [
       <tr key={record.id} className={cn("border-b transition-colors hover:bg-[#F8FBFA]", bgColor)}>
-        <td className={cn("p-3 align-middle", fontWeight)} style={{ paddingLeft: `${12 + level * 24}px` }}>
+        <td className={cn("p-4 align-middle", fontWeight)} style={{ paddingLeft: `${16 + level * 24}px` }}>
           <div className="flex items-center gap-2">
             {hasChildren && (
               <button onClick={() => toggleRow(record.id)} className="hover:text-[#00B04D]">
@@ -175,21 +175,21 @@ const Settlement = () => {
             <span>{record.tradingUnit}</span>
           </div>
         </td>
-        <td className={cn("p-3 align-middle text-center", fontWeight)}>{record.settlementNo}</td>
-        <td className={cn("p-3 align-middle text-center", fontWeight)}>{record.settlementYear}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.settlementPrice.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.compensationPrice.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.settlementVolume.toFixed(3)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.settlementFee.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-center", fontWeight)}>{record.contractPosition}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.compensationIncome.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.otherFees.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.totalIncomeNoSubsidy.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.totalIncomeWithSubsidy.toFixed(2)}</td>
-        <td className={cn("p-3 align-middle text-center", fontWeight)}>{record.status}</td>
-        <td className={cn("p-3 align-middle text-right font-mono", fontWeight)}>{record.vatRate}</td>
-        <td className={cn("p-3 align-middle text-center text-xs text-muted-foreground", fontWeight)}>{record.remark}</td>
-        <td className="p-3 align-middle text-center">
+        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.settlementNo}</td>
+        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.settlementYear}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementPrice.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.compensationPrice.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementVolume.toFixed(3)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementFee.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.contractPosition}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.compensationIncome.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.otherFees.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.totalIncomeNoSubsidy.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.totalIncomeWithSubsidy.toFixed(2)}</td>
+        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.status}</td>
+        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.vatRate}</td>
+        <td className={cn("p-4 align-middle text-center text-xs text-muted-foreground", fontWeight)}>{record.remark}</td>
+        <td className="p-4 align-middle text-center">
           {!record.isSummary && !record.isGroup && (
             <div className="flex items-center justify-center gap-3">
               <button className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
@@ -321,23 +321,23 @@ const Settlement = () => {
           <div className="rounded-md border max-h-[600px] overflow-y-auto relative">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                <tr className="border-b-2 border-[#00B04D]">
-                  <th className="h-11 px-3 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">交易单元</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单号</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算年号</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单价<br/>(元/MWh)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿单价<br/>(元/MWh)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电量<br/>(MWh)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电费<br/>(元)</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">合同序位</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿结算收入<br/>(元)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">其他结算费用<br/>(元)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>不含补贴(元)</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>含补贴(元)</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算状态</th>
-                  <th className="h-11 px-3 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">增值税率<br/>(%)</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">备注</th>
-                  <th className="h-11 px-3 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">操作</th>
+                <tr className="border-b bg-[#F1F8F4]">
+                  <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">交易单元</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单号</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算年号</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单价<br/>(元/MWh)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿单价<br/>(元/MWh)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电量<br/>(MWh)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电费<br/>(元)</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">合同序位</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿结算收入<br/>(元)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">其他结算费用<br/>(元)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>不含补贴(元)</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>含补贴(元)</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算状态</th>
+                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">增值税率<br/>(%)</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">备注</th>
+                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">操作</th>
                 </tr>
               </thead>
               <tbody>
