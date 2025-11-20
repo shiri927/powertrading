@@ -39,6 +39,31 @@ interface BidScheme {
   timeSlots: TimeSlot[];
 }
 
+// 日滚动交易申报相关类型定义
+interface RollingTimePoint {
+  id: string;
+  timePoint: number;
+  checked: boolean;
+  tradingDirection: 'sell' | 'no-trade' | 'buy' | 'unlimited';
+  maxLimitPrice: number;
+  minLimitPrice: number;
+  buyLimitVolume: number;
+  sellLimitVolume: number;
+  referenceValue: string;
+  ratio: number;
+  fixedValue: number;
+  declarationPrice: number;
+}
+
+interface RollingScheme {
+  id: string;
+  schemeNumber: string;
+  schemeName: string;
+  tradingDate: string;
+  tradingUnit: string;
+  timePoints: RollingTimePoint[];
+}
+
 // 模拟24小时申报数据
 const generateBidData = () => {
   return Array.from({ length: 24 }, (_, i) => ({
@@ -54,6 +79,38 @@ const generateBidData = () => {
     bidStatus: i % 4 === 0 ? "success" : i % 3 === 0 ? "pending" : "none",
     winRate: [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22].includes(i) ? `${(30 + Math.random() * 70).toFixed(0)}%` : `${(0).toFixed(0)}%`,
   }));
+};
+
+// 生成日滚动交易24个时点数据
+const generateRollingTimePoints = (): RollingTimePoint[] => {
+  return Array.from({ length: 24 }, (_, i) => ({
+    id: `point-${i + 1}`,
+    timePoint: i + 1,
+    checked: false,
+    tradingDirection: 'no-trade' as const,
+    maxLimitPrice: 1500.00,
+    minLimitPrice: 0.00,
+    buyLimitVolume: 0.000,
+    sellLimitVolume: 0.000,
+    referenceValue: '策略首选',
+    ratio: 0,
+    fixedValue: 0.000,
+    declarationPrice: 0.00
+  }));
+};
+
+// 生成模拟日滚动交易申报方案数据
+const generateMockRollingSchemes = (): RollingScheme[] => {
+  return [
+    {
+      id: 'rolling-scheme-1',
+      schemeNumber: '20250217',
+      schemeName: '绿略应计1',
+      tradingDate: '2025年02月17日滚动交易(2025-2-19)',
+      tradingUnit: '交易单元',
+      timePoints: generateRollingTimePoints()
+    }
+  ];
 };
 
 // 生成模拟省间现货申报方案数据
@@ -125,6 +182,15 @@ const Console = () => {
   });
   const [intraProvSchemes, setIntraProvSchemes] = useState<BidScheme[]>(generateMockInterProvincialSchemes());
   const [intraProvViewMode, setIntraProvViewMode] = useState<'ratio' | 'fixed' | 'price'>('ratio');
+  
+  // 日滚动交易申报状态
+  const [rollingSchemeNumber, setRollingSchemeNumber] = useState('20250217');
+  const [rollingTradingDate, setRollingTradingDate] = useState('2025年02月17日滚动交易(2025-2-19)');
+  const [rollingSchemes, setRollingSchemes] = useState<RollingScheme[]>(generateMockRollingSchemes());
+  const [activeRollingSchemeId, setActiveRollingSchemeId] = useState('rolling-scheme-1');
+  const [rollingTradingUnit, setRollingTradingUnit] = useState('交易单元');
+  const [strategyMode, setStrategyMode] = useState<'ratio' | 'fixed'>('ratio');
+  const [showUnitSection, setShowUnitSection] = useState(true);
   
   // 实时时钟更新
   useEffect(() => {
@@ -293,6 +359,100 @@ const Console = () => {
         s.id === slotId ? { ...s, ...updates } : s
       )
     });
+  };
+
+  // 日滚动交易申报操作函数
+  const activeRollingScheme = rollingSchemes.find(s => s.id === activeRollingSchemeId);
+  const allTimePointsChecked = activeRollingScheme?.timePoints.every(p => p.checked) || false;
+
+  const updateRollingTimePoint = (pointId: string, updates: Partial<RollingTimePoint>) => {
+    setRollingSchemes(prev => prev.map(scheme => 
+      scheme.id === activeRollingSchemeId
+        ? {
+            ...scheme,
+            timePoints: scheme.timePoints.map(point =>
+              point.id === pointId ? { ...point, ...updates } : point
+            )
+          }
+        : scheme
+    ));
+  };
+
+  const handleSelectAllTimePoints = (checked: boolean) => {
+    setRollingSchemes(prev => prev.map(scheme =>
+      scheme.id === activeRollingSchemeId
+        ? {
+            ...scheme,
+            timePoints: scheme.timePoints.map(point => ({ ...point, checked }))
+          }
+        : scheme
+    ));
+  };
+
+  const handleOneClickSell = () => {
+    const selectedPoints = activeRollingScheme?.timePoints.filter(p => p.checked) || [];
+    if (selectedPoints.length === 0) {
+      return;
+    }
+    selectedPoints.forEach(point => {
+      updateRollingTimePoint(point.id, { tradingDirection: 'sell' });
+    });
+  };
+
+  const handleOneClickBuy = () => {
+    const selectedPoints = activeRollingScheme?.timePoints.filter(p => p.checked) || [];
+    if (selectedPoints.length === 0) {
+      return;
+    }
+    selectedPoints.forEach(point => {
+      updateRollingTimePoint(point.id, { tradingDirection: 'buy' });
+    });
+  };
+
+  const handleOneClickHighestPrice = () => {
+    const selectedPoints = activeRollingScheme?.timePoints.filter(p => p.checked) || [];
+    if (selectedPoints.length === 0) {
+      return;
+    }
+    selectedPoints.forEach(point => {
+      updateRollingTimePoint(point.id, { declarationPrice: point.maxLimitPrice });
+    });
+  };
+
+  const handleOneClickLowestPrice = () => {
+    const selectedPoints = activeRollingScheme?.timePoints.filter(p => p.checked) || [];
+    if (selectedPoints.length === 0) {
+      return;
+    }
+    selectedPoints.forEach(point => {
+      updateRollingTimePoint(point.id, { declarationPrice: point.minLimitPrice });
+    });
+  };
+
+  const addNewRollingScheme = () => {
+    const newScheme: RollingScheme = {
+      id: `rolling-scheme-${Date.now()}`,
+      schemeNumber: `${Date.now()}`,
+      schemeName: `方案${rollingSchemes.length + 1}`,
+      tradingDate: format(new Date(), 'yyyy年MM月dd日滚动交易'),
+      tradingUnit: '交易单元',
+      timePoints: generateRollingTimePoints()
+    };
+    setRollingSchemes(prev => [...prev, newScheme]);
+    setActiveRollingSchemeId(newScheme.id);
+  };
+
+  const exportRollingScheme = () => {
+    const scheme = rollingSchemes.find(s => s.id === activeRollingSchemeId);
+    if (!scheme) return;
+    const json = JSON.stringify(scheme, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rolling-scheme-${scheme.schemeNumber}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -554,8 +714,425 @@ const Console = () => {
             </TabsContent>
             
             <TabsContent value="rolling" className="space-y-4">
-              <div className="text-center py-12 text-muted-foreground">
-                日滚动交易申报功能开发中...
+              {/* Top Filter and Clock Area */}
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={rollingSchemeNumber}
+                    onChange={(e) => setRollingSchemeNumber(e.target.value)}
+                    className="w-32"
+                    placeholder="方案编号"
+                  />
+                  <Select value={rollingTradingDate} onValueChange={setRollingTradingDate}>
+                    <SelectTrigger className="w-64">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025年02月17日滚动交易(2025-2-19)">
+                        2025年02月17日滚动交易(2025-2-19)
+                      </SelectItem>
+                      <SelectItem value="2025年02月18日滚动交易(2025-2-20)">
+                        2025年02月18日滚动交易(2025-2-20)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button className="bg-[#00B04D] hover:bg-[#009644]">查询</Button>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="text-2xl font-bold">
+                    {format(currentTime, 'HH:mm:ss')}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(currentTime, 'yyyy年MM月dd日 EEEE', { locale: zhCN })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Operation Button Bar */}
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                    {activeRollingScheme?.schemeName || '绿略应计1'}
+                  </Badge>
+                  <Button variant="outline" onClick={addNewRollingScheme}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    新增
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline">状态查询</Button>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-1" />
+                    保存
+                  </Button>
+                  <Button variant="outline">
+                    <Send className="h-4 w-4 mr-1" />
+                    立即申报
+                  </Button>
+                  <Button className="bg-[#00B04D] hover:bg-[#009644]">
+                    <Clock className="h-4 w-4 mr-1" />
+                    定时申报
+                  </Button>
+                  <Button variant="outline" onClick={exportRollingScheme}>
+                    <Upload className="h-4 w-4 mr-1" />
+                    导出
+                  </Button>
+                </div>
+              </div>
+
+              {/* Control Panel */}
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white p-4 rounded-lg border">
+                <Select value={rollingTradingUnit} onValueChange={setRollingTradingUnit}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="交易单元" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="交易单元">交易单元</SelectItem>
+                    <SelectItem value="单元1">单元1</SelectItem>
+                    <SelectItem value="单元2">单元2</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex items-center gap-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 text-sm cursor-help">
+                          接受限额方向调询
+                          <HelpCircle className="h-4 w-4 text-red-500" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>点击查询当前交易单元的限额信息</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleOneClickSell}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
+                      一键卖出
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleOneClickBuy}
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+                      一键买入
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleOneClickHighestPrice}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      一键最高价
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleOneClickLowestPrice}
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                    >
+                      一键最低价
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>策略首选</span>
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="radio" 
+                        name="strategy-mode" 
+                        checked={strategyMode === 'ratio'}
+                        onChange={() => setStrategyMode('ratio')}
+                        className="cursor-pointer"
+                      />
+                      <span>比例</span>
+                      <Input 
+                        type="number" 
+                        value="0" 
+                        className="w-16 h-7 text-xs text-right"
+                        disabled={strategyMode !== 'ratio'}
+                      />
+                    </div>
+                    <span className="mx-1">/</span>
+                    <div className="flex items-center gap-1">
+                      <span>固定值</span>
+                      <Input 
+                        type="number" 
+                        value="0.000" 
+                        className="w-20 h-7 text-xs text-right font-mono"
+                        disabled={strategyMode !== 'fixed'}
+                      />
+                    </div>
+                  </div>
+                  <Button className="bg-[#00B04D] hover:bg-[#009644]" size="sm">
+                    批量设置
+                  </Button>
+                </div>
+              </div>
+
+              {/* Collapsible Section */}
+              <div className="bg-white rounded-lg border">
+                <div 
+                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-[#F8FBFA]"
+                  onClick={() => setShowUnitSection(!showUnitSection)}
+                >
+                  <div className="flex items-center gap-2">
+                    <ChevronDown 
+                      className={`h-4 w-4 transition-transform ${showUnitSection ? '' : '-rotate-90'}`}
+                    />
+                    <span className="font-medium">交易单元</span>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                {showUnitSection && (
+                  <div className="p-3 border-t">
+                    <p className="text-sm text-muted-foreground">交易单元详细信息...</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Main Data Table */}
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                      <tr className="border-b-2 border-[#00B04D]">
+                        <th className="h-10 px-4 text-left align-middle font-semibold text-xs">
+                          <Checkbox 
+                            checked={allTimePointsChecked}
+                            onCheckedChange={handleSelectAllTimePoints}
+                          />
+                        </th>
+                        <th className="h-10 px-4 text-center align-middle font-semibold text-xs">
+                          时点
+                        </th>
+                        <th className="h-10 px-4 text-center align-middle font-semibold text-xs">
+                          交易方向
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">
+                            (卖出、不交易、买入、无限制)
+                          </div>
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-semibold text-xs">
+                          最高限价
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">(元/MWh)</div>
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-semibold text-xs">
+                          最低限价
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">(元/MWh)</div>
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-semibold text-xs">
+                          买入限量
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">(MWh)</div>
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-semibold text-xs">
+                          卖出限量
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">(MWh)</div>
+                        </th>
+                        <th className="h-10 px-4 text-center align-middle font-semibold text-xs" colSpan={3}>
+                          申报电价
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-semibold text-xs">
+                          申报电价
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">(元/MWh)</div>
+                        </th>
+                      </tr>
+                      <tr className="border-b bg-[#E8F0EC]">
+                        <th colSpan={7}></th>
+                        <th className="h-8 px-2 text-center align-middle font-medium text-xs">
+                          参考值
+                        </th>
+                        <th className="h-8 px-2 text-center align-middle font-medium text-xs">
+                          比例(%)
+                        </th>
+                        <th className="h-8 px-2 text-center align-middle font-medium text-xs">
+                          固定值(MWh)
+                        </th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    
+                    <tbody>
+                      {activeRollingScheme?.timePoints.map((point) => (
+                        <tr 
+                          key={point.id}
+                          className="border-b transition-colors hover:bg-[#F8FBFA]"
+                        >
+                          <td className="p-4 align-middle">
+                            <Checkbox 
+                              checked={point.checked}
+                              onCheckedChange={(checked) => 
+                                updateRollingTimePoint(point.id, { checked: !!checked })
+                              }
+                            />
+                          </td>
+                          
+                          <td className="p-4 align-middle text-center font-medium">
+                            {point.timePoint}
+                          </td>
+                          
+                          <td className="p-4 align-middle">
+                            <TooltipProvider>
+                              <div className="flex items-center justify-center gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <input 
+                                      type="radio"
+                                      name={`direction-${point.id}`}
+                                      checked={point.tradingDirection === 'sell'}
+                                      onChange={() => updateRollingTimePoint(point.id, { tradingDirection: 'sell' })}
+                                      className="cursor-pointer"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>卖出</p></TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <input 
+                                      type="radio"
+                                      name={`direction-${point.id}`}
+                                      checked={point.tradingDirection === 'no-trade'}
+                                      onChange={() => updateRollingTimePoint(point.id, { tradingDirection: 'no-trade' })}
+                                      className="cursor-pointer"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>不交易</p></TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <input 
+                                      type="radio"
+                                      name={`direction-${point.id}`}
+                                      checked={point.tradingDirection === 'buy'}
+                                      onChange={() => updateRollingTimePoint(point.id, { tradingDirection: 'buy' })}
+                                      className="cursor-pointer"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>买入</p></TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <input 
+                                      type="radio"
+                                      name={`direction-${point.id}`}
+                                      checked={point.tradingDirection === 'unlimited'}
+                                      onChange={() => updateRollingTimePoint(point.id, { tradingDirection: 'unlimited' })}
+                                      className="cursor-pointer"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>无限制</p></TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
+                          </td>
+                          
+                          <td className="p-4 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.maxLimitPrice}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                maxLimitPrice: parseFloat(e.target.value) 
+                              })}
+                              className="w-28 text-right font-mono text-xs"
+                              step="0.01"
+                            />
+                          </td>
+                          
+                          <td className="p-4 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.minLimitPrice}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                minLimitPrice: parseFloat(e.target.value) 
+                              })}
+                              className="w-28 text-right font-mono text-xs"
+                              step="0.01"
+                            />
+                          </td>
+                          
+                          <td className="p-4 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.buyLimitVolume}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                buyLimitVolume: parseFloat(e.target.value) 
+                              })}
+                              className="w-28 text-right font-mono text-xs"
+                              step="0.001"
+                            />
+                          </td>
+                          
+                          <td className="p-4 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.sellLimitVolume}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                sellLimitVolume: parseFloat(e.target.value) 
+                              })}
+                              className="w-28 text-right font-mono text-xs"
+                              step="0.001"
+                            />
+                          </td>
+                          
+                          <td className="p-2 align-middle text-center">
+                            <span className="text-xs text-muted-foreground">
+                              {point.referenceValue}
+                            </span>
+                          </td>
+                          
+                          <td className="p-2 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.ratio}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                ratio: parseFloat(e.target.value) 
+                              })}
+                              className="w-20 text-right font-mono text-xs"
+                              disabled={strategyMode !== 'ratio'}
+                            />
+                          </td>
+                          
+                          <td className="p-2 align-middle">
+                            <Input 
+                              type="number"
+                              value={point.fixedValue}
+                              onChange={(e) => updateRollingTimePoint(point.id, { 
+                                fixedValue: parseFloat(e.target.value) 
+                              })}
+                              className="w-24 text-right font-mono text-xs"
+                              disabled={strategyMode !== 'fixed'}
+                              step="0.001"
+                            />
+                          </td>
+                          
+                          <td className="p-4 align-middle text-right">
+                            <span className="font-mono text-xs">
+                              {point.declarationPrice.toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </TabsContent>
             
