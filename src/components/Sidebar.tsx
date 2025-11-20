@@ -8,7 +8,8 @@ import {
   PieChart,
   Settings,
   ChevronDown,
-  LineChart
+  LineChart,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 
@@ -82,6 +83,14 @@ const navigation = [
     children: [
       { name: "发电侧收益", href: "/revenue/generation" },
       { name: "售电侧收益", href: "/revenue/retail" },
+    ]
+  },
+  { 
+    name: "报表与报告", 
+    icon: FileText,
+    children: [
+      { name: "报表管理", href: "/reports/management" },
+      { name: "报告管理", href: "/reports/analysis" },
     ]
   },
   { 
