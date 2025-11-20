@@ -25,7 +25,6 @@ const navigation = [
       { name: "市场供需预测", href: "/forecast/supply-demand" },
       { name: "现货电价预测", href: "/forecast/spot-price" },
       { name: "价差预测", href: "/forecast/price-difference" },
-      { name: "气象情报", href: "/forecast/weather" },
       { name: "外送价格计算", href: "/forecast/transmission-price" },
     ]
   },
@@ -39,9 +38,17 @@ const navigation = [
     ]
   },
   { 
-    name: "市场情报", 
-    href: "/market", 
-    icon: BarChart3 
+    name: "市场与基本面数据", 
+    icon: BarChart3,
+    children: [
+      { name: "市场行情", href: "/market-fundamentals/quotes" },
+      { name: "市场出清", href: "/market-fundamentals/clearing" },
+      { name: "市场供需", href: "/market-fundamentals/supply-demand" },
+      { name: "气象数据", href: "/market-fundamentals/weather" },
+      { name: "电网系统", href: "/market-fundamentals/grid" },
+      { name: "能源行情", href: "/market-fundamentals/energy" },
+      { name: "新闻与政策", href: "/market-fundamentals/news-policy" },
+    ]
   },
   { 
     name: "新能源交易", 
@@ -85,7 +92,7 @@ const navigation = [
 ];
 
 export const Sidebar = () => {
-  const [expandedItems, setExpandedItems] = useState<string[]>(["预测数据"]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(["市场与基本面数据"]);
 
   const toggleExpand = (name: string) => {
     setExpandedItems(prev => 
