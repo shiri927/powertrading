@@ -42,6 +42,7 @@ const navigation = [
       { name: "出清管理", href: "/renewable/clearing" },
       { name: "结算管理", href: "/renewable/settlement" },
       { name: "复盘分析", href: "/renewable/review" },
+      { name: "交易台账", href: "/renewable/trading-ledger" },
     ]
   },
   { 
