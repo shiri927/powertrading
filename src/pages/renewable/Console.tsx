@@ -11,10 +11,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Terminal, Plus, Upload, Download, Copy, Clock, Send, Minus, X, Pencil, Trash2, HelpCircle, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { Terminal, Plus, Upload, Download, Copy, Clock, Send, Minus, X, Pencil, Trash2, HelpCircle, ChevronDown, Calendar as CalendarIcon, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { useTradingStore } from "@/store/tradingStore";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // 省间现货申报相关类型定义
 interface TimeSlot {
@@ -157,10 +161,16 @@ const generateMockInterProvincialSchemes = (): BidScheme[] => {
 };
 
 const Console = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pendingBid, setPendingBid } = useTradingStore();
+  
   const [bidData, setBidData] = useState(generateBidData());
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentScheme, setCurrentScheme] = useState("scheme1");
   const [tradeDirections, setTradeDirections] = useState<Record<number, number>>({});
+  const [showRecommendationAlert, setShowRecommendationAlert] = useState(false);
+  const [activeTab, setActiveTab] = useState("centralized");
   
   // 省间现货申报状态
   const [interProvTradingCenter, setInterProvTradingCenter] = useState('shanxi');
@@ -191,6 +201,55 @@ const Console = () => {
   const [rollingTradingUnit, setRollingTradingUnit] = useState('交易单元');
   const [strategyMode, setStrategyMode] = useState<'ratio' | 'fixed'>('ratio');
   const [showUnitSection, setShowUnitSection] = useState(true);
+
+  // 处理来自推荐系统的预填充数据
+  useEffect(() => {
+    const prefillData = location.state?.prefillData || pendingBid;
+    
+    if (prefillData && prefillData.fromRecommendation) {
+      // 自动切换到省内现货申报 Tab
+      setActiveTab("intra-provincial");
+      
+      // 生成基于推荐策略的申报方案
+      const recommendedScheme: BidScheme = {
+        id: `scheme-recommended-${Date.now()}`,
+        name: `AI推荐方案 - ${prefillData.strategy || '智能策略'}`,
+        targetDate: new Date(),
+        tradingUnits: [prefillData.tradingUnit || '十二回路一期'],
+        selectedUnitsCount: 1,
+        totalUnitsCount: 5,
+        limitCondition: '日前限额 1000MWh',
+        powerStrategy: '按照AI推荐执行',
+        priceStrategy: '按照AI推荐执行',
+        timeSlots: prefillData.actions?.map((action: any, index: number) => ({
+          id: `slot-rec-${index}`,
+          startTime: action.time.replace(':', ''),
+          endTime: index < prefillData.actions.length - 1 
+            ? prefillData.actions[index + 1].time.replace(':', '')
+            : '2400',
+          powerRatio: null,
+          powerFixed: action.amount,
+          price: action.expectedPrice
+        })) || []
+      };
+
+      // 添加到省内现货申报方案列表
+      setIntraProvSchemes(prev => [recommendedScheme, ...prev]);
+
+      // 显示提示信息
+      setShowRecommendationAlert(true);
+      toast.success('AI推荐方案已自动填充', {
+        description: `策略: ${prefillData.strategy}，已切换到省内现货申报页面`,
+        duration: 5000,
+      });
+
+      // 清除 pendingBid 和 location.state
+      setPendingBid(null);
+      
+      // 清除 location.state（避免刷新页面时重复处理）
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, pendingBid]);
   
   // 实时时钟更新
   useEffect(() => {
@@ -475,12 +534,41 @@ const Console = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="centralized" className="w-full">
+          {/* AI推荐方案提示 */}
+          {showRecommendationAlert && (
+            <Alert className="mb-6 border-primary bg-primary/5">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <AlertTitle className="flex items-center justify-between">
+                <span>AI推荐方案已自动填充</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setShowRecommendationAlert(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                智能决策系统已根据当前市场条件和AI预测，为您生成了最优交易方案。
+                该方案已添加到"省内现货申报"的方案列表中，请检查后提交申报。
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="centralized">集中竞价申报</TabsTrigger>
               <TabsTrigger value="rolling">日滚动交易申报</TabsTrigger>
               <TabsTrigger value="inter-provincial">省间现货申报</TabsTrigger>
-              <TabsTrigger value="intra-provincial">省内现货申报</TabsTrigger>
+              <TabsTrigger value="intra-provincial">
+                省内现货申报
+                {showRecommendationAlert && (
+                  <Badge variant="default" className="ml-2 h-5 px-1.5 text-[10px]">
+                    AI推荐
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="centralized" className="space-y-4">
