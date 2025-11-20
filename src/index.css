@@ -60,14 +60,14 @@ All colors MUST be HSL.
     --chart-4: 174 76% 33%;
     --chart-5: 32 98% 48%;
 
-    /* Sidebar - Light theme */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 20%;
+    /* Sidebar - Dark Gray theme */
+    --sidebar-background: 0 0% 18%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 149 100% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 10% 95%;
-    --sidebar-accent-foreground: 149 100% 35%;
-    --sidebar-border: 0 0% 88%;
+    --sidebar-accent: 0 0% 25%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 25%;
     --sidebar-ring: 149 100% 35%;
   }
 
@@ -114,13 +114,13 @@ All colors MUST be HSL.
     --chart-4: 174 76% 38%;
     --chart-5: 32 98% 52%;
 
-    --sidebar-background: 140 15% 10%;
-    --sidebar-foreground: 140 5% 95%;
+    --sidebar-background: 0 0% 15%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 149 100% 40%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 140 12% 15%;
-    --sidebar-accent-foreground: 140 5% 95%;
-    --sidebar-border: 140 12% 18%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 22%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 22%;
     --sidebar-ring: 149 100% 40%;
   }
 }
