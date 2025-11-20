@@ -8,14 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle, Clock, Edit } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle, Clock, Edit, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 const BaseData = () => {
   const [selectedYear, setSelectedYear] = useState<Date>(new Date(2024, 0, 1));
   const [compareYear, setCompareYear] = useState<Date>(new Date(2023, 0, 1));
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<any>(null);
 
   // 统计数据
   const stats = [
@@ -300,17 +304,375 @@ const BaseData = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="contract-management">
-          <Card>
-            <CardHeader>
-              <CardTitle>合同管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                合同管理功能开发中...
+        <TabsContent value="contract-management" className="space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">合约信息</h2>
+            <div className="flex gap-2">
+              <Button variant="outline">合约分析</Button>
+              <Button variant="outline">批量删除</Button>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">合约电量</div>
+                <div className="text-2xl font-bold">519279.868 MWh</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">统计电量</div>
+                <div className="text-2xl font-bold">451145.868 MWh</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">均价</div>
+                <div className="text-2xl font-bold">317.74 元/MWh</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex gap-4 items-center">
+                <Select defaultValue="all-units">
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="交易单元" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all-units">全部交易单元</SelectItem>
+                    <SelectItem value="unit1">大山台二期</SelectItem>
+                    <SelectItem value="unit2">大山台三期</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select defaultValue="all-directions">
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="方向" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all-directions">全部方向</SelectItem>
+                    <SelectItem value="buy">买入</SelectItem>
+                    <SelectItem value="sell">卖出</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="合同名称/主体"
+                  className="w-[300px]"
+                />
+
+                <Button>查询</Button>
+                <Button variant="outline">重置</Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Contracts Table */}
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox />
+                    </TableHead>
+                    <TableHead>交易单元</TableHead>
+                    <TableHead>方向</TableHead>
+                    <TableHead className="min-w-[300px]">合同名称</TableHead>
+                    <TableHead>合同类型</TableHead>
+                    <TableHead>关联场站</TableHead>
+                    <TableHead>执行周期</TableHead>
+                    <TableHead>合约电量(MWh)</TableHead>
+                    <TableHead>统计电量(MWh)</TableHead>
+                    <TableHead>均价(元/MWh)</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[
+                    {
+                      unit: "大山台二期",
+                      direction: "卖出",
+                      name: "华能山西新能源有限责任公司_晋源2024年大同平鲁天成风电场2024年年度直接交易用户双边协商电力直接交易（新能源）合同#99",
+                      type: "省内",
+                      station: "-",
+                      period: "20240401-20240430",
+                      contract: 4000,
+                      stats: 4000,
+                      price: 320
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "山西省电能服务有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#16",
+                      type: "省内",
+                      station: "-",
+                      period: "20240401-20240430",
+                      contract: 1500,
+                      stats: 1500,
+                      price: 312
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "山西晋华能电有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#2",
+                      type: "省内",
+                      station: "-",
+                      period: "20240401-20240430",
+                      contract: 10000,
+                      stats: 10000,
+                      price: 288
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "山西华越电子科技有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#159",
+                      type: "省内",
+                      station: "-",
+                      period: "20240401-20240430",
+                      contract: 10000,
+                      stats: 10000,
+                      price: 332
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "买入",
+                      name: "天源平鲁天成风电场2024年4月08日省内交易协议(2024-4-10)合同24",
+                      type: "省内",
+                      station: "-",
+                      period: "20240410-20240410",
+                      contract: -21,
+                      stats: -21,
+                      price: 328.77
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "天源平鲁天成风电场2024年4月09日省内交易协议(2024-4-11)合同60",
+                      type: "省内",
+                      station: "-",
+                      period: "20240411-20240411",
+                      contract: 102.935,
+                      stats: 102.935,
+                      price: 330.41
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "天源平鲁天成风电场2024年4月12日省内交易协议(2024-4-14)合同124",
+                      type: "省内",
+                      station: "-",
+                      period: "20240414-20240414",
+                      contract: 53.93,
+                      stats: 53.93,
+                      price: 339.97
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "买入",
+                      name: "天源平鲁天成风电场2024年4月16日省内交易协议(2024-4-18)合同6",
+                      type: "省内",
+                      station: "-",
+                      period: "20240418-20240418",
+                      contract: -51,
+                      stats: -51,
+                      price: 48.66
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "天源平鲁天成风电场2024年4月21-30日下半分月挂牌分交易（滚动集约）合同143",
+                      type: "省内",
+                      station: "-",
+                      period: "20240421-20240430",
+                      contract: 1615.45,
+                      stats: 1615.45,
+                      price: 255.09
+                    },
+                    {
+                      unit: "大山台三期",
+                      direction: "卖出",
+                      name: "天源平鲁天成风电场发电挂牌2024年4月01日省内挂牌交易",
+                      type: "省内",
+                      station: "-",
+                      period: "20240401-20240401",
+                      contract: 849.999,
+                      stats: 849.999,
+                      price: 311.69
+                    },
+                  ].map((contract, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Checkbox />
+                      </TableCell>
+                      <TableCell>{contract.unit}</TableCell>
+                      <TableCell>
+                        <Badge variant={contract.direction === "卖出" ? "default" : "secondary"}>
+                          {contract.direction}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-primary cursor-pointer flex-shrink-0" />
+                          <span className="truncate">{contract.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{contract.type}</TableCell>
+                      <TableCell>{contract.station}</TableCell>
+                      <TableCell>{contract.period}</TableCell>
+                      <TableCell>{contract.contract}</TableCell>
+                      <TableCell>{contract.stats}</TableCell>
+                      <TableCell>{contract.price}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setContractDialogOpen(true);
+                            }}
+                          >
+                            详情
+                          </Button>
+                          <Button variant="ghost" size="sm">编辑</Button>
+                          <Button variant="ghost" size="sm">删除</Button>
+                          <Button variant="ghost" size="sm">导出</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Contract Detail Dialog */}
+          <Dialog open={contractDialogOpen} onOpenChange={setContractDialogOpen}>
+            <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  合约详情
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left: Contract Info */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground mb-1">合约主体</div>
+                      <div className="font-medium">{selectedContract?.unit}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">交易方向</div>
+                      <Badge variant={selectedContract?.direction === "卖出" ? "default" : "secondary"}>
+                        {selectedContract?.direction}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">执行时段</div>
+                      <div className="font-medium">{selectedContract?.period}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">仓位计算</div>
+                      <Badge>参与</Badge>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-muted-foreground mb-1">合同名称</div>
+                      <div className="font-medium text-xs break-words">{selectedContract?.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">合同类型</div>
+                      <div className="font-medium">-/-</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">交易对手</div>
+                      <div className="font-medium text-xs">华能山西新能源有限责任公司_晋源2024</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">签订时间</div>
+                      <div className="font-medium">20231214</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1">关联主合约</div>
+                      <div className="font-medium">-</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Time Period Tabs and Data */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Tabs defaultValue="24" className="w-full">
+                      <TabsList>
+                        <TabsTrigger value="24">24</TabsTrigger>
+                        <TabsTrigger value="96">96</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  
+                  <div className="flex justify-end text-sm">
+                    <div className="space-x-4">
+                      <span>合约总电量：<strong>4000MWh</strong></span>
+                      <span>统计电价：<strong>320元/MWh</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Time-based Data Table */}
+              <div className="mt-6 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">日期</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                      {Array.from({ length: 16 }, (_, i) => {
+                        const hour = i * 1.5;
+                        const minutes = (hour % 1) * 60;
+                        const displayHour = Math.floor(hour).toString().padStart(2, '0');
+                        const displayMin = minutes.toString().padStart(2, '0');
+                        return (
+                          <TableHead key={i} className="text-center min-w-[60px]">
+                            {displayHour}{displayMin}
+                          </TableHead>
+                        );
+                      })}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 10 }, (_, dayIndex) => {
+                      const date = `202404${(dayIndex + 1).toString().padStart(2, '0')}`;
+                      return (
+                        <>
+                          <TableRow key={`${dayIndex}-energy`}>
+                            <TableCell rowSpan={2} className="font-medium">{date}</TableCell>
+                            <TableCell className="text-muted-foreground">电量</TableCell>
+                            {Array.from({ length: 16 }, (_, i) => (
+                              <TableCell key={i} className="text-center">1,389</TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow key={`${dayIndex}-price`}>
+                            <TableCell className="text-muted-foreground">电价</TableCell>
+                            {Array.from({ length: 16 }, (_, i) => (
+                              <TableCell key={i} className="text-center">320</TableCell>
+                            ))}
+                          </TableRow>
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="contract-analysis">
