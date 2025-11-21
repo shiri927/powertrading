@@ -59,6 +59,7 @@ import ReportAnalysis from "./pages/reports/ReportAnalysis";
 
 const queryClient = new QueryClient();
 
+// Force rebuild to fix React dispatcher issue
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
