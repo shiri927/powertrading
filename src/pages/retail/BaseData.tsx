@@ -1,32 +1,731 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { CalendarIcon, Plus, Search, FileText, CheckCircle2, Clock, AlertCircle, Download, Eye, TrendingUp, BarChart3 } from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, ComposedChart } from "recharts";
+
+// 模拟数据生成
+const generateCalendarEvents = () => {
+  return [
+    { id: 1, date: new Date(2025, 10, 15), type: "announcement", title: "省间现货交易公告", status: "未读" },
+    { id: 2, date: new Date(2025, 10, 18), type: "todo", title: "提交月度交易计划", status: "待处理", priority: "high" },
+    { id: 3, date: new Date(2025, 10, 20), type: "sequence", title: "11月交易序列", status: "进行中" },
+    { id: 4, date: new Date(2025, 10, 22), type: "announcement", title: "绿证交易规则更新", status: "已读" },
+    { id: 5, date: new Date(2025, 10, 25), type: "todo", title: "合同备案截止", status: "待处理", priority: "high" },
+  ];
+};
+
+const generatePowerPlanMetrics = () => {
+  return [
+    { label: "交易单元总数", value: "12", unit: "个" },
+    { label: "计划已完成", value: "8", subValue: "66.7%", status: "success" },
+    { label: "待制定计划", value: "3", subValue: "25.0%", status: "warning" },
+    { label: "待发布计划", value: "1", subValue: "8.3%", status: "info" },
+  ];
+};
+
+const generatePowerPlanData = () => {
+  return Array.from({ length: 12 }, (_, i) => ({
+    month: `${i + 1}月`,
+    planned: 8000 + Math.random() * 2000,
+    actual: 7500 + Math.random() * 2500,
+    completion: 85 + Math.random() * 15,
+  }));
+};
+
+const generateContractData = () => {
+  return [
+    { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "单元A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中" },
+    { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "单元B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中" },
+    { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "单元C", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成" },
+    { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "单元A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中" },
+    { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "单元D", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中" },
+  ];
+};
+
+const generatePositionAnalysisData = () => {
+  return Array.from({ length: 24 }, (_, i) => ({
+    hour: `${i.toString().padStart(2, '0')}:00`,
+    volume: 800 + Math.random() * 400,
+    avgPrice: 350 + Math.random() * 100,
+    contracts: Math.floor(2 + Math.random() * 3),
+  }));
+};
 
 const BaseData = () => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [contractFilter, setContractFilter] = useState({ tradingCenter: "all", tradingUnit: "all", keyword: "" });
+  const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11" });
+
+  const calendarEvents = generateCalendarEvents();
+  const powerPlanMetrics = generatePowerPlanMetrics();
+  const powerPlanData = generatePowerPlanData();
+  const contractData = generateContractData();
+  const positionData = generatePositionAnalysisData();
+
+  // 筛选合同数据
+  const filteredContracts = contractData.filter(contract => {
+    const matchCenter = contractFilter.tradingCenter === "all" || contract.tradingCenter === contractFilter.tradingCenter;
+    const matchUnit = contractFilter.tradingUnit === "all" || contract.tradingUnit === contractFilter.tradingUnit;
+    const matchKeyword = !contractFilter.keyword || contract.name.includes(contractFilter.keyword) || contract.id.includes(contractFilter.keyword);
+    return matchCenter && matchUnit && matchKeyword;
+  });
+
+  const chartConfig = {
+    planned: { label: "计划电量", color: "#3b82f6" },
+    actual: { label: "实际电量", color: "#10b981" },
+    volume: { label: "持仓电量", color: "#00B04D" },
+    avgPrice: { label: "加权均价", color: "#f59e0b" },
+  };
+
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">基础数据管理</h1>
         <p className="text-muted-foreground mt-2">
-          售电用户、套餐及合同基础数据
+          交易日历、电量计划、合同管理及仓位分析
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            基础数据概览
-          </CardTitle>
-          <CardDescription>
-            用户信息、套餐配置、合同管理
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            基础数据管理功能开发中...
+      <Tabs defaultValue="calendar" className="space-y-4">
+        <TabsList className="bg-[#F1F8F4]">
+          <TabsTrigger value="calendar">交易日历</TabsTrigger>
+          <TabsTrigger value="power-plan">电量计划</TabsTrigger>
+          <TabsTrigger value="contract">合同管理</TabsTrigger>
+          <TabsTrigger value="analysis">合同分析</TabsTrigger>
+        </TabsList>
+
+        {/* 交易日历 */}
+        <TabsContent value="calendar" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 日历视图 */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  交易日历
+                </CardTitle>
+                <CardDescription>查看待办事项、公告和交易序列</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  locale={zhCN}
+                  className="rounded-md border p-3"
+                />
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-semibold">当日事项：</h4>
+                  {calendarEvents
+                    .filter(event => selectedDate && format(event.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+                    .map(event => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-[#F8FBFA] rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {event.type === "announcement" && <FileText className="h-4 w-4 text-blue-600" />}
+                          {event.type === "todo" && <CheckCircle2 className="h-4 w-4 text-orange-600" />}
+                          {event.type === "sequence" && <Clock className="h-4 w-4 text-green-600" />}
+                          <span className="text-sm">{event.title}</span>
+                        </div>
+                        <Badge variant={event.priority === "high" ? "destructive" : "secondary"}>
+                          {event.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  {!calendarEvents.some(event => selectedDate && format(event.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')) && (
+                    <p className="text-sm text-muted-foreground">暂无事项</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 待办、公告、序列列表 */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>待办事项</span>
+                    <Button size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-1" />
+                      新建
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {calendarEvents.filter(e => e.type === "todo").map(event => (
+                        <div key={event.id} className="p-2 bg-[#F8FBFA] rounded hover:bg-[#F1F8F4] transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{event.title}</p>
+                              <p className="text-xs text-muted-foreground">{format(event.date, 'yyyy-MM-dd', { locale: zhCN })}</p>
+                            </div>
+                            {event.priority === "high" && <AlertCircle className="h-4 w-4 text-red-600" />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>公告通知</span>
+                    <Button size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-1" />
+                      新建
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[150px]">
+                    <div className="space-y-2">
+                      {calendarEvents.filter(e => e.type === "announcement").map(event => (
+                        <div key={event.id} className="p-2 bg-[#F8FBFA] rounded hover:bg-[#F1F8F4] transition-colors cursor-pointer">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm flex-1">{event.title}</p>
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-3 w-3 text-muted-foreground" />
+                              <Download className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{format(event.date, 'yyyy-MM-dd', { locale: zhCN })}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* 电量计划 */}
+        <TabsContent value="power-plan" className="space-y-4">
+          {/* 指标概览 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {powerPlanMetrics.map((metric, index) => (
+              <Card key={index}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold font-mono">{metric.value}</span>
+                    <span className="text-sm text-muted-foreground">{metric.unit}</span>
+                  </div>
+                  {metric.subValue && (
+                    <Badge variant={metric.status === "success" ? "default" : metric.status === "warning" ? "secondary" : "outline"} className="mt-2">
+                      {metric.subValue}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  新建年度计划
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>新建年度电量计划</DialogTitle>
+                  <DialogDescription>填写年度电量计划信息</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>交易单元</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择交易单元" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unit-a">单元A</SelectItem>
+                          <SelectItem value="unit-b">单元B</SelectItem>
+                          <SelectItem value="unit-c">单元C</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>计划年份</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择年份" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2025">2025</SelectItem>
+                          <SelectItem value="2026">2026</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>计划总电量 (MWh)</Label>
+                    <Input type="number" placeholder="输入年度计划总电量" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>备注</Label>
+                    <Textarea placeholder="输入备注信息" rows={3} />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline">取消</Button>
+                  <Button>确认创建</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  新建月度计划
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>新建月度电量计划</DialogTitle>
+                  <DialogDescription>填写月度电量计划信息</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>交易单元</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择交易单元" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unit-a">单元A</SelectItem>
+                          <SelectItem value="unit-b">单元B</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>计划月份</Label>
+                      <Input type="month" defaultValue="2025-11" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>计划电量 (MWh)</Label>
+                    <Input type="number" placeholder="输入月度计划电量" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline">取消</Button>
+                  <Button>确认创建</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* 计划完成情况图表 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">电量计划完成情况</CardTitle>
+              <CardDescription>月度计划电量与实际电量对比</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={powerPlanData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis yAxisId="left" className="text-xs" label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" className="text-xs" label={{ value: '完成率 (%)', angle: 90, position: 'insideRight' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar yAxisId="left" dataKey="planned" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="actual" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="completion" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 合同管理 */}
+        <TabsContent value="contract" className="space-y-4">
+          {/* 筛选条件 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">合同检索</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>交易中心</Label>
+                  <Select value={contractFilter.tradingCenter} onValueChange={(value) => setContractFilter({ ...contractFilter, tradingCenter: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectItem value="山西交易中心">山西交易中心</SelectItem>
+                      <SelectItem value="山东交易中心">山东交易中心</SelectItem>
+                      <SelectItem value="国家交易中心">国家交易中心</SelectItem>
+                      <SelectItem value="绿证交易平台">绿证交易平台</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>交易单元</Label>
+                  <Select value={contractFilter.tradingUnit} onValueChange={(value) => setContractFilter({ ...contractFilter, tradingUnit: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectItem value="单元A">单元A</SelectItem>
+                      <SelectItem value="单元B">单元B</SelectItem>
+                      <SelectItem value="单元C">单元C</SelectItem>
+                      <SelectItem value="单元D">单元D</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>关键字</Label>
+                  <Input 
+                    placeholder="合同名称或编号" 
+                    value={contractFilter.keyword}
+                    onChange={(e) => setContractFilter({ ...contractFilter, keyword: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button className="w-full">
+                    <Search className="h-4 w-4 mr-2" />
+                    查询
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 合同列表 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                <span>合同列表</span>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  导入合同
+                </Button>
+              </CardTitle>
+              <CardDescription>共 {filteredContracts.length} 条合同</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border max-h-[500px] overflow-y-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">合同编号</th>
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">合同名称</th>
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">交易中心</th>
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">交易单元</th>
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">合同类型</th>
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">执行期间</th>
+                      <th className="h-10 px-4 text-right align-middle font-semibold text-xs">合同电量</th>
+                      <th className="h-10 px-4 text-right align-middle font-semibold text-xs">平均电价</th>
+                      <th className="h-10 px-4 text-center align-middle font-semibold text-xs">状态</th>
+                      <th className="h-10 px-4 text-center align-middle font-semibold text-xs">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredContracts.map((contract) => (
+                      <tr key={contract.id} className="border-b transition-colors hover:bg-[#F8FBFA]">
+                        <td className="p-4 align-middle font-mono text-xs">{contract.id}</td>
+                        <td className="p-4 align-middle text-xs">{contract.name}</td>
+                        <td className="p-4 align-middle text-xs">{contract.tradingCenter}</td>
+                        <td className="p-4 align-middle text-xs">{contract.tradingUnit}</td>
+                        <td className="p-4 align-middle text-xs">{contract.type}</td>
+                        <td className="p-4 align-middle text-xs font-mono">{contract.startDate} ~ {contract.endDate}</td>
+                        <td className="p-4 align-middle text-right font-mono text-xs">{contract.volume.toLocaleString()}</td>
+                        <td className="p-4 align-middle text-right font-mono text-xs">{contract.avgPrice.toFixed(2)}</td>
+                        <td className="p-4 align-middle text-center">
+                          <Badge variant={contract.status === "执行中" ? "default" : "secondary"} className="text-xs">
+                            {contract.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4 align-middle text-center">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl">
+                              <DialogHeader>
+                                <DialogTitle>合同详情</DialogTitle>
+                                <DialogDescription>{contract.name}</DialogDescription>
+                              </DialogHeader>
+                              <div className="grid grid-cols-2 gap-6 py-4">
+                                <div className="space-y-4">
+                                  <h4 className="font-semibold text-sm border-b pb-2">基础信息</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <span className="text-muted-foreground">合同编号：</span>
+                                      <span className="font-mono">{contract.id}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">交易中心：</span>
+                                      <span>{contract.tradingCenter}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">交易单元：</span>
+                                      <span>{contract.tradingUnit}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">合同类型：</span>
+                                      <span>{contract.type}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-muted-foreground">执行期间：</span>
+                                      <span className="font-mono">{contract.startDate} 至 {contract.endDate}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">合同电量：</span>
+                                      <span className="font-mono">{contract.volume.toLocaleString()} MWh</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">平均电价：</span>
+                                      <span className="font-mono">{contract.avgPrice.toFixed(2)} 元/MWh</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-4">
+                                  <h4 className="font-semibold text-sm border-b pb-2">分时量价数据</h4>
+                                  <ScrollArea className="h-[250px]">
+                                    <table className="w-full text-xs">
+                                      <thead className="bg-[#F1F8F4]">
+                                        <tr>
+                                          <th className="p-2 text-left">时段</th>
+                                          <th className="p-2 text-right">电量(MWh)</th>
+                                          <th className="p-2 text-right">电价(元/MWh)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {Array.from({ length: 24 }, (_, i) => (
+                                          <tr key={i} className="border-b hover:bg-[#F8FBFA]">
+                                            <td className="p-2 font-mono">{i.toString().padStart(2, '0')}:00</td>
+                                            <td className="p-2 text-right font-mono">{(contract.volume / 24).toFixed(0)}</td>
+                                            <td className="p-2 text-right font-mono">{(contract.avgPrice + (Math.random() - 0.5) * 50).toFixed(2)}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </ScrollArea>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 合同分析 */}
+        <TabsContent value="analysis" className="space-y-4">
+          {/* 分析条件 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">分析条件</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>分析维度</Label>
+                  <Select value={analysisParams.dimension} onValueChange={(value) => setAnalysisParams({ ...analysisParams, dimension: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unit">按交易单元</SelectItem>
+                      <SelectItem value="period">按时段</SelectItem>
+                      <SelectItem value="contract">按合同类型</SelectItem>
+                      <SelectItem value="date">按日期</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>分析周期</Label>
+                  <Select value={analysisParams.period} onValueChange={(value) => setAnalysisParams({ ...analysisParams, period: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="year">年度仓位</SelectItem>
+                      <SelectItem value="month">月度仓位</SelectItem>
+                      <SelectItem value="multi-day">多日仓位</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>日期范围</Label>
+                  <Input type="month" value={analysisParams.dateRange} onChange={(e) => setAnalysisParams({ ...analysisParams, dateRange: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button className="w-full">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    分析
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 统计指标 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">合同总数</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold font-mono">{contractData.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">活跃合同数量</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">总持仓电量</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold font-mono">{contractData.reduce((sum, c) => sum + c.volume, 0).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground mt-1">MWh</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">加权平均电价</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold font-mono">
+                  {(contractData.reduce((sum, c) => sum + c.avgPrice * c.volume, 0) / contractData.reduce((sum, c) => sum + c.volume, 0)).toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">元/MWh</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">覆盖交易单元</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold font-mono">{new Set(contractData.map(c => c.tradingUnit)).size}</div>
+                <p className="text-xs text-muted-foreground mt-1">个</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 仓位分析图表 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  持仓电量分布
+                </CardTitle>
+                <CardDescription>24小时分时段持仓电量</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={positionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="hour" className="text-xs" />
+                      <YAxis className="text-xs" label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft' }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="volume" fill="#00B04D" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  持仓均价趋势
+                </CardTitle>
+                <CardDescription>24小时分时段加权平均电价</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={positionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="hour" className="text-xs" />
+                      <YAxis className="text-xs" label={{ value: '电价 (元/MWh)', angle: -90, position: 'insideLeft' }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="avgPrice" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 详细数据表 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">仓位明细数据</CardTitle>
+              <CardDescription>各时段持仓电量、均价及合同数量</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border max-h-[400px] overflow-y-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left align-middle font-semibold text-xs">时段</th>
+                      <th className="h-10 px-4 text-right align-middle font-semibold text-xs">持仓电量 (MWh)</th>
+                      <th className="h-10 px-4 text-right align-middle font-semibold text-xs">加权均价 (元/MWh)</th>
+                      <th className="h-10 px-4 text-right align-middle font-semibold text-xs">合同数量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {positionData.map((row, index) => (
+                      <tr key={index} className="border-b transition-colors hover:bg-[#F8FBFA]">
+                        <td className="p-4 align-middle font-mono text-xs">{row.hour}</td>
+                        <td className="p-4 align-middle text-right font-mono text-xs">{row.volume.toFixed(2)}</td>
+                        <td className="p-4 align-middle text-right font-mono text-xs">{row.avgPrice.toFixed(2)}</td>
+                        <td className="p-4 align-middle text-right font-mono text-xs">{row.contracts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
