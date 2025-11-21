@@ -152,6 +152,15 @@ export const Sidebar = () => {
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <h1 className="text-lg font-bold leading-tight mb-0.5 text-red-900">
                 杉数科技
+电力交易决策平台
+
+
+
+
+
+
+
+
               </h1>
               <p className="text-sm font-medium leading-tight mb-2 text-slate-950">
                 
