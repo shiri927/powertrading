@@ -147,7 +147,7 @@ export const Sidebar = () => {
   return <div className="w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-white to-slate-50/50">
+        <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-white to-slate-50/50 bg-slate-50">
           <div className="flex items-start gap-3">
             <img src={shanshuLogo} alt="杉数科技" className="w-14 h-14 object-contain flex-shrink-0 mt-0.5" />
             <div className="flex flex-col justify-center flex-1 min-w-0">
