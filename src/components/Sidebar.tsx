@@ -2,6 +2,7 @@ import { NavLink } from "./NavLink";
 import { LayoutDashboard, TrendingUp, BarChart3, Zap, ShoppingCart, PieChart, Settings, ChevronDown, LineChart, FileText } from "lucide-react";
 import { useState } from "react";
 import heengyLogo from "@/assets/heengy-logo.png";
+import shanshuLogo from "@/assets/shanshu-logo.png";
 const navigation = [{
   name: "首页大屏",
   href: "/",
@@ -147,19 +148,11 @@ export const Sidebar = () => {
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="p-6 border-b border-sidebar-border bg-slate-50">
-          <div className="flex items-start gap-4 bg-slate-50 text-slate-950">
-            
+          <div className="flex items-start gap-3 bg-slate-50 text-slate-950">
+            <img src={shanshuLogo} alt="杉数科技" className="w-12 h-12 object-contain flex-shrink-0" />
             <div className="flex flex-col justify-center flex-1 min-w-0">
-              <h1 className="text-lg font-bold leading-tight mb-0.5 text-red-900">
-                杉数科技                            电力交易决策平台
-
-
-
-
-
-
-
-
+              <h1 className="text-lg font-bold leading-tight mb-0.5 text-slate-950">
+                电力交易决策平台
               </h1>
               <p className="text-sm font-medium leading-tight mb-2 text-slate-950">
                 
