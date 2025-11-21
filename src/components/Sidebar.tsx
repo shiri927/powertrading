@@ -148,19 +148,16 @@ export const Sidebar = () => {
         {/* Logo */}
         <div className="p-6 border-b border-sidebar-border bg-slate-50">
           <div className="flex items-start gap-4 bg-slate-50 text-slate-950">
-            <div className="flex-shrink-0 bg-[#00B04D]/10 rounded-lg p-2">
-              <img src={heengyLogo} alt="Heengy Logo" className="h-10 w-10 object-contain" />
-            </div>
+            
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <h1 className="text-lg font-bold leading-tight mb-0.5 text-red-900">
                 杉数科技
               </h1>
-              <p className="text-sm font-medium text-sidebar-foreground leading-tight mb-2">
-                电力交易平台
+              <p className="text-sm font-medium leading-tight mb-2 text-slate-950">
+                
+
               </p>
-              <p className="text-[10px] text-sidebar-foreground/50 font-mono leading-tight tracking-tight">
-                Heengy Power Trading Platform
-              </p>
+              
             </div>
           </div>
         </div>
