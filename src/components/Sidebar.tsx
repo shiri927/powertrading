@@ -151,10 +151,12 @@ export const Sidebar = () => {
           <div className="flex items-start gap-3">
             <img src={shanshuLogo} alt="杉数科技" className="w-14 h-14 object-contain flex-shrink-0 mt-0.5" />
             <div className="flex flex-col justify-center flex-1 min-w-0">
-              <h2 className="text-base font-bold leading-tight mb-1" style={{ color: '#8B2332' }}>
+              <h2 style={{
+              color: '#8B2332'
+            }} className="font-bold leading-tight mb-1 text-lg text-red-900">
                 杉数科技
               </h2>
-              <h1 className="text-lg font-bold leading-tight text-slate-950">
+              <h1 className="font-bold leading-tight text-slate-950 text-base">
                 电力交易决策平台
               </h1>
               <p className="text-sm font-medium leading-tight mb-2 text-slate-950">
