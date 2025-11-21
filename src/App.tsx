@@ -36,7 +36,8 @@ import RetailBaseData from "./pages/retail/BaseData";
 import RetailConsole from "./pages/retail/Console";
 import RetailTrading from "./pages/retail/Trading";
 import RetailLoad from "./pages/retail/Load";
-import RetailSettlement from "./pages/retail/SettlementRetail";
+import RetailClearing from "./pages/retail/Clearing";
+import RetailSettlement from "./pages/retail/Settlement";
 import RetailReview from "./pages/retail/Review";
 import TradingLedger from "./pages/retail/TradingLedger";
 
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/load" element={<RetailLoad />} />
+            <Route path="/retail/clearing" element={<RetailClearing />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
             <Route path="/retail/trading-ledger" element={<TradingLedger />} />
