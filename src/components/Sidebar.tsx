@@ -147,7 +147,7 @@ export const Sidebar = () => {
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="p-6 border-b border-sidebar-border bg-slate-50">
-          <div className="flex items-start gap-4 text-red-900">
+          <div className="flex items-start gap-4 text-slate-950">
             <div className="flex-shrink-0 bg-[#00B04D]/10 rounded-lg p-2">
               <img src={heengyLogo} alt="Heengy Logo" className="h-10 w-10 object-contain" />
             </div>
