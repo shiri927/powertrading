@@ -156,7 +156,7 @@ export const Sidebar = () => {
             }} className="font-bold leading-tight mb-1 text-lg text-red-900">
                 杉数科技
               </h2>
-              <h1 className="font-bold leading-tight text-slate-950 text-base">
+              <h1 className="font-bold leading-tight text-base text-red-900">
                 电力交易决策平台
               </h1>
               <p className="text-sm font-medium leading-tight mb-2 text-slate-950">
