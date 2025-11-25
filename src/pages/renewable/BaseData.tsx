@@ -20,6 +20,8 @@ const BaseData = () => {
   const [compareYear, setCompareYear] = useState<Date>(new Date(2023, 0, 1));
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<any>(null);
 
   // 统计数据
   const stats = [
@@ -259,7 +261,15 @@ const BaseData = () => {
                             <TableCell>
                               {row.id !== "合计" && (
                                 <div className="flex gap-1">
-                                  <Button variant="link" size="sm" className="h-auto p-0 text-primary">
+                                  <Button 
+                                    variant="link" 
+                                    size="sm" 
+                                    className="h-auto p-0 text-primary"
+                                    onClick={() => {
+                                      setEditingUnit(row);
+                                      setEditDialogOpen(true);
+                                    }}
+                                  >
                                     编辑
                                   </Button>
                                   <span className="text-muted-foreground">|</span>
@@ -668,6 +678,233 @@ const BaseData = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 编辑对话框 */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>编辑</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* 核电场信息 */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">核电场信息</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* 场站分组 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">场站分组</label>
+                  <Select defaultValue="default">
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择场站分组" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">华能一组</SelectItem>
+                      <SelectItem value="group2">华能二组</SelectItem>
+                      <SelectItem value="group3">华能三组</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 交易统称 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">交易统称</label>
+                  <Select defaultValue="default">
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择交易统称" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">统称1</SelectItem>
+                      <SelectItem value="name2">统称2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 平均可用电量 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">平均可用电量</label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" defaultValue="3.1" className="flex-1" />
+                    <span className="text-sm text-muted-foreground">MW</span>
+                  </div>
+                </div>
+
+                {/* 铭牌电功率 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">铭牌电功率</label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" defaultValue="49.5" className="flex-1" />
+                    <span className="text-sm text-muted-foreground">kW</span>
+                  </div>
+                </div>
+
+                {/* 申报场站名称 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">申报场站名称</label>
+                  <Input 
+                    defaultValue='原阳风电场新能源"南部跨流一体化市场"交易' 
+                    placeholder="请输入申报场站名称"
+                  />
+                </div>
+
+                {/* 场站类型 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">场站类型</label>
+                  <Select defaultValue="wind">
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择场站类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wind">风电</SelectItem>
+                      <SelectItem value="solar">光伏</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 交易场站名称 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">交易场站名称</label>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="use-station-name" />
+                    <Input 
+                      defaultValue='南部跨流一体化"南部跨流一体化"方案协调新合作处' 
+                      placeholder="请输入交易场站名称"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                {/* 核发电省份 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">核发电省份</label>
+                  <Select defaultValue="hebei">
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择省份" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hebei">廊坊代码区电站 值</SelectItem>
+                      <SelectItem value="shandong">山东</SelectItem>
+                      <SelectItem value="shanxi">山西</SelectItem>
+                      <SelectItem value="zhejiang">浙江</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 场站编码 */}
+                <div className="space-y-2 col-span-2">
+                  <label className="text-sm text-muted-foreground">场站编码</label>
+                  <Input 
+                    defaultValue="河南跨流十工程标准化批整理准确对流价值" 
+                    placeholder="请输入场站编码"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 核电场配置 */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">核电场配置</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* 核温 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">核温</label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" defaultValue="113.00" className="flex-1" />
+                    <span className="text-sm text-muted-foreground">MW</span>
+                  </div>
+                </div>
+
+                {/* 地址 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">地址</label>
+                  <Input placeholder="请输入地址" />
+                </div>
+
+                {/* 期望运行/可达性/五道机 组合 */}
+                <div className="space-y-2 col-span-2">
+                  <label className="text-sm text-muted-foreground">期望运行</label>
+                  <div className="flex items-center gap-2">
+                    <Select defaultValue="group">
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="group">集团</SelectItem>
+                        <SelectItem value="individual">个人</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <span className="text-sm text-muted-foreground">可达性</span>
+                    <Input type="number" className="w-[100px]" />
+                    <span className="text-sm text-muted-foreground">年</span>
+                    
+                    <Select defaultValue="machine5">
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="machine5">五道机</SelectItem>
+                        <SelectItem value="machine3">三道机</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <span className="text-sm text-muted-foreground">反</span>
+                  </div>
+                </div>
+
+                {/* 加装年份 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">加装年份</label>
+                  <Input placeholder="请输入年份" />
+                </div>
+
+                {/* 级别编码 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">级别编码</label>
+                  <Input defaultValue="翻越" placeholder="请输入级别编码" />
+                </div>
+              </div>
+            </div>
+
+            {/* 交易配置 */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">交易配置</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* 上网时间 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">上网时间</label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" defaultValue="250" className="flex-1" />
+                    <span className="text-sm text-muted-foreground">元/MW/h</span>
+                  </div>
+                </div>
+
+                {/* 邮件时钟 */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">邮件时钟</label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" defaultValue="0.26" className="flex-1" />
+                    <span className="text-sm text-muted-foreground">元</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 底部按钮 */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={() => setEditDialogOpen(false)}>
+              保存
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
