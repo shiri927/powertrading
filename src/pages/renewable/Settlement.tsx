@@ -35,7 +35,7 @@ interface SettlementRecord {
 // 生成模拟数据
 const generateMockData = (): SettlementRecord[] => {
   const months = ["202410", "202411"];
-  const tradingUnits = ["交易单元001", "交易单元002", "交易单元003"];
+  const tradingUnits = ["山东省场站A", "山东省场站B", "山东省场站C", "山西省场站A", "山西省场站B", "山西省场站C", "浙江省场站A", "浙江省场站B", "浙江省场站C"];
   const statuses = ["已结算", "待结算", "结算中"];
   
   const monthlyData = months.map((month, monthIndex) => {
@@ -260,9 +260,15 @@ const Settlement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部交易单元</SelectItem>
-                    <SelectItem value="unit001">交易单元001</SelectItem>
-                    <SelectItem value="unit002">交易单元002</SelectItem>
-                    <SelectItem value="unit003">交易单元003</SelectItem>
+                    <SelectItem value="unit001">山东省场站A</SelectItem>
+                    <SelectItem value="unit002">山东省场站B</SelectItem>
+                    <SelectItem value="unit003">山东省场站C</SelectItem>
+                    <SelectItem value="unit004">山西省场站A</SelectItem>
+                    <SelectItem value="unit005">山西省场站B</SelectItem>
+                    <SelectItem value="unit006">山西省场站C</SelectItem>
+                    <SelectItem value="unit007">浙江省场站A</SelectItem>
+                    <SelectItem value="unit008">浙江省场站B</SelectItem>
+                    <SelectItem value="unit009">浙江省场站C</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

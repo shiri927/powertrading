@@ -74,8 +74,8 @@ interface TradingSession {
 // Mock数据生成函数
 const generateStations = (): StationData[] => {
   const stationNames = [
-    '十二回路一期', '十二回路二期', '十三回路', '十四回路', 
-    '十五回路一期', '十五回路二期', '十六回路', '十七回路'
+    '山东省场站A', '山东省场站B', '山东省场站C', '山东省场站D', 
+    '山西省场站A', '山西省场站B', '山西省场站C', '浙江省场站A'
   ];
   
   return stationNames.map((name, i) => ({

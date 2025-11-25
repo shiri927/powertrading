@@ -122,7 +122,7 @@ export const RecommendationTab = () => {
   const handleApplyRecommendation = (recommendation: StrategyRecommendation) => {
     // 生成申报数据并保存到全局状态
     const bidData = {
-      tradingUnit: '十二回路一期',
+      tradingUnit: '山东省场站A',
       strategy: recommendation.strategy.name,
       actions: recommendation.suggestedActions,
       fromRecommendation: true,

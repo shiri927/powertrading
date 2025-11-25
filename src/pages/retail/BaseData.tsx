@@ -47,11 +47,11 @@ const generatePowerPlanData = () => {
 
 const generateContractData = () => {
   return [
-    { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "单元A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中" },
-    { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "单元B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中" },
-    { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "单元C", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成" },
-    { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "单元A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中" },
-    { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "单元D", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中" },
+    { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "山东省场站A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中" },
+    { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "山东省场站B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中" },
+    { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "山西省场站A", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成" },
+    { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "浙江省场站A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中" },
+    { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "山西省场站B", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中" },
   ];
 };
 
@@ -262,9 +262,10 @@ const BaseData = () => {
                           <SelectValue placeholder="选择交易单元" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="unit-a">单元A</SelectItem>
-                          <SelectItem value="unit-b">单元B</SelectItem>
-                          <SelectItem value="unit-c">单元C</SelectItem>
+                          <SelectItem value="unit-a">山东省场站A</SelectItem>
+                          <SelectItem value="unit-b">山东省场站B</SelectItem>
+                          <SelectItem value="unit-c">山西省场站A</SelectItem>
+                          <SelectItem value="unit-d">浙江省场站A</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -398,10 +399,12 @@ const BaseData = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全部</SelectItem>
-                      <SelectItem value="单元A">单元A</SelectItem>
-                      <SelectItem value="单元B">单元B</SelectItem>
-                      <SelectItem value="单元C">单元C</SelectItem>
-                      <SelectItem value="单元D">单元D</SelectItem>
+                      <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+                      <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+                      <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+                      <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+                      <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+                      <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
