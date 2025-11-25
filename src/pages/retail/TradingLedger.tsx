@@ -234,8 +234,10 @@ export default function TradingLedger() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="unit1">交易单元1</SelectItem>
-                    <SelectItem value="unit2">交易单元2</SelectItem>
+                    <SelectItem value="unit1">山东省场站A</SelectItem>
+                    <SelectItem value="unit2">山东省场站B</SelectItem>
+                    <SelectItem value="unit3">山西省场站A</SelectItem>
+                    <SelectItem value="unit4">浙江省场站A</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

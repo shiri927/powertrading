@@ -215,7 +215,7 @@ const Console = () => {
         id: `scheme-recommended-${Date.now()}`,
         name: `AI推荐方案 - ${prefillData.strategy || '智能策略'}`,
         targetDate: new Date(),
-        tradingUnits: [prefillData.tradingUnit || '十二回路一期'],
+        tradingUnits: [prefillData.tradingUnit || '山东省场站A'],
         selectedUnitsCount: 1,
         totalUnitsCount: 5,
         limitCondition: '日前限额 1000MWh',
@@ -630,8 +630,12 @@ const Console = () => {
                       <SelectValue placeholder="交易单元" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unit1">大任一期</SelectItem>
-                      <SelectItem value="unit2">大任二期</SelectItem>
+                      <SelectItem value="unit1">山东省场站A</SelectItem>
+                      <SelectItem value="unit2">山东省场站B</SelectItem>
+                      <SelectItem value="unit3">山西省场站A</SelectItem>
+                      <SelectItem value="unit4">山西省场站B</SelectItem>
+                      <SelectItem value="unit5">浙江省场站A</SelectItem>
+                      <SelectItem value="unit6">浙江省场站B</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -877,9 +881,12 @@ const Console = () => {
                     <SelectValue placeholder="交易单元" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="交易单元">交易单元</SelectItem>
-                    <SelectItem value="单元1">单元1</SelectItem>
-                    <SelectItem value="单元2">单元2</SelectItem>
+                    <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+                    <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+                    <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+                    <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+                    <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+                    <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
                   </SelectContent>
                 </Select>
                 

@@ -226,10 +226,12 @@ export const AIForecastTab = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unit1">十二回路一期</SelectItem>
-                    <SelectItem value="unit2">滨州沾化风电</SelectItem>
-                    <SelectItem value="unit3">烟台海阳光伏</SelectItem>
-                    <SelectItem value="unit4">威海荣成风电</SelectItem>
+                    <SelectItem value="unit1">山东省场站A</SelectItem>
+                    <SelectItem value="unit2">山东省场站B</SelectItem>
+                    <SelectItem value="unit3">山西省场站A</SelectItem>
+                    <SelectItem value="unit4">山西省场站B</SelectItem>
+                    <SelectItem value="unit5">浙江省场站A</SelectItem>
+                    <SelectItem value="unit6">浙江省场站B</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

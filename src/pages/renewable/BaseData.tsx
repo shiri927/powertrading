@@ -32,8 +32,9 @@ const BaseData = () => {
 
   // 交易单元列表
   const tradingUnits = [
-    "电量竞价年", "天津摇橹", "全省", "虎跑山", "晨新光伏", "穆家庄", "望狐二一期", "望狐三期", "米嘉峪",
-    "全牛", "孟县粤鑫风电场", "锦柏二期", "石哲", "金关树苗", "将军岭"
+    "山东省场站A", "山东省场站B", "山东省场站C", "山东省场站D", "山东省场站E",
+    "山西省场站A", "山西省场站B", "山西省场站C", "山西省场站D", "山西省场站E",
+    "浙江省场站A", "浙江省场站B", "浙江省场站C", "浙江省场站D", "浙江省场站E"
   ];
 
   // 图表数据
@@ -48,19 +49,19 @@ const BaseData = () => {
   // 表格数据
   const tableData = [
     { id: "合计", unit: "合计", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "" },
-    { id: "1", unit: "天津摇橹", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "2", unit: "全省", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "3", unit: "虎跑山", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "4", unit: "晨新光伏", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "5", unit: "穆家庄", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "6", unit: "望狐二一期", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "7", unit: "望狐三期", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "8", unit: "米嘉峪", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "9", unit: "全牛", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "10", unit: "孟县粤鑫风电场", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "11", unit: "锦柏二期", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "12", unit: "石哲", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "13", unit: "金关树苗", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "1", unit: "山东省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "2", unit: "山东省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "3", unit: "山东省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "4", unit: "山东省场站D", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "5", unit: "山东省场站E", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "6", unit: "山西省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "7", unit: "山西省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "8", unit: "山西省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "9", unit: "山西省场站D", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "10", unit: "山西省场站E", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "11", unit: "浙江省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "12", unit: "浙江省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
+    { id: "13", unit: "浙江省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
   ];
 
   return (
@@ -396,9 +397,9 @@ const BaseData = () => {
                 <TableBody>
                   {[
                     {
-                      unit: "大山台二期",
+                      unit: "山东省场站A",
                       direction: "卖出",
-                      name: "华能山西新能源有限责任公司_晋源2024年大同平鲁天成风电场2024年年度直接交易用户双边协商电力直接交易（新能源）合同#99",
+                      name: "华能山东新能源有限责任公司_2024年山东省场站A年度直接交易用户双边协商电力直接交易（新能源）合同#99",
                       type: "省内",
                       station: "-",
                       period: "20240401-20240430",
@@ -407,9 +408,9 @@ const BaseData = () => {
                       price: 320
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "山东省场站B",
                       direction: "卖出",
-                      name: "山西省电能服务有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#16",
+                      name: "山东省电能服务有限公司_2024年山东省场站B月度直接交易用户双边协商电力直接交易（新能源）合同#16",
                       type: "省内",
                       station: "-",
                       period: "20240401-20240430",
@@ -418,9 +419,9 @@ const BaseData = () => {
                       price: 312
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "山西省场站A",
                       direction: "卖出",
-                      name: "山西晋华能电有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#2",
+                      name: "山西华能电有限公司_2024年山西省场站A月度直接交易用户双边协商电力直接交易（新能源）合同#2",
                       type: "省内",
                       station: "-",
                       period: "20240401-20240430",
@@ -429,9 +430,9 @@ const BaseData = () => {
                       price: 288
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "山西省场站B",
                       direction: "卖出",
-                      name: "山西华越电子科技有限公司_晋源2024年天成平鲁天成风电场2024年4月月度直接交易用户双边协商电力直接交易（新能源）合同#159",
+                      name: "山西华越电子科技有限公司_2024年山西省场站B月度直接交易用户双边协商电力直接交易（新能源）合同#159",
                       type: "省内",
                       station: "-",
                       period: "20240401-20240430",
@@ -440,9 +441,9 @@ const BaseData = () => {
                       price: 332
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "浙江省场站A",
                       direction: "买入",
-                      name: "天源平鲁天成风电场2024年4月08日省内交易协议(2024-4-10)合同24",
+                      name: "浙江省场站A 2024年4月08日省内交易协议(2024-4-10)合同24",
                       type: "省内",
                       station: "-",
                       period: "20240410-20240410",
@@ -451,9 +452,9 @@ const BaseData = () => {
                       price: 328.77
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "浙江省场站A",
                       direction: "卖出",
-                      name: "天源平鲁天成风电场2024年4月09日省内交易协议(2024-4-11)合同60",
+                      name: "浙江省场站A 2024年4月09日省内交易协议(2024-4-11)合同60",
                       type: "省内",
                       station: "-",
                       period: "20240411-20240411",
@@ -462,9 +463,9 @@ const BaseData = () => {
                       price: 330.41
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "浙江省场站B",
                       direction: "卖出",
-                      name: "天源平鲁天成风电场2024年4月12日省内交易协议(2024-4-14)合同124",
+                      name: "浙江省场站B 2024年4月12日省内交易协议(2024-4-14)合同124",
                       type: "省内",
                       station: "-",
                       period: "20240414-20240414",
@@ -473,9 +474,9 @@ const BaseData = () => {
                       price: 339.97
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "浙江省场站B",
                       direction: "买入",
-                      name: "天源平鲁天成风电场2024年4月16日省内交易协议(2024-4-18)合同6",
+                      name: "浙江省场站B 2024年4月16日省内交易协议(2024-4-18)合同6",
                       type: "省内",
                       station: "-",
                       period: "20240418-20240418",
@@ -484,9 +485,9 @@ const BaseData = () => {
                       price: 48.66
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "山东省场站C",
                       direction: "卖出",
-                      name: "天源平鲁天成风电场2024年4月21-30日下半分月挂牌分交易（滚动集约）合同143",
+                      name: "山东省场站C 2024年4月21-30日下半分月挂牌分交易（滚动集约）合同143",
                       type: "省内",
                       station: "-",
                       period: "20240421-20240430",
@@ -495,9 +496,9 @@ const BaseData = () => {
                       price: 255.09
                     },
                     {
-                      unit: "大山台三期",
+                      unit: "山西省场站C",
                       direction: "卖出",
-                      name: "天源平鲁天成风电场发电挂牌2024年4月01日省内挂牌交易",
+                      name: "山西省场站C发电挂牌2024年4月01日省内挂牌交易",
                       type: "省内",
                       station: "-",
                       period: "20240401-20240401",

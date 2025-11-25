@@ -80,63 +80,69 @@ const generateTradingUnitTree = (): TradingUnitNode[] => {
   return [
     {
       id: '1',
-      name: '新庄厂/场站电池组合同',
+      name: '山东省场站组',
       type: 'station',
       contracts: [],
       children: [
         {
           id: '1-1',
-          name: '十二回路一期',
+          name: '山东省场站A',
           type: 'unit',
-          contracts: generateContracts('十二回路一期', 8),
+          contracts: generateContracts('山东省场站A', 8),
+        },
+        {
+          id: '1-2',
+          name: '山东省场站B',
+          type: 'unit',
+          contracts: generateContracts('山东省场站B', 10),
         },
       ],
     },
     {
       id: '2',
-      name: '达坂城厂/场站电池组合同',
+      name: '山西省场站组',
       type: 'station',
       contracts: [],
       children: [
         {
           id: '2-1',
-          name: '达坂城一期',
+          name: '山西省场站A',
           type: 'unit',
-          contracts: generateContracts('达坂城一期', 10),
+          contracts: generateContracts('山西省场站A', 10),
         },
         {
           id: '2-2',
-          name: '达坂城二期',
+          name: '山西省场站B',
           type: 'unit',
-          contracts: generateContracts('达坂城二期', 7),
+          contracts: generateContracts('山西省场站B', 7),
         },
       ],
     },
     {
       id: '3',
-      name: '叶青城厂/场站电池组合同',
+      name: '浙江省场站组',
       type: 'station',
       contracts: [],
       children: [
         {
           id: '3-1',
-          name: '小草湖一期',
+          name: '浙江省场站A',
           type: 'unit',
-          contracts: generateContracts('小草湖一期', 9),
+          contracts: generateContracts('浙江省场站A', 9),
         },
         {
           id: '3-2',
-          name: '小草湖二期',
+          name: '浙江省场站B',
           type: 'unit',
-          contracts: generateContracts('小草湖二期', 6),
+          contracts: generateContracts('浙江省场站B', 6),
         },
       ],
     },
     {
       id: '4',
-      name: '新疆能建新能源有限公司',
+      name: '综合能源公司',
       type: 'unit',
-      contracts: generateContracts('新疆能建新能源有限公司', 12),
+      contracts: generateContracts('综合能源公司', 12),
     },
   ];
 };
@@ -1248,7 +1254,7 @@ const InterProvincialReview = () => {
   const [selectedChartKey, setSelectedChartKey] = useState('20240506');
   
   const rawData = useMemo(() => 
-    generateInterSpotReviewData('20240501', '20240520', ['交易单元1', '交易单元2'], granularity),
+    generateInterSpotReviewData('20240501', '20240520', ['山东省场站A', '山东省场站B'], granularity),
     [granularity]
   );
   
@@ -2302,7 +2308,7 @@ const ForecastAdjustmentReview = () => {
   const [dimension, setDimension] = useState<ForecastAggregationDimension>('date');
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['total']));
   
-  const tradingUnits = ['十二回路一期', '达坂城一期', '达坂城二期', '小草湖一期', '小草湖二期'];
+  const tradingUnits = ['山东省场站A', '山东省场站B', '山西省场站A', '山西省场站B', '浙江省场站A', '浙江省场站B'];
   
   const rawData = useMemo(() => 
     generateForecastAdjustmentData(tradingUnits, granularity),

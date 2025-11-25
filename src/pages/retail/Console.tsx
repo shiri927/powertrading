@@ -120,7 +120,7 @@ const generateMockIntraProvincialSchemes = (): BidScheme[] => {
       id: 'scheme-1',
       name: '单一价格，按时段申报电力方-1',
       targetDate: new Date(),
-      tradingUnits: ['交易单元1', '交易单元2'],
+      tradingUnits: ['山东省场站A', '山东省场站B'],
       selectedUnitsCount: 2,
       totalUnitsCount: 5,
       limitCondition: '自动分配',
@@ -429,9 +429,10 @@ const Console = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unit1">交易单元1</SelectItem>
-                      <SelectItem value="unit2">交易单元2</SelectItem>
-                      <SelectItem value="unit3">交易单元3</SelectItem>
+                      <SelectItem value="unit1">山东省场站A</SelectItem>
+                      <SelectItem value="unit2">山东省场站B</SelectItem>
+                      <SelectItem value="unit3">山西省场站A</SelectItem>
+                      <SelectItem value="unit4">浙江省场站A</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -560,9 +561,10 @@ const Console = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="交易单元">交易单元</SelectItem>
-                      <SelectItem value="交易单元1">交易单元1</SelectItem>
-                      <SelectItem value="交易单元2">交易单元2</SelectItem>
+                      <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+                      <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+                      <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+                      <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
