@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ZAxis } from "recharts";
 import { CalendarIcon, Download, ArrowUpDown, BarChart3, Table2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,59 @@ const tableData = [
   { date: "2024-11-03", maxValue: 14120.450, maxTime: "01:30", minValue: 3200.450, minTime: "13:00", avgValue: 8660.450, avgTime: "全时段" },
   { date: "2024-11-04", maxValue: 13890.670, maxTime: "02:15", minValue: 2950.780, minTime: "11:45", avgValue: 8420.725, avgTime: "全时段" },
 ];
+
+// 生成散点图数据：竞价空间 vs 日前电价预测
+const generateScatterData = (date: string, color: string, basePrice: number, priceSlope: number) => {
+  const points = [];
+  // 生成40-50个散点
+  for (let i = 0; i < 45; i++) {
+    const biddingSpace = 50 + Math.random() * 400; // 50-450 MW
+    const price = basePrice + priceSlope * biddingSpace + (Math.random() - 0.5) * 60; // 添加随机波动
+    points.push({
+      x: biddingSpace,
+      y: Math.max(220, Math.min(550, price)), // 限制在合理范围
+      date,
+      color,
+    });
+  }
+  return points;
+};
+
+const scatterData = [
+  ...generateScatterData('2025-07-01', '#ff6b6b', 520, -0.5), // 红色，从高价开始，负斜率
+  ...generateScatterData('2025-07-02', '#4ecdc4', 490, -0.45), // 青色
+  ...generateScatterData('2025-07-03', '#ffd93d', 460, -0.4), // 黄色
+];
+
+// 按日期分组散点数据
+const scatterByDate = {
+  '2025-07-01': scatterData.filter(d => d.date === '2025-07-01'),
+  '2025-07-02': scatterData.filter(d => d.date === '2025-07-02'),
+  '2025-07-03': scatterData.filter(d => d.date === '2025-07-03'),
+};
+
+// 为每个日期计算趋势线（线性回归）
+const calculateTrendLine = (points: any[]) => {
+  const n = points.length;
+  const sumX = points.reduce((sum, p) => sum + p.x, 0);
+  const sumY = points.reduce((sum, p) => sum + p.y, 0);
+  const sumXY = points.reduce((sum, p) => sum + p.x * p.y, 0);
+  const sumXX = points.reduce((sum, p) => sum + p.x * p.x, 0);
+  
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  
+  return [
+    { x: 50, y: slope * 50 + intercept },
+    { x: 450, y: slope * 450 + intercept },
+  ];
+};
+
+const trendLines = {
+  '2025-07-01': calculateTrendLine(scatterByDate['2025-07-01']),
+  '2025-07-02': calculateTrendLine(scatterByDate['2025-07-02']),
+  '2025-07-03': calculateTrendLine(scatterByDate['2025-07-03']),
+};
 
 const MarketSupplyDemand = () => {
   const [activeTab, setActiveTab] = useState("thermal-space");
@@ -259,6 +312,108 @@ const MarketSupplyDemand = () => {
                 {/* Charts */}
                 {viewMode === "chart" ? (
                   <div className="space-y-4">
+                    {/* 散点图：竞价空间 vs 日前电价预测 */}
+                    {tab.id === "thermal-space" && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">日前电价预测与竞价空间预测散点图</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ResponsiveContainer width="100%" height={400}>
+                            <ScatterChart margin={{ top: 20, right: 80, bottom: 20, left: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis 
+                                type="number" 
+                                dataKey="x" 
+                                name="竞价空间预测" 
+                                unit="MW"
+                                domain={[0, 500]}
+                                label={{ value: '竞价空间预测(MW)', position: 'insideBottom', offset: -10 }}
+                                stroke="hsl(var(--muted-foreground))"
+                              />
+                              <YAxis 
+                                type="number" 
+                                dataKey="y" 
+                                name="日前电价预测" 
+                                unit="元/MWh"
+                                domain={[200, 550]}
+                                stroke="hsl(var(--muted-foreground))"
+                              />
+                              <ZAxis range={[40, 40]} />
+                              <Tooltip 
+                                cursor={{ strokeDasharray: '3 3' }}
+                                contentStyle={{
+                                  backgroundColor: 'hsl(var(--background))',
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '6px',
+                                }}
+                                formatter={(value: number, name: string) => {
+                                  if (name === '日前电价预测') return [`${value.toFixed(2)} 元/MWh`, '日前电价预测'];
+                                  if (name === '竞价空间预测') return [`${value.toFixed(2)} MW`, '竞价空间预测'];
+                                  return [value, name];
+                                }}
+                              />
+                              <Legend 
+                                verticalAlign="top" 
+                                align="right"
+                                wrapperStyle={{ paddingBottom: '20px' }}
+                                formatter={(value) => {
+                                  const labels: { [key: string]: string } = {
+                                    'scatter-2025-07-01': '2025-07-01',
+                                    'scatter-2025-07-02': '2025-07-02',
+                                    'scatter-2025-07-03': '2025-07-03',
+                                  };
+                                  return labels[value] || value;
+                                }}
+                              />
+                              
+                              {/* 散点和趋势线 - 2025-07-01 */}
+                              <Scatter 
+                                name="scatter-2025-07-01" 
+                                data={scatterByDate['2025-07-01']} 
+                                fill="#ff6b6b"
+                                opacity={0.6}
+                              />
+                              <Scatter 
+                                data={trendLines['2025-07-01']} 
+                                fill="none"
+                                line={{ stroke: '#ff6b6b', strokeWidth: 2 }}
+                                shape={() => null}
+                              />
+                              
+                              {/* 散点和趋势线 - 2025-07-02 */}
+                              <Scatter 
+                                name="scatter-2025-07-02" 
+                                data={scatterByDate['2025-07-02']} 
+                                fill="#4ecdc4"
+                                opacity={0.6}
+                              />
+                              <Scatter 
+                                data={trendLines['2025-07-02']} 
+                                fill="none"
+                                line={{ stroke: '#4ecdc4', strokeWidth: 2 }}
+                                shape={() => null}
+                              />
+                              
+                              {/* 散点和趋势线 - 2025-07-03 */}
+                              <Scatter 
+                                name="scatter-2025-07-03" 
+                                data={scatterByDate['2025-07-03']} 
+                                fill="#ffd93d"
+                                opacity={0.6}
+                              />
+                              <Scatter 
+                                data={trendLines['2025-07-03']} 
+                                fill="none"
+                                line={{ stroke: '#ffd93d', strokeWidth: 2 }}
+                                shape={() => null}
+                              />
+                            </ScatterChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
                     {/* Line Chart */}
                     <Card>
                       <CardHeader>
