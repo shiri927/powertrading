@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ZAxis } from "recharts";
-import { CalendarIcon, Download, ArrowUpDown, BarChart3, Table2 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ZAxis, ReferenceArea } from "recharts";
+import { CalendarIcon, Download, ArrowUpDown, BarChart3, Table2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DateRangeDisplay } from "@/components/DateRangeDisplay";
@@ -103,6 +103,19 @@ const MarketSupplyDemand = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // 散点图缩放相关状态
+  const [scatterZoom, setScatterZoom] = useState({
+    left: 0,
+    right: 500,
+    bottom: 200,
+    top: 550,
+    refAreaLeft: null as number | null,
+    refAreaRight: null as number | null,
+    refAreaBottom: null as number | null,
+    refAreaTop: null as number | null,
+  });
+  const [isSelecting, setIsSelecting] = useState(false);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -115,6 +128,70 @@ const MarketSupplyDemand = () => {
 
   const handleDownload = () => {
     console.log("下载数据");
+  };
+
+  // 散点图缩放处理函数
+  const handleScatterMouseDown = (e: any) => {
+    if (e && e.activeLabel !== undefined) {
+      setScatterZoom({
+        ...scatterZoom,
+        refAreaLeft: e.activeLabel,
+        refAreaBottom: e.activePayload?.[0]?.payload?.y || scatterZoom.bottom,
+      });
+      setIsSelecting(true);
+    }
+  };
+
+  const handleScatterMouseMove = (e: any) => {
+    if (isSelecting && e && e.activeLabel !== undefined) {
+      setScatterZoom({
+        ...scatterZoom,
+        refAreaLeft: scatterZoom.refAreaLeft,
+        refAreaRight: e.activeLabel,
+        refAreaBottom: scatterZoom.refAreaBottom,
+        refAreaTop: e.activePayload?.[0]?.payload?.y || scatterZoom.top,
+      });
+    }
+  };
+
+  const handleScatterMouseUp = () => {
+    if (isSelecting && scatterZoom.refAreaLeft && scatterZoom.refAreaRight) {
+      let { refAreaLeft, refAreaRight, refAreaBottom, refAreaTop } = scatterZoom;
+
+      // 确保左右顺序正确
+      if (refAreaLeft > refAreaRight) {
+        [refAreaLeft, refAreaRight] = [refAreaRight, refAreaLeft];
+      }
+      if (refAreaBottom && refAreaTop && refAreaBottom > refAreaTop) {
+        [refAreaBottom, refAreaTop] = [refAreaTop, refAreaBottom];
+      }
+
+      // 设置新的缩放范围
+      setScatterZoom({
+        left: refAreaLeft,
+        right: refAreaRight,
+        bottom: refAreaBottom || scatterZoom.bottom,
+        top: refAreaTop || scatterZoom.top,
+        refAreaLeft: null,
+        refAreaRight: null,
+        refAreaBottom: null,
+        refAreaTop: null,
+      });
+    }
+    setIsSelecting(false);
+  };
+
+  const handleResetScatterZoom = () => {
+    setScatterZoom({
+      left: 0,
+      right: 500,
+      bottom: 200,
+      top: 550,
+      refAreaLeft: null,
+      refAreaRight: null,
+      refAreaBottom: null,
+      refAreaTop: null,
+    });
   };
 
   return (
@@ -316,28 +393,52 @@ const MarketSupplyDemand = () => {
                     {tab.id === "thermal-space" && (
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base">日前电价预测与竞价空间预测散点图</CardTitle>
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-base">日前电价预测与竞价空间预测散点图</CardTitle>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleResetScatterZoom}
+                                disabled={scatterZoom.left === 0 && scatterZoom.right === 500 && scatterZoom.bottom === 200 && scatterZoom.top === 550}
+                              >
+                                <Maximize2 className="h-4 w-4 mr-2" />
+                                重置缩放
+                              </Button>
+                            </div>
+                          </div>
                         </CardHeader>
                         <CardContent>
+                          <div className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                            <ZoomIn className="h-4 w-4" />
+                            提示：鼠标拖拽选择区域进行缩放
+                          </div>
                           <ResponsiveContainer width="100%" height={400}>
-                            <ScatterChart margin={{ top: 20, right: 80, bottom: 20, left: 20 }}>
+                            <ScatterChart 
+                              margin={{ top: 20, right: 80, bottom: 20, left: 20 }}
+                              onMouseDown={handleScatterMouseDown}
+                              onMouseMove={handleScatterMouseMove}
+                              onMouseUp={handleScatterMouseUp}
+                            >
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                               <XAxis 
                                 type="number" 
                                 dataKey="x" 
                                 name="竞价空间预测" 
                                 unit="MW"
-                                domain={[0, 500]}
+                                domain={[scatterZoom.left, scatterZoom.right]}
                                 label={{ value: '竞价空间预测(MW)', position: 'insideBottom', offset: -10 }}
                                 stroke="hsl(var(--muted-foreground))"
+                                allowDataOverflow
                               />
                               <YAxis 
                                 type="number" 
                                 dataKey="y" 
                                 name="日前电价预测" 
                                 unit="元/MWh"
-                                domain={[200, 550]}
+                                domain={[scatterZoom.bottom, scatterZoom.top]}
                                 stroke="hsl(var(--muted-foreground))"
+                                allowDataOverflow
                               />
                               <ZAxis range={[40, 40]} />
                               <Tooltip 
@@ -366,6 +467,19 @@ const MarketSupplyDemand = () => {
                                   return labels[value] || value;
                                 }}
                               />
+                              
+                              {/* 选择区域高亮 */}
+                              {scatterZoom.refAreaLeft && scatterZoom.refAreaRight && (
+                                <ReferenceArea
+                                  x1={scatterZoom.refAreaLeft}
+                                  x2={scatterZoom.refAreaRight}
+                                  y1={scatterZoom.refAreaBottom || scatterZoom.bottom}
+                                  y2={scatterZoom.refAreaTop || scatterZoom.top}
+                                  strokeOpacity={0.3}
+                                  fill="hsl(var(--primary))"
+                                  fillOpacity={0.1}
+                                />
+                              )}
                               
                               {/* 散点和趋势线 - 2025-07-01 */}
                               <Scatter 
