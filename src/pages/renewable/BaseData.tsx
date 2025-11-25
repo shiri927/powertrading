@@ -108,27 +108,6 @@ const BaseData = () => {
             ))}
           </div>
 
-          {/* 交易单元标签 */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs">0</Badge>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  电量竞价年
-                </Badge>
-                {tradingUnits.slice(1).map((unit, index) => (
-                  <span key={index} className="text-sm text-muted-foreground">
-                    、{unit}
-                  </span>
-                ))}
-                <span className="text-sm text-muted-foreground">...</span>
-                <Button variant="ghost" size="sm" className="ml-auto">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           <div className="grid grid-cols-2 gap-6">
             {/* 左侧：筛选和图表 */}
             <div className="space-y-6">
