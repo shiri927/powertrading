@@ -1,0 +1,372 @@
+/* Dashboard Large Screen Tech Theme Styles */
+
+/* Dashboard specific CSS variables */
+.dashboard-screen {
+  --dashboard-bg-start: 210 50% 8%;
+  --dashboard-bg-end: 210 45% 12%;
+  --dashboard-glow: 200 100% 50%;
+  --dashboard-border: 200 80% 40%;
+  --dashboard-text: 200 20% 90%;
+  --dashboard-text-muted: 200 15% 60%;
+  --dashboard-accent: 45 100% 50%;
+  --dashboard-success: 149 100% 45%;
+  --dashboard-danger: 0 80% 55%;
+}
+
+/* Full screen background */
+.dashboard-screen {
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--dashboard-bg-start)) 0%,
+    hsl(var(--dashboard-bg-end)) 100%
+  );
+  color: hsl(var(--dashboard-text));
+  overflow-x: hidden;
+}
+
+/* Tech border card styling */
+.tech-border-card {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    hsla(200, 50%, 15%, 0.8) 0%,
+    hsla(210, 50%, 10%, 0.9) 100%
+  );
+  border: 1px solid hsla(200, 80%, 40%, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tech-border-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--dashboard-glow)) 50%,
+    transparent 100%
+  );
+  opacity: 0.8;
+}
+
+.tech-border-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsla(200, 80%, 40%, 0.5) 50%,
+    transparent 100%
+  );
+}
+
+/* Corner decorations */
+.tech-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: hsl(var(--dashboard-glow));
+  opacity: 0.6;
+}
+
+.tech-corner-tl {
+  top: 0;
+  left: 0;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.tech-corner-tr {
+  top: 0;
+  right: 0;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+.tech-corner-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+.tech-corner-br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+/* Glowing title text */
+.glow-title {
+  color: hsl(var(--dashboard-text));
+  text-shadow: 
+    0 0 10px hsla(200, 100%, 60%, 0.5),
+    0 0 20px hsla(200, 100%, 50%, 0.3),
+    0 0 40px hsla(200, 100%, 40%, 0.2);
+  letter-spacing: 0.15em;
+}
+
+/* Metric card glow effect */
+.metric-glow {
+  background: linear-gradient(
+    180deg,
+    hsla(200, 50%, 20%, 0.6) 0%,
+    hsla(210, 50%, 12%, 0.8) 100%
+  );
+  border: 1px solid hsla(200, 80%, 40%, 0.2);
+  border-radius: 4px;
+  position: relative;
+}
+
+.metric-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--dashboard-glow)) 50%,
+    transparent 100%
+  );
+}
+
+.metric-value {
+  color: hsl(var(--dashboard-accent));
+  text-shadow: 0 0 10px hsla(45, 100%, 50%, 0.4);
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Map container styling */
+.map-container {
+  position: relative;
+  background: radial-gradient(
+    ellipse at center,
+    hsla(200, 50%, 15%, 0.3) 0%,
+    transparent 70%
+  );
+  border: 1px solid hsla(200, 80%, 40%, 0.2);
+  border-radius: 50%;
+}
+
+.map-container::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid hsla(200, 80%, 40%, 0.3);
+  animation: pulse-border 3s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+/* Station marker */
+.station-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: hsl(var(--dashboard-success));
+  box-shadow: 
+    0 0 10px hsl(var(--dashboard-success)),
+    0 0 20px hsla(149, 100%, 45%, 0.5);
+  animation: marker-pulse 2s ease-in-out infinite;
+}
+
+@keyframes marker-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.station-marker::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid hsla(149, 100%, 45%, 0.5);
+  animation: marker-ring 2s ease-in-out infinite;
+}
+
+@keyframes marker-ring {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% { 
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Scan line effect */
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsla(200, 100%, 60%, 0.4) 50%,
+    transparent 100%
+  );
+  animation: scan 4s linear infinite;
+}
+
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Table styling for dashboard */
+.dashboard-table {
+  width: 100%;
+  font-size: 12px;
+}
+
+.dashboard-table th {
+  color: hsl(var(--dashboard-glow));
+  font-weight: 500;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid hsla(200, 80%, 40%, 0.3);
+  background: hsla(200, 50%, 15%, 0.3);
+}
+
+.dashboard-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid hsla(200, 80%, 40%, 0.1);
+  color: hsl(var(--dashboard-text));
+}
+
+.dashboard-table tr:hover td {
+  background: hsla(200, 50%, 20%, 0.2);
+}
+
+/* View toggle buttons */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: hsla(200, 50%, 15%, 0.5);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.view-toggle-btn {
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 12px;
+  color: hsl(var(--dashboard-text-muted));
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.view-toggle-btn:hover {
+  color: hsl(var(--dashboard-text));
+}
+
+.view-toggle-btn.active {
+  background: hsla(200, 80%, 40%, 0.3);
+  color: hsl(var(--dashboard-glow));
+}
+
+/* Card header with toggle */
+.card-header-with-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid hsla(200, 80%, 40%, 0.2);
+}
+
+.card-title-tech {
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--dashboard-text));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title-tech::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: hsl(var(--dashboard-glow));
+  border-radius: 2px;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: hsl(var(--dashboard-text-muted));
+}
+
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* Timestamp footer */
+.timestamp-footer {
+  text-align: center;
+  padding: 12px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 14px;
+  color: hsl(var(--dashboard-text-muted));
+  border-top: 1px solid hsla(200, 80%, 40%, 0.2);
+}
+
+/* Recharts overrides for dark theme */
+.dashboard-screen .recharts-cartesian-grid-horizontal line,
+.dashboard-screen .recharts-cartesian-grid-vertical line {
+  stroke: hsla(200, 50%, 30%, 0.3);
+}
+
+.dashboard-screen .recharts-text {
+  fill: hsl(200, 15%, 60%);
+  font-size: 11px;
+}
+
+.dashboard-screen .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: hsla(210, 50%, 12%, 0.95) !important;
+  border: 1px solid hsla(200, 80%, 40%, 0.3) !important;
+  border-radius: 4px;
+}
+
+.dashboard-screen .recharts-legend-item-text {
+  color: hsl(200, 15%, 70%) !important;
+  font-size: 11px;
+}

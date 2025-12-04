@@ -1,14 +1,11 @@
-import { MetricCard } from "@/components/MetricCard";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Zap, 
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { TechBorderCard } from "@/components/dashboard/TechBorderCard";
+import { ViewToggle } from "@/components/dashboard/ViewToggle";
+import { ChinaMapVisualization } from "@/components/dashboard/ChinaMapVisualization";
+import { MetricCardGlow } from "@/components/dashboard/MetricCardGlow";
+import { FileX } from "lucide-react";
+import "@/styles/dashboard-screen.css";
 import {
   LineChart,
   Line,
@@ -20,289 +17,237 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Area,
-  AreaChart,
+  ComposedChart,
 } from "recharts";
-import { DateRangeDisplay } from "@/components/DateRangeDisplay";
 
-const revenueData = [
-  { month: "Jan", midTerm: 4200, spot: 2400, total: 6600 },
-  { month: "Feb", midTerm: 3800, spot: 2800, total: 6600 },
-  { month: "Mar", midTerm: 5100, spot: 3200, total: 8300 },
-  { month: "Apr", midTerm: 4500, spot: 3800, total: 8300 },
-  { month: "May", midTerm: 5800, spot: 4200, total: 10000 },
-  { month: "Jun", midTerm: 5200, spot: 4800, total: 10000 },
+// 中长期交易数据
+const midTermTradingData = [
+  { month: "2024-12", electricity: 5468.0, price: 323.95 },
+  { month: "2025-01", electricity: 28939.898, price: 329.9 },
+  { month: "2025-02", electricity: 22465.52, price: 312.45 },
+  { month: "2025-03", electricity: 35782.15, price: 318.72 },
+  { month: "2025-04", electricity: 31254.68, price: 305.88 },
+  { month: "2025-05", electricity: 28976.42, price: 298.65 },
+  { month: "2025-06", electricity: 25483.91, price: 285.42 },
+  { month: "2025-07", electricity: 32156.78, price: 295.18 },
 ];
 
-const priceData = [
-  { time: "00:00", dayAhead: 320, realTime: 315 },
-  { time: "04:00", dayAhead: 280, realTime: 285 },
-  { time: "08:00", dayAhead: 420, realTime: 425 },
-  { time: "12:00", dayAhead: 480, realTime: 475 },
-  { time: "16:00", dayAhead: 520, realTime: 515 },
-  { time: "20:00", dayAhead: 450, realTime: 460 },
+// 省内现货交易数据
+const spotTradingData = [
+  { date: "10-07", dayAheadVolume: 8.5, realTimeVolume: 7.2, dayAheadPrice: 320, realTimePrice: 315 },
+  { date: "10-14", dayAheadVolume: 9.2, realTimeVolume: 8.8, dayAheadPrice: 335, realTimePrice: 342 },
+  { date: "10-21", dayAheadVolume: 7.8, realTimeVolume: 6.5, dayAheadPrice: 298, realTimePrice: 285 },
+  { date: "10-28", dayAheadVolume: 10.5, realTimeVolume: 9.8, dayAheadPrice: 365, realTimePrice: 358 },
+  { date: "11-04", dayAheadVolume: 8.9, realTimeVolume: 8.2, dayAheadPrice: 342, realTimePrice: 338 },
+];
+
+// 供需预测数据
+const supplyDemandData = [
+  { date: "11-05", renewableOutput: 185000, userLoad: 210000 },
+  { date: "11-12", renewableOutput: 192000, userLoad: 225000 },
+  { date: "11-19", renewableOutput: 178000, userLoad: 218000 },
+  { date: "11-26", renewableOutput: 205000, userLoad: 235000 },
+  { date: "12-03", renewableOutput: 198000, userLoad: 242000 },
+  { date: "12-10", renewableOutput: 188000, userLoad: 228000 },
+  { date: "12-17", renewableOutput: 175000, userLoad: 215000 },
 ];
 
 const Dashboard = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [midTermView, setMidTermView] = useState<"chart" | "table">("table");
+  const [spotView, setSpotView] = useState<"chart" | "table">("chart");
+  const [supplyDemandView, setSupplyDemandView] = useState<"chart" | "table">("chart");
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <div className="p-8 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">首页大屏</h1>
-        <p className="text-muted-foreground mt-2">
-          公司级业务全景视图 - 关键指标可视化
-        </p>
+    <div className="dashboard-screen p-4">
+      {/* Header Title */}
+      <div className="text-center py-4 mb-4">
+        <h1 className="glow-title text-2xl font-bold tracking-widest">
+          电力辅助交易系统
+        </h1>
       </div>
 
-      <DateRangeDisplay
-        startDate={new Date(2025, 10, 1)}
-        endDate={new Date(2025, 10, 20)}
-        lastUpdated={new Date()}
-        className="px-4 py-3 bg-muted/20 rounded-lg"
-      />
-
-      {/* Tabs for Generation/Retail Side */}
-      <Tabs defaultValue="generation" className="w-full">
-        <TabsList>
-          <TabsTrigger value="generation">发电侧</TabsTrigger>
-          <TabsTrigger value="retail">售电侧</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="generation" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title="总收益"
-              value="¥10.2M"
-              change="较上月 +12.5%"
-              changeType="positive"
-              icon={DollarSign}
-              description="本月累计"
-            />
-            <MetricCard
-              title="现货市场收益"
-              value="¥4.8M"
-              change="较上月 +8.3%"
-              changeType="positive"
-              icon={TrendingUp}
-              description="本月累计"
-            />
-            <MetricCard
-              title="发电量"
-              value="28,450 MWh"
-              change="较上月 +5.2%"
-              changeType="positive"
-              icon={Zap}
-              description="本月累计"
-            />
-            <MetricCard
-              title="平均现货价格"
-              value="¥426/MWh"
-              change="较上月 -2.1%"
-              changeType="negative"
-              icon={Clock}
-              description="本月平均"
-            />
-          </div>
-
-          {/* Revenue Analysis Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>收益分析</CardTitle>
-              <CardDescription>
-                中长期与现货市场收益趋势对比
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <AreaChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-12 gap-4" style={{ height: "calc(100vh - 160px)" }}>
+        {/* Left Column */}
+        <div className="col-span-3 flex flex-col gap-4">
+          {/* 中长期交易详情 */}
+          <TechBorderCard
+            title="中长期交易详情"
+            className="flex-1"
+            headerRight={
+              <ViewToggle view={midTermView} onViewChange={setMidTermView} />
+            }
+          >
+            {midTermView === "table" ? (
+              <div className="overflow-auto max-h-[200px]">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>月份</th>
+                      <th className="text-right">电量(MWh)</th>
+                      <th className="text-right">电价(元/MWh)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {midTermTradingData.map((row) => (
+                      <tr key={row.month}>
+                        <td>{row.month}</td>
+                        <td className="text-right font-mono">
+                          {row.electricity.toLocaleString()}
+                        </td>
+                        <td className="text-right font-mono">
+                          {row.price.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={midTermTradingData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="midTerm" 
-                    stackId="1"
-                    stroke="hsl(var(--chart-1))" 
-                    fill="hsl(var(--chart-1))"
-                    name="中长期收益"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="spot" 
-                    stackId="1"
-                    stroke="hsl(var(--chart-2))" 
-                    fill="hsl(var(--chart-2))"
-                    name="现货收益"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Price Trend Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle>趋势分析</CardTitle>
-              <CardDescription>
-                日前与实时节点电价对比
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={priceData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="time" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="dayAhead" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                    name="日前电价"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="realTime" 
-                    stroke="hsl(var(--secondary))" 
-                    strokeWidth={2}
-                    name="实时电价"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Performance Indicators */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>发电表现</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">中长期交易</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">18,250 MWh</span>
-                    <ArrowUpRight className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">现货交易（日前）</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">6,420 MWh</span>
-                    <ArrowUpRight className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">现货交易（实时）</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">3,780 MWh</span>
-                    <ArrowDownRight className="h-4 w-4 text-destructive" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>价格表现</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">平均结算价格</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">¥412/MWh</span>
-                    <ArrowUpRight className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">峰值价格</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">¥585/MWh</span>
-                    <ArrowUpRight className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">谷值价格</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">¥245/MWh</span>
-                    <ArrowDownRight className="h-4 w-4 text-destructive" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="retail" className="space-y-6">
-          {/* Key Metrics for Retail */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title="总收益"
-              value="¥8.5M"
-              change="较上月 +15.2%"
-              changeType="positive"
-              icon={DollarSign}
-              description="本月累计"
-            />
-            <MetricCard
-              title="客户数量"
-              value="2,450"
-              change="+125 新增客户"
-              changeType="positive"
-              icon={TrendingUp}
-              description="当前活跃"
-            />
-            <MetricCard
-              title="总用电量"
-              value="32,800 MWh"
-              change="较上月 +7.8%"
-              changeType="positive"
-              icon={Zap}
-              description="本月累计"
-            />
-            <MetricCard
-              title="平均单位收益"
-              value="¥0.259/kWh"
-              change="较上月 +3.5%"
-              changeType="positive"
-              icon={Clock}
-              description="本月平均"
-            />
-          </div>
-
-          {/* Customer Revenue Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>用户收益分析</CardTitle>
-              <CardDescription>
-                按客户群体划分的收益分布
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar 
-                    dataKey="total" 
-                    fill="hsl(var(--chart-1))"
-                    name="总收益"
-                  />
+                  <Bar dataKey="electricity" fill="hsl(200, 80%, 50%)" name="电量(MWh)" />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
+          </TechBorderCard>
+
+          {/* 省内现货交易详情 */}
+          <TechBorderCard
+            title="省内现货交易详情"
+            className="flex-1"
+            headerRight={
+              <ViewToggle view={spotView} onViewChange={setSpotView} />
+            }
+          >
+            {spotView === "chart" ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <ComposedChart data={spotTradingData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Bar yAxisId="left" dataKey="dayAheadVolume" fill="hsl(200, 80%, 50%)" name="日前结算(MWh)" />
+                  <Bar yAxisId="left" dataKey="realTimeVolume" fill="hsl(149, 80%, 45%)" name="实时结算(MWh)" />
+                  <Line yAxisId="right" type="monotone" dataKey="dayAheadPrice" stroke="hsl(45, 100%, 50%)" name="日前价格" strokeWidth={2} />
+                  <Line yAxisId="right" type="monotone" dataKey="realTimePrice" stroke="hsl(0, 80%, 55%)" name="实时价格" strokeWidth={2} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="overflow-auto max-h-[200px]">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th className="text-right">日前(MWh)</th>
+                      <th className="text-right">实时(MWh)</th>
+                      <th className="text-right">日前价格</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spotTradingData.map((row) => (
+                      <tr key={row.date}>
+                        <td>{row.date}</td>
+                        <td className="text-right font-mono">{row.dayAheadVolume}</td>
+                        <td className="text-right font-mono">{row.realTimeVolume}</td>
+                        <td className="text-right font-mono">{row.dayAheadPrice}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TechBorderCard>
+        </div>
+
+        {/* Center Column */}
+        <div className="col-span-6 flex flex-col gap-4">
+          {/* 交易总览 */}
+          <div className="grid grid-cols-4 gap-3">
+            <MetricCardGlow label="总装机" value="102.000" unit="MW" />
+            <MetricCardGlow label="结算电量" value="822.453" unit="万kWh" />
+            <MetricCardGlow label="结算电费" value="106.77" unit="万元" />
+            <MetricCardGlow label="度电收益" value="0.13" unit="元/kWh" />
+          </div>
+
+          {/* 中国地图 */}
+          <TechBorderCard title="场站分布" className="flex-1">
+            <ChinaMapVisualization />
+          </TechBorderCard>
+        </div>
+
+        {/* Right Column */}
+        <div className="col-span-3 flex flex-col gap-4">
+          {/* 供需预测 */}
+          <TechBorderCard
+            title="供需预测"
+            className="flex-1"
+            headerRight={
+              <ViewToggle view={supplyDemandView} onViewChange={setSupplyDemandView} />
+            }
+          >
+            {supplyDemandView === "chart" ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={supplyDemandData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Line type="monotone" dataKey="renewableOutput" stroke="hsl(149, 80%, 45%)" name="新能源出力" strokeWidth={2} />
+                  <Line type="monotone" dataKey="userLoad" stroke="hsl(45, 100%, 50%)" name="用户负荷" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="overflow-auto max-h-[200px]">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th className="text-right">新能源出力</th>
+                      <th className="text-right">用户负荷</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {supplyDemandData.map((row) => (
+                      <tr key={row.date}>
+                        <td>{row.date}</td>
+                        <td className="text-right font-mono">{row.renewableOutput.toLocaleString()}</td>
+                        <td className="text-right font-mono">{row.userLoad.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TechBorderCard>
+
+          {/* 气象报警信息 */}
+          <TechBorderCard title="气象报警信息" className="flex-1">
+            <div className="empty-state">
+              <FileX className="empty-state-icon" />
+              <span className="text-sm">暂无数据</span>
+            </div>
+          </TechBorderCard>
+        </div>
+      </div>
+
+      {/* Footer Timestamp */}
+      <div className="timestamp-footer">
+        {format(currentTime, "yyyy/MM/dd HH:mm:ss")}
+      </div>
     </div>
   );
 };
