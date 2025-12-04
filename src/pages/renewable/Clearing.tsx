@@ -82,8 +82,7 @@ const volumeChartConfig = {
 };
 
 const Clearing = () => {
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date(2025, 10, 1));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date(2025, 10, 30));
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date(2025, 10, 5));
   const [tradingCenter, setTradingCenter] = useState<string>("all");
   const [dataType, setDataType] = useState<string>("all");
   
@@ -96,8 +95,7 @@ const Clearing = () => {
   const showRealTime = dataType === "all" || dataType === "realTime";
 
   const handleReset = () => {
-    setStartDate(new Date(2025, 10, 1));
-    setEndDate(new Date(2025, 10, 30));
+    setSelectedDate(new Date(2025, 10, 5));
     setTradingCenter("all");
     setDataType("all");
   };
@@ -146,56 +144,27 @@ const Clearing = () => {
               </Select>
             </div>
 
-            {/* 开始日期 */}
+            {/* 日期 */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">开始日期:</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">日期:</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
                       "w-[140px] justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
+                      !selectedDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "yyyy-MM-dd") : "选择日期"}
+                    {selectedDate ? format(selectedDate, "yyyy-MM-dd") : "选择日期"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    locale={zhCN}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* 结束日期 */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">结束日期:</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[140px] justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "yyyy-MM-dd") : "选择日期"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
                     locale={zhCN}
                     initialFocus
                     className="p-3 pointer-events-auto"
