@@ -91,6 +91,10 @@ const Clearing = () => {
   const volumeData = generateVolumeData();
   const tableData = generateTableData();
 
+  // 根据数据类型过滤显示的数据键
+  const showDayAhead = dataType === "all" || dataType === "dayAhead";
+  const showRealTime = dataType === "all" || dataType === "realTime";
+
   const handleReset = () => {
     setStartDate(new Date(2025, 10, 1));
     setEndDate(new Date(2025, 10, 30));
@@ -237,36 +241,44 @@ const Clearing = () => {
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="dayAheadClearPrice" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="realTimeClearPrice" 
-                  stroke="#ef4444" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="dayAheadPrice" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="realTimePrice" 
-                  stroke="#ef4444" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                />
+                {showDayAhead && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="dayAheadClearPrice" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {showRealTime && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="realTimeClearPrice" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {showDayAhead && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="dayAheadPrice" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                )}
+                {showRealTime && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="realTimePrice" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -295,34 +307,42 @@ const Clearing = () => {
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="dayAheadClearVolume" 
-                  fill="#3b82f6" 
-                  fillOpacity={0.3}
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="realTimeClearVolume" 
-                  fill="#ef4444" 
-                  fillOpacity={0.3}
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                />
-                <Bar 
-                  dataKey="dayAheadVolume" 
-                  fill="#3b82f6" 
-                  fillOpacity={0.6}
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar 
-                  dataKey="realTimeVolume" 
-                  fill="#ef4444" 
-                  fillOpacity={0.6}
-                  radius={[4, 4, 0, 0]}
-                />
+                {showDayAhead && (
+                  <Area 
+                    type="monotone" 
+                    dataKey="dayAheadClearVolume" 
+                    fill="#3b82f6" 
+                    fillOpacity={0.3}
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                  />
+                )}
+                {showRealTime && (
+                  <Area 
+                    type="monotone" 
+                    dataKey="realTimeClearVolume" 
+                    fill="#ef4444" 
+                    fillOpacity={0.3}
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                  />
+                )}
+                {showDayAhead && (
+                  <Bar 
+                    dataKey="dayAheadVolume" 
+                    fill="#3b82f6" 
+                    fillOpacity={0.6}
+                    radius={[4, 4, 0, 0]}
+                  />
+                )}
+                {showRealTime && (
+                  <Bar 
+                    dataKey="realTimeVolume" 
+                    fill="#ef4444" 
+                    fillOpacity={0.6}
+                    radius={[4, 4, 0, 0]}
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -340,44 +360,60 @@ const Clearing = () => {
               <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
                 <tr className="border-b bg-[#F1F8F4]">
                   <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">时段</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电价</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电价</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电价</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电价</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电量</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电量</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电量</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电量</th>
+                  {showDayAhead && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电价</th>}
+                  {showRealTime && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电价</th>}
+                  {showDayAhead && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电价</th>}
+                  {showRealTime && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电价</th>}
+                  {showDayAhead && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前出清电量</th>}
+                  {showRealTime && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时出清电量</th>}
+                  {showDayAhead && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">日前电量</th>}
+                  {showRealTime && <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">实时电量</th>}
                 </tr>
               </thead>
               <tbody>
                 {tableData.map((row, index) => (
                   <tr key={index} className="border-b transition-colors hover:bg-[#F8FBFA]">
                     <td className="p-4 align-middle font-medium">{row.time}</td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.dayAheadClearPrice.toFixed(2)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.realTimeClearPrice.toFixed(2)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.dayAheadPrice.toFixed(2)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.realTimePrice.toFixed(2)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.dayAheadClearVolume.toFixed(0)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.realTimeClearVolume.toFixed(0)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.dayAheadVolume.toFixed(0)}
-                    </td>
-                    <td className="p-4 align-middle text-right font-mono text-xs">
-                      {row.realTimeVolume.toFixed(0)}
-                    </td>
+                    {showDayAhead && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.dayAheadClearPrice.toFixed(2)}
+                      </td>
+                    )}
+                    {showRealTime && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.realTimeClearPrice.toFixed(2)}
+                      </td>
+                    )}
+                    {showDayAhead && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.dayAheadPrice.toFixed(2)}
+                      </td>
+                    )}
+                    {showRealTime && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.realTimePrice.toFixed(2)}
+                      </td>
+                    )}
+                    {showDayAhead && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.dayAheadClearVolume.toFixed(0)}
+                      </td>
+                    )}
+                    {showRealTime && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.realTimeClearVolume.toFixed(0)}
+                      </td>
+                    )}
+                    {showDayAhead && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.dayAheadVolume.toFixed(0)}
+                      </td>
+                    )}
+                    {showRealTime && (
+                      <td className="p-4 align-middle text-right font-mono text-xs">
+                        {row.realTimeVolume.toFixed(0)}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
