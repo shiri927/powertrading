@@ -1,6 +1,15 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { CalendarIcon, Search, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { LineChart, Line, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 // 生成价格数据
 const generatePriceData = () => {
@@ -73,9 +82,21 @@ const volumeChartConfig = {
 };
 
 const Clearing = () => {
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date(2025, 10, 1));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date(2025, 10, 30));
+  const [tradingCenter, setTradingCenter] = useState<string>("all");
+  const [dataType, setDataType] = useState<string>("all");
+  
   const priceData = generatePriceData();
   const volumeData = generateVolumeData();
   const tableData = generateTableData();
+
+  const handleReset = () => {
+    setStartDate(new Date(2025, 10, 1));
+    setEndDate(new Date(2025, 10, 30));
+    setTradingCenter("all");
+    setDataType("all");
+  };
 
   return (
     <div className="p-8 space-y-6">
@@ -85,6 +106,114 @@ const Clearing = () => {
           分时段交易、省内外现货出清结果管理
         </p>
       </div>
+
+      {/* 筛选栏 */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* 交易中心 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">交易中心:</span>
+              <Select value={tradingCenter} onValueChange={setTradingCenter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="选择交易中心" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="shandong">山东</SelectItem>
+                  <SelectItem value="shanxi">山西</SelectItem>
+                  <SelectItem value="zhejiang">浙江</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 数据类型 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">数据类型:</span>
+              <Select value={dataType} onValueChange={setDataType}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="选择数据类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="dayAhead">日前</SelectItem>
+                  <SelectItem value="realTime">实时</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 开始日期 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">开始日期:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "yyyy-MM-dd") : "选择日期"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    locale={zhCN}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 结束日期 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">结束日期:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "yyyy-MM-dd") : "选择日期"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    locale={zhCN}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="default" size="sm">
+                <Search className="h-4 w-4 mr-1" />
+                查询
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReset}>
+                <RotateCcw className="h-4 w-4 mr-1" />
+                重置
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 价格图表 */}
       <Card>
