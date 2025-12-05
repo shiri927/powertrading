@@ -92,15 +92,15 @@ const navigation = [{
       name: "用能管理",
       href: "/retail/trading/energy-management"
     }, {
+      name: "用电管理",
+      href: "/retail/trading/load-management"
+    }, {
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
     }, {
       name: "零售执行情况追踪",
       href: "/retail/trading/execution-tracking"
     }]
-  }, {
-    name: "用电负荷管理",
-    href: "/retail/load"
   }, {
     name: "出清管理",
     href: "/retail/clearing"
