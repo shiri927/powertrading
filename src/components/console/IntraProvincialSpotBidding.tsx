@@ -39,10 +39,6 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
   const [activeTab, setActiveTab] = useState("bidding");
   const [tradingUnit, setTradingUnit] = useState("shanxi-demo");
   const [executionDate, setExecutionDate] = useState<Date>(new Date(2025, 10, 7));
-  const [timeStart, setTimeStart] = useState("00:15");
-  const [timeEnd, setTimeEnd] = useState("24:00");
-  const [correctionMethod, setCorrectionMethod] = useState("ratio");
-  const [adjustmentRatio, setAdjustmentRatio] = useState("1.00");
   const [powerData, setPowerData] = useState(generatePowerPredictionData);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
@@ -53,25 +49,6 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
     default: null as number | null,
   }), []);
 
-  const handleAdjust = () => {
-    const ratio = parseFloat(adjustmentRatio);
-    if (isNaN(ratio)) return;
-    
-    setPowerData(prev => prev.map(item => ({
-      ...item,
-      pendingPower: parseFloat((item.originalPower * ratio).toFixed(3))
-    })));
-  };
-
-  const handleSave = () => {
-    console.log("Saving power data...");
-    toast.success("保存成功", { description: "功率预测数据已保存" });
-  };
-
-  const handlePublish = () => {
-    console.log("Publishing power data...");
-    toast.success("下发成功", { description: "策略已下发至交易中心" });
-  };
 
   // 应用推荐策略到申报
   const handleApplyRecommendation = (recommendation: StrategyRecommendation) => {
@@ -200,61 +177,18 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
                 </div>
               </div>
 
-              {/* 时间和调整控制栏 */}
-              <div className="flex items-center justify-between gap-4 flex-wrap p-3 bg-[#F1F8F4] rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">时间</span>
-                    <Input 
-                      value={timeStart} 
-                      onChange={(e) => setTimeStart(e.target.value)}
-                      className="w-20 h-8 text-sm font-mono text-center"
-                    />
-                    <span className="text-muted-foreground">~</span>
-                    <Input 
-                      value={timeEnd} 
-                      onChange={(e) => setTimeEnd(e.target.value)}
-                      className="w-20 h-8 text-sm font-mono text-center"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">功率预测修正方式</span>
-                    <Select value={correctionMethod} onValueChange={setCorrectionMethod}>
-                      <SelectTrigger className="w-28 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ratio">调整比例</SelectItem>
-                        <SelectItem value="fixed">固定值</SelectItem>
-                        <SelectItem value="offset">偏移量</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Input 
-                    value={adjustmentRatio}
-                    onChange={(e) => setAdjustmentRatio(e.target.value)}
-                    className="w-20 h-8 text-sm font-mono text-right"
-                  />
-
-                  <Button variant="outline" size="sm" onClick={handleAdjust}>调整</Button>
-                  <Button variant="outline" size="sm" className="border-primary text-primary" onClick={handleSave}>保存</Button>
-                  <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={handlePublish}>下发</Button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">自动申报</Button>
-                  <Button variant="outline" size="sm">原始策略</Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setActiveTab("recommendation")}
-                  >
-                    推荐策略
-                  </Button>
-                  <Button variant="outline" size="sm">操作记录</Button>
-                </div>
+              {/* 操作按钮栏 */}
+              <div className="flex items-center justify-end gap-2 p-3 bg-[#F1F8F4] rounded-lg">
+                <Button variant="outline" size="sm">自动申报</Button>
+                <Button variant="outline" size="sm">原始策略</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveTab("recommendation")}
+                >
+                  推荐策略
+                </Button>
+                <Button variant="outline" size="sm">操作记录</Button>
               </div>
 
               {/* 功率预测数据表格 */}
