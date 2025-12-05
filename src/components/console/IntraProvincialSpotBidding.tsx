@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import { CalendarIcon, Search, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { EmbeddedRecommendation } from "./EmbeddedRecommendation";
+import { StrategyRecommendation } from "@/lib/trading/recommendation-engine";
 
 // 生成96点功率预测数据
 const generatePowerPredictionData = () => {
@@ -33,6 +36,7 @@ interface IntraProvincialSpotBiddingProps {
 }
 
 const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincialSpotBiddingProps) => {
+  const [activeTab, setActiveTab] = useState("bidding");
   const [tradingUnit, setTradingUnit] = useState("shanxi-demo");
   const [executionDate, setExecutionDate] = useState<Date>(new Date(2025, 10, 7));
   const [timeStart, setTimeStart] = useState("00:15");
@@ -60,13 +64,51 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
   };
 
   const handleSave = () => {
-    // 保存逻辑
     console.log("Saving power data...");
+    toast.success("保存成功", { description: "功率预测数据已保存" });
   };
 
   const handlePublish = () => {
-    // 下发逻辑
     console.log("Publishing power data...");
+    toast.success("下发成功", { description: "策略已下发至交易中心" });
+  };
+
+  // 应用推荐策略到申报
+  const handleApplyRecommendation = (recommendation: StrategyRecommendation) => {
+    // 根据推荐的操作调整功率数据
+    const actions = recommendation.suggestedActions;
+    
+    // 简化处理：根据推荐策略调整功率预测
+    const adjustedData = powerData.map((item, index) => {
+      // 根据时间段应用不同的调整
+      const hour = Math.floor(index / 4);
+      let adjustmentFactor = 1.0;
+      
+      // 根据推荐操作类型调整
+      actions.forEach(action => {
+        const actionHour = parseInt(action.time.split(':')[0]);
+        if (Math.abs(hour - actionHour) <= 2) {
+          if (action.action === 'buy') {
+            adjustmentFactor *= 0.95; // 买入时降低申报功率
+          } else if (action.action === 'sell') {
+            adjustmentFactor *= 1.05; // 卖出时提高申报功率
+          }
+        }
+      });
+      
+      return {
+        ...item,
+        pendingPower: parseFloat((item.originalPower * adjustmentFactor).toFixed(3)),
+        expectedRevenue: parseFloat((item.originalPower * adjustmentFactor * (300 + Math.random() * 100)).toFixed(2)),
+      };
+    });
+    
+    setPowerData(adjustedData);
+    setActiveTab("bidding");
+    
+    toast.success("策略已应用", {
+      description: "推荐策略已预填到申报数据中，请检查并提交",
+    });
   };
 
   return (
@@ -119,139 +161,164 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
         </Button>
       </div>
 
-      {/* 日前交易策略下发区域 */}
-      <Card className="border">
-        <CardContent className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">日前交易策略下发</h3>
-          
-          {/* 三个策略收入预测卡片 */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border bg-[#F8FBFA]">
-              <div className="text-sm text-muted-foreground mb-1">待下发策略-结算收入预测(元)</div>
-              <div className="text-2xl font-bold font-mono text-foreground">
-                {strategyPredictions.pending !== null ? strategyPredictions.pending.toLocaleString() : '--'}
-              </div>
-            </div>
-            <div className="p-4 rounded-lg border bg-[#F8FBFA]">
-              <div className="text-sm text-muted-foreground mb-1">推荐策略-结算收入预测(元)</div>
-              <div className="text-2xl font-bold font-mono text-foreground">
-                {strategyPredictions.recommended !== null ? strategyPredictions.recommended.toLocaleString() : '--'}
-              </div>
-            </div>
-            <div className="p-4 rounded-lg border bg-[#F8FBFA]">
-              <div className="text-sm text-muted-foreground mb-1">默认策略-结算收入预测(元)</div>
-              <div className="text-2xl font-bold font-mono text-foreground">
-                {strategyPredictions.default !== null ? strategyPredictions.default.toLocaleString() : '--'}
-              </div>
-            </div>
-          </div>
+      {/* 主要内容区域 - 带标签页 */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-[#F1F8F4] border">
+          <TabsTrigger value="bidding" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            策略申报
+          </TabsTrigger>
+          <TabsTrigger value="recommendation" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            推荐策略
+          </TabsTrigger>
+        </TabsList>
 
-          {/* 时间和调整控制栏 */}
-          <div className="flex items-center justify-between gap-4 flex-wrap p-3 bg-[#F1F8F4] rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">时间</span>
-                <Input 
-                  value={timeStart} 
-                  onChange={(e) => setTimeStart(e.target.value)}
-                  className="w-20 h-8 text-sm font-mono text-center"
-                />
-                <span className="text-muted-foreground">~</span>
-                <Input 
-                  value={timeEnd} 
-                  onChange={(e) => setTimeEnd(e.target.value)}
-                  className="w-20 h-8 text-sm font-mono text-center"
-                />
+        {/* 策略申报 Tab */}
+        <TabsContent value="bidding" className="mt-4">
+          <Card className="border">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">日前交易策略下发</h3>
+              
+              {/* 三个策略收入预测卡片 */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg border bg-[#F8FBFA]">
+                  <div className="text-sm text-muted-foreground mb-1">待下发策略-结算收入预测(元)</div>
+                  <div className="text-2xl font-bold font-mono text-foreground">
+                    {strategyPredictions.pending !== null ? strategyPredictions.pending.toLocaleString() : '--'}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border bg-[#F8FBFA]">
+                  <div className="text-sm text-muted-foreground mb-1">推荐策略-结算收入预测(元)</div>
+                  <div className="text-2xl font-bold font-mono text-foreground">
+                    {strategyPredictions.recommended !== null ? strategyPredictions.recommended.toLocaleString() : '--'}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border bg-[#F8FBFA]">
+                  <div className="text-sm text-muted-foreground mb-1">默认策略-结算收入预测(元)</div>
+                  <div className="text-2xl font-bold font-mono text-foreground">
+                    {strategyPredictions.default !== null ? strategyPredictions.default.toLocaleString() : '--'}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">功率预测修正方式</span>
-                <Select value={correctionMethod} onValueChange={setCorrectionMethod}>
-                  <SelectTrigger className="w-28 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ratio">调整比例</SelectItem>
-                    <SelectItem value="fixed">固定值</SelectItem>
-                    <SelectItem value="offset">偏移量</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* 时间和调整控制栏 */}
+              <div className="flex items-center justify-between gap-4 flex-wrap p-3 bg-[#F1F8F4] rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">时间</span>
+                    <Input 
+                      value={timeStart} 
+                      onChange={(e) => setTimeStart(e.target.value)}
+                      className="w-20 h-8 text-sm font-mono text-center"
+                    />
+                    <span className="text-muted-foreground">~</span>
+                    <Input 
+                      value={timeEnd} 
+                      onChange={(e) => setTimeEnd(e.target.value)}
+                      className="w-20 h-8 text-sm font-mono text-center"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">功率预测修正方式</span>
+                    <Select value={correctionMethod} onValueChange={setCorrectionMethod}>
+                      <SelectTrigger className="w-28 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ratio">调整比例</SelectItem>
+                        <SelectItem value="fixed">固定值</SelectItem>
+                        <SelectItem value="offset">偏移量</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Input 
+                    value={adjustmentRatio}
+                    onChange={(e) => setAdjustmentRatio(e.target.value)}
+                    className="w-20 h-8 text-sm font-mono text-right"
+                  />
+
+                  <Button variant="outline" size="sm" onClick={handleAdjust}>调整</Button>
+                  <Button variant="outline" size="sm" className="border-primary text-primary" onClick={handleSave}>保存</Button>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={handlePublish}>下发</Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">自动申报</Button>
+                  <Button variant="outline" size="sm">原始策略</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setActiveTab("recommendation")}
+                  >
+                    推荐策略
+                  </Button>
+                  <Button variant="outline" size="sm">操作记录</Button>
+                </div>
               </div>
 
-              <Input 
-                value={adjustmentRatio}
-                onChange={(e) => setAdjustmentRatio(e.target.value)}
-                className="w-20 h-8 text-sm font-mono text-right"
-              />
+              {/* 功率预测数据表格 */}
+              <div className="rounded-lg border overflow-hidden">
+                <div className="max-h-[500px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10">
+                      <TableRow className="bg-[#E8F0EC] border-b-2 border-primary">
+                        <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
+                        <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
+                        <TableHead className="text-center font-semibold text-foreground">原始短期功率预测(MW)</TableHead>
+                        <TableHead className="text-center font-semibold text-foreground">待下发短期功率预测(MW)</TableHead>
+                        <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {powerData.map((row) => (
+                        <TableRow 
+                          key={row.id}
+                          className={cn(
+                            "transition-colors cursor-pointer",
+                            selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]"
+                          )}
+                          onClick={() => setSelectedRow(row.id)}
+                        >
+                          <TableCell className="text-center font-mono text-sm">{row.id}</TableCell>
+                          <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Input
+                              type="number"
+                              value={row.pendingPower}
+                              onChange={(e) => {
+                                const newValue = parseFloat(e.target.value);
+                                if (!isNaN(newValue)) {
+                                  setPowerData(prev => prev.map(item => 
+                                    item.id === row.id ? { ...item, pendingPower: newValue } : item
+                                  ));
+                                }
+                              }}
+                              className="w-28 h-8 text-center font-mono text-sm mx-auto"
+                              step="0.001"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm text-muted-foreground">
+                            {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              <Button variant="outline" size="sm" onClick={handleAdjust}>调整</Button>
-              <Button variant="outline" size="sm" className="border-primary text-primary" onClick={handleSave}>保存</Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={handlePublish}>下发</Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">自动申报</Button>
-              <Button variant="outline" size="sm">原始策略</Button>
-              <Button variant="outline" size="sm">推荐策略</Button>
-              <Button variant="outline" size="sm">操作记录</Button>
-            </div>
-          </div>
-
-          {/* 功率预测数据表格 */}
-          <div className="rounded-lg border overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto">
-              <Table>
-                <TableHeader className="sticky top-0 z-10">
-                  <TableRow className="bg-[#E8F0EC] border-b-2 border-primary">
-                    <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
-                    <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
-                    <TableHead className="text-center font-semibold text-foreground">原始短期功率预测(MW)</TableHead>
-                    <TableHead className="text-center font-semibold text-foreground">待下发短期功率预测(MW)</TableHead>
-                    <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {powerData.map((row, index) => (
-                    <TableRow 
-                      key={row.id}
-                      className={cn(
-                        "transition-colors cursor-pointer",
-                        selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]"
-                      )}
-                      onClick={() => setSelectedRow(row.id)}
-                    >
-                      <TableCell className="text-center font-mono text-sm">{row.id}</TableCell>
-                      <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Input
-                          type="number"
-                          value={row.pendingPower}
-                          onChange={(e) => {
-                            const newValue = parseFloat(e.target.value);
-                            if (!isNaN(newValue)) {
-                              setPowerData(prev => prev.map(item => 
-                                item.id === row.id ? { ...item, pendingPower: newValue } : item
-                              ));
-                            }
-                          }}
-                          className="w-28 h-8 text-center font-mono text-sm mx-auto"
-                          step="0.001"
-                        />
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-sm text-muted-foreground">
-                        {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* 推荐策略 Tab */}
+        <TabsContent value="recommendation" className="mt-4">
+          <EmbeddedRecommendation onApplyRecommendation={handleApplyRecommendation} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
