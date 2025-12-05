@@ -97,9 +97,9 @@ const App = () => (
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
             <Route path="/retail/trading/energy-management" element={<EnergyManagement />} />
+            <Route path="/retail/trading/load-management" element={<RetailLoad />} />
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
-            <Route path="/retail/load" element={<RetailLoad />} />
             <Route path="/retail/clearing" element={<RetailClearing />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
