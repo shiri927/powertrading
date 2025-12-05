@@ -3,30 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
-import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
-import { CalendarIcon, Plus, Search, FileText, CheckCircle2, Clock, AlertCircle, Download, Eye, TrendingUp, BarChart3 } from "lucide-react";
+import { Plus, Search, TrendingUp, BarChart3, Eye } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, ComposedChart } from "recharts";
 
 // 模拟数据生成
-const generateCalendarEvents = () => {
-  return [
-    { id: 1, date: new Date(2025, 10, 15), type: "announcement", title: "省间现货交易公告", status: "未读" },
-    { id: 2, date: new Date(2025, 10, 18), type: "todo", title: "提交月度交易计划", status: "待处理", priority: "high" },
-    { id: 3, date: new Date(2025, 10, 20), type: "sequence", title: "11月交易序列", status: "进行中" },
-    { id: 4, date: new Date(2025, 10, 22), type: "announcement", title: "绿证交易规则更新", status: "已读" },
-    { id: 5, date: new Date(2025, 10, 25), type: "todo", title: "合同备案截止", status: "待处理", priority: "high" },
-  ];
-};
-
 const generatePowerPlanMetrics = () => {
   return [
     { label: "交易单元总数", value: "12", unit: "个" },
@@ -65,11 +52,9 @@ const generatePositionAnalysisData = () => {
 };
 
 const BaseData = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [contractFilter, setContractFilter] = useState({ tradingCenter: "all", tradingUnit: "all", keyword: "" });
   const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11" });
 
-  const calendarEvents = generateCalendarEvents();
   const powerPlanMetrics = generatePowerPlanMetrics();
   const powerPlanData = generatePowerPlanData();
   const contractData = generateContractData();
@@ -95,125 +80,16 @@ const BaseData = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">基础数据管理</h1>
         <p className="text-muted-foreground mt-2">
-          交易日历、电量计划、合同管理及仓位分析
+          电量计划、合同管理及仓位分析
         </p>
       </div>
 
-      <Tabs defaultValue="calendar" className="space-y-4">
+      <Tabs defaultValue="power-plan" className="space-y-4">
         <TabsList className="bg-[#F1F8F4]">
-          <TabsTrigger value="calendar">交易日历</TabsTrigger>
           <TabsTrigger value="power-plan">电量计划</TabsTrigger>
           <TabsTrigger value="contract">合同管理</TabsTrigger>
           <TabsTrigger value="analysis">合同分析</TabsTrigger>
         </TabsList>
-
-        {/* 交易日历 */}
-        <TabsContent value="calendar" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 日历视图 */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5" />
-                  交易日历
-                </CardTitle>
-                <CardDescription>查看待办事项、公告和交易序列</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  locale={zhCN}
-                  className="rounded-md border p-3"
-                />
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-semibold">当日事项：</h4>
-                  {calendarEvents
-                    .filter(event => selectedDate && format(event.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
-                    .map(event => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-[#F8FBFA] rounded-lg">
-                        <div className="flex items-center gap-2">
-                          {event.type === "announcement" && <FileText className="h-4 w-4 text-blue-600" />}
-                          {event.type === "todo" && <CheckCircle2 className="h-4 w-4 text-orange-600" />}
-                          {event.type === "sequence" && <Clock className="h-4 w-4 text-green-600" />}
-                          <span className="text-sm">{event.title}</span>
-                        </div>
-                        <Badge variant={event.priority === "high" ? "destructive" : "secondary"}>
-                          {event.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  {!calendarEvents.some(event => selectedDate && format(event.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')) && (
-                    <p className="text-sm text-muted-foreground">暂无事项</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 待办、公告、序列列表 */}
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    <span>待办事项</span>
-                    <Button size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-1" />
-                      新建
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2">
-                      {calendarEvents.filter(e => e.type === "todo").map(event => (
-                        <div key={event.id} className="p-2 bg-[#F8FBFA] rounded hover:bg-[#F1F8F4] transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{event.title}</p>
-                              <p className="text-xs text-muted-foreground">{format(event.date, 'yyyy-MM-dd', { locale: zhCN })}</p>
-                            </div>
-                            {event.priority === "high" && <AlertCircle className="h-4 w-4 text-red-600" />}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    <span>公告通知</span>
-                    <Button size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-1" />
-                      新建
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[150px]">
-                    <div className="space-y-2">
-                      {calendarEvents.filter(e => e.type === "announcement").map(event => (
-                        <div key={event.id} className="p-2 bg-[#F8FBFA] rounded hover:bg-[#F1F8F4] transition-colors cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm flex-1">{event.title}</p>
-                            <div className="flex items-center gap-2">
-                              <Eye className="h-3 w-3 text-muted-foreground" />
-                              <Download className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{format(event.date, 'yyyy-MM-dd', { locale: zhCN })}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
 
         {/* 电量计划 */}
         <TabsContent value="power-plan" className="space-y-4">
