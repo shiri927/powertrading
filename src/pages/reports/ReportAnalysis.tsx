@@ -7,9 +7,9 @@ import { FileText, Download, Eye, Calendar } from "lucide-react";
 const analysisReportData = [
   {
     id: 1,
-    name: "2024年第一季度市场分析报告",
+    name: "2024年3月市场分析报告",
     category: "市场分析",
-    period: "Q1 2024",
+    period: "2024年3月",
     author: "分析团队",
     status: "已发布",
     publishDate: "2024-03-28",
