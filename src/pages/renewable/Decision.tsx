@@ -1,9 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, TrendingUp, Settings, Lightbulb } from "lucide-react";
+import { Brain, TrendingUp, Settings } from "lucide-react";
 import { AIForecastTab } from "./decision/AIForecastTab";
 import { StrategyConfigTab } from "./decision/StrategyConfigTab";
 import { BacktestTab } from "./decision/BacktestTab";
-import { RecommendationTab } from "./decision/RecommendationTab";
 
 const Decision = () => {
   return (
@@ -16,7 +15,7 @@ const Decision = () => {
       </div>
 
       <Tabs defaultValue="forecast" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-[#F1F8F4]">
+        <TabsList className="grid w-full grid-cols-3 bg-[#F1F8F4]">
           <TabsTrigger value="forecast" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             AI功率预测
@@ -28,10 +27,6 @@ const Decision = () => {
           <TabsTrigger value="backtest" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             回测与模拟
-          </TabsTrigger>
-          <TabsTrigger value="recommendation" className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" />
-            智能推荐
           </TabsTrigger>
         </TabsList>
 
@@ -45,10 +40,6 @@ const Decision = () => {
 
         <TabsContent value="backtest">
           <BacktestTab />
-        </TabsContent>
-
-        <TabsContent value="recommendation">
-          <RecommendationTab />
         </TabsContent>
       </Tabs>
     </div>
