@@ -11,146 +11,126 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-const tradingData = [
-  {
-    date: "20240416",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月16日曲线交易(2024-4-18)",
-    time: "1000-1600",
-    period: "20240418-20240418"
-  },
-  {
-    date: "20240416",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月16日曲线交易(2024-4-19)",
-    time: "1000-1600",
-    period: "20240419-20240419"
-  },
-  {
-    date: "20240416",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月16日曲线交易(2024-4-20)",
-    time: "1000-1600",
-    period: "20240420-20240420"
-  },
-  {
-    date: "20240416",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "发电商2024年4月21-30日『午后高峰调整交易』(现...",
-    time: "1300-1500",
-    period: "20240421-20240430"
-  },
-  {
-    date: "20240416",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "发电商2024年4月21-30日『晚间高峰调整交易』(现...",
-    time: "1000-1100",
-    period: "20240421-20240430"
-  },
-  {
-    date: "20240418",
-    center: "山东电力交易中心",
-    type: "交易序列",
-    content: "2024年5月挂牌1号曲线交易",
-    time: "0900-1100",
-    period: "20240501-20240531"
-  },
-  {
-    date: "20240418",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年5月挂牌1号1天临时组合交易补偿措施(组...",
-    time: "0900-1200",
-    period: "20240501-20240531"
-  },
-  {
-    date: "20240424",
-    center: "浙江电力交易中心",
-    type: "交易序列",
-    content: "发电商2024年5月5日晚间高峰组合交易(曲线交易)",
-    time: "1300-1500",
-    period: "20240501-20240531"
-  },
-  {
-    date: "20240424",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "发电商2024年5月交易组合高峰时段交易",
-    time: "0900-1100",
-    period: "20240501-20240531"
-  },
-  {
-    date: "20240425",
-    center: "山东电力交易中心",
-    type: "交易序列",
-    content: "2024年5月1-10日上午时段组合交易(曲线交易)",
-    time: "1000-1600",
-    period: "20240501-20240510"
-  },
-  {
-    date: "20240425",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年5月1-10日上午对外报量上交易(曲线交易)",
-    time: "0915-0925",
-    period: "20240501-20240531"
-  },
-  {
-    date: "20240401",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-3)",
-    time: "1000-1600",
-    period: "20240403-20240403"
-  },
-  {
-    date: "20240401",
-    center: "浙江电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-4)",
-    time: "1000-1600",
-    period: "20240404-20240404"
-  },
-  {
-    date: "20240401",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-5)",
-    time: "1000-1600",
-    period: "20240405-20240405"
-  },
-  {
-    date: "20240401",
-    center: "山东电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-6)",
-    time: "1000-1600",
-    period: "20240406-20240406"
-  },
-  {
-    date: "20240401",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-7)",
-    time: "1000-1600",
-    period: "20240407-20240407"
-  },
-  {
-    date: "20240401",
-    center: "山西电力交易中心",
-    type: "交易序列",
-    content: "2024年04月01日曲线交易(2024-4-8)",
-    time: "1000-1600",
-    period: "20240408-20240408"
-  },
-];
-
+const tradingData = [{
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-18)",
+  time: "1000-1600",
+  period: "20240418-20240418"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-19)",
+  time: "1000-1600",
+  period: "20240419-20240419"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-20)",
+  time: "1000-1600",
+  period: "20240420-20240420"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年4月21-30日『午后高峰调整交易』(现...",
+  time: "1300-1500",
+  period: "20240421-20240430"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年4月21-30日『晚间高峰调整交易』(现...",
+  time: "1000-1100",
+  period: "20240421-20240430"
+}, {
+  date: "20240418",
+  center: "山东电力交易中心",
+  type: "交易序列",
+  content: "2024年5月挂牌1号曲线交易",
+  time: "0900-1100",
+  period: "20240501-20240531"
+}, {
+  date: "20240418",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年5月挂牌1号1天临时组合交易补偿措施(组...",
+  time: "0900-1200",
+  period: "20240501-20240531"
+}, {
+  date: "20240424",
+  center: "浙江电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年5月5日晚间高峰组合交易(曲线交易)",
+  time: "1300-1500",
+  period: "20240501-20240531"
+}, {
+  date: "20240424",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年5月交易组合高峰时段交易",
+  time: "0900-1100",
+  period: "20240501-20240531"
+}, {
+  date: "20240425",
+  center: "山东电力交易中心",
+  type: "交易序列",
+  content: "2024年5月1-10日上午时段组合交易(曲线交易)",
+  time: "1000-1600",
+  period: "20240501-20240510"
+}, {
+  date: "20240425",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年5月1-10日上午对外报量上交易(曲线交易)",
+  time: "0915-0925",
+  period: "20240501-20240531"
+}, {
+  date: "20240401",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-3)",
+  time: "1000-1600",
+  period: "20240403-20240403"
+}, {
+  date: "20240401",
+  center: "浙江电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-4)",
+  time: "1000-1600",
+  period: "20240404-20240404"
+}, {
+  date: "20240401",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-5)",
+  time: "1000-1600",
+  period: "20240405-20240405"
+}, {
+  date: "20240401",
+  center: "山东电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-6)",
+  time: "1000-1600",
+  period: "20240406-20240406"
+}, {
+  date: "20240401",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-7)",
+  time: "1000-1600",
+  period: "20240407-20240407"
+}, {
+  date: "20240401",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月01日曲线交易(2024-4-8)",
+  time: "1000-1600",
+  period: "20240408-20240408"
+}];
 export default function TradingLedger() {
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date(2024, 3, 1));
   const [selectedCenter, setSelectedCenter] = useState("all");
@@ -160,13 +140,13 @@ export default function TradingLedger() {
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
-    return tradingData.filter((row) => {
+    return tradingData.filter(row => {
       // 交易中心筛选
       if (selectedCenter !== "all") {
         const centerMap: Record<string, string> = {
           shanxi: "山西电力交易中心",
           shandong: "山东电力交易中心",
-          zhejiang: "浙江电力交易中心",
+          zhejiang: "浙江电力交易中心"
         };
         if (row.center !== centerMap[selectedCenter]) return false;
       }
@@ -181,22 +161,18 @@ export default function TradingLedger() {
         const filterDateStr = format(filterDate, "yyyyMMdd");
         if (row.date !== filterDateStr) return false;
       }
-
       return true;
     });
   }, [selectedCenter, keyword, filterDate]);
-
   const handleReset = () => {
     setSelectedCenter("all");
     setSelectedUnit("all");
     setKeyword("");
     setFilterDate(undefined);
   };
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">交易台账</h1>
+        <h1 className="text-3xl font-bold text-foreground">交易日历</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -246,11 +222,7 @@ export default function TradingLedger() {
                 <label className="text-sm font-medium mb-2 block text-muted-foreground">
                   关键字
                 </label>
-                <Input 
-                  placeholder="请输入关键字" 
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                />
+                <Input placeholder="请输入关键字" value={keyword} onChange={e => setKeyword(e.target.value)} />
               </div>
 
               <div>
@@ -259,25 +231,13 @@ export default function TradingLedger() {
                 </label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filterDate && "text-muted-foreground"
-                      )}
-                    >
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {filterDate ? format(filterDate, "yyyy-MM-dd") : <span>选择日期</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={filterDate}
-                      onSelect={setFilterDate}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
+                    <Calendar mode="single" selected={filterDate} onSelect={setFilterDate} initialFocus className="pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -290,12 +250,7 @@ export default function TradingLedger() {
 
           <Card>
             <CardContent className="p-4">
-              <Calendar
-                mode="single"
-                selected={calendarDate}
-                onSelect={setCalendarDate}
-                className="rounded-md"
-              />
+              <Calendar mode="single" selected={calendarDate} onSelect={setCalendarDate} className="rounded-md" />
             </CardContent>
           </Card>
         </div>
@@ -335,9 +290,7 @@ export default function TradingLedger() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredData.length > 0 ? (
-                            filteredData.map((row, index) => (
-                              <TableRow key={index}>
+                          {filteredData.length > 0 ? filteredData.map((row, index) => <TableRow key={index}>
                                 <TableCell>
                                   <Checkbox />
                                 </TableCell>
@@ -349,15 +302,11 @@ export default function TradingLedger() {
                                 </TableCell>
                                 <TableCell>{row.time}</TableCell>
                                 <TableCell>{row.period}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
+                              </TableRow>) : <TableRow>
                               <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                 暂无符合条件的交易记录
                               </TableCell>
-                            </TableRow>
-                          )}
+                            </TableRow>}
                         </TableBody>
                       </Table>
                     </div>
@@ -380,6 +329,5 @@ export default function TradingLedger() {
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
