@@ -61,6 +61,9 @@ const navigation = [{
   name: "售电业务侧",
   icon: ShoppingCart,
   children: [{
+    name: "交易日历",
+    href: "/retail/trading-ledger"
+  }, {
     name: "基础数据",
     href: "/retail/base-data"
   }, {
