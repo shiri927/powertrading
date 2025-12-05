@@ -186,7 +186,6 @@ const IntraProvincialSpotBidding = ({
                         <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
                         <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
                         <TableHead className="text-center font-semibold text-foreground">预计用电量(MW)</TableHead>
-                        <TableHead className="text-center font-semibold text-foreground">待下发短期功率预测(MW)</TableHead>
                         <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -196,17 +195,6 @@ const IntraProvincialSpotBidding = ({
                           <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
                           <TableCell className="text-center">
                             <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Input type="number" value={row.pendingPower} onChange={e => {
-                          const newValue = parseFloat(e.target.value);
-                          if (!isNaN(newValue)) {
-                            setPowerData(prev => prev.map(item => item.id === row.id ? {
-                              ...item,
-                              pendingPower: newValue
-                            } : item));
-                          }
-                        }} className="w-28 h-8 text-center font-mono text-sm mx-auto" step="0.001" />
                           </TableCell>
                           <TableCell className="text-center font-mono text-sm text-muted-foreground">
                             {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
