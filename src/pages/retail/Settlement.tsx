@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Receipt, ChevronRight, ChevronDown, Download, Upload, FileSpreadsheet, Calendar as CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -27,6 +28,7 @@ interface SettlementRecord {
   vatRate: number;
   remark: string;
   month?: string;
+  side?: "wholesale" | "retail";
   children?: SettlementRecord[];
   isGroup?: boolean;
   isSummary?: boolean;
@@ -37,6 +39,7 @@ const generateMockData = (): SettlementRecord[] => {
   const months = ["202410", "202411"];
   const tradingUnits = ["交易单元001", "交易单元002", "交易单元003"];
   const statuses = ["已结算", "待结算", "结算中"];
+  const sides: ("wholesale" | "retail")[] = ["wholesale", "retail"];
   
   const monthlyData = months.map((month, monthIndex) => {
     const records: SettlementRecord[] = [];
@@ -70,6 +73,7 @@ const generateMockData = (): SettlementRecord[] => {
         vatRate: 13,
         remark: i % 3 === 0 ? "正常结算" : "",
         month,
+        side: sides[i % 2],
       });
     }
     
@@ -128,6 +132,7 @@ const Settlement = () => {
   const [data] = useState<SettlementRecord[]>(generateMockData());
   const [tradingCenter, setTradingCenter] = useState("山西电力交易中心");
   const [tradingUnit, setTradingUnit] = useState("all");
+  const [settlementSide, setSettlementSide] = useState<"all" | "wholesale" | "retail">("all");
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(2024, 9, 1));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date(2024, 10, 30));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set(["total-summary"]));
@@ -144,14 +149,67 @@ const Settlement = () => {
     });
   };
 
+  // 根据筛选条件过滤数据
   const filteredData = useMemo(() => {
-    // 筛选逻辑可在此实现
-    return data;
-  }, [data, tradingCenter, tradingUnit, startDate, endDate]);
+    if (settlementSide === "all") {
+      return data;
+    }
+    
+    // 深度过滤数据
+    const filterRecords = (records: SettlementRecord[]): SettlementRecord[] => {
+      return records.map(record => {
+        if (record.children) {
+          const filteredChildren = record.children
+            .map(child => {
+              if (child.children) {
+                const filteredGrandChildren = child.children.filter(
+                  grandChild => grandChild.side === settlementSide
+                );
+                if (filteredGrandChildren.length === 0) return null;
+                
+                // 重新计算汇总
+                return {
+                  ...child,
+                  settlementVolume: filteredGrandChildren.reduce((sum, r) => sum + r.settlementVolume, 0),
+                  settlementFee: filteredGrandChildren.reduce((sum, r) => sum + r.settlementFee, 0),
+                  compensationIncome: filteredGrandChildren.reduce((sum, r) => sum + r.compensationIncome, 0),
+                  otherFees: filteredGrandChildren.reduce((sum, r) => sum + r.otherFees, 0),
+                  totalIncomeNoSubsidy: filteredGrandChildren.reduce((sum, r) => sum + r.totalIncomeNoSubsidy, 0),
+                  totalIncomeWithSubsidy: filteredGrandChildren.reduce((sum, r) => sum + r.totalIncomeWithSubsidy, 0),
+                  remark: `${filteredGrandChildren.length}条记录`,
+                  children: filteredGrandChildren,
+                };
+              }
+              return child.side === settlementSide ? child : null;
+            })
+            .filter(Boolean) as SettlementRecord[];
+          
+          if (filteredChildren.length === 0) return { ...record, children: [] };
+          
+          // 重新计算总汇总
+          return {
+            ...record,
+            settlementVolume: filteredChildren.reduce((sum, r) => sum + r.settlementVolume, 0),
+            settlementFee: filteredChildren.reduce((sum, r) => sum + r.settlementFee, 0),
+            compensationIncome: filteredChildren.reduce((sum, r) => sum + r.compensationIncome, 0),
+            otherFees: filteredChildren.reduce((sum, r) => sum + r.otherFees, 0),
+            totalIncomeNoSubsidy: filteredChildren.reduce((sum, r) => sum + r.totalIncomeNoSubsidy, 0),
+            totalIncomeWithSubsidy: filteredChildren.reduce((sum, r) => sum + r.totalIncomeWithSubsidy, 0),
+            remark: `${filteredChildren.length}个月`,
+            children: filteredChildren,
+          };
+        }
+        return record;
+      });
+    };
+    
+    return filterRecords(data);
+  }, [data, settlementSide]);
 
   const handleReset = () => {
     setTradingCenter("山西电力交易中心");
     setTradingUnit("all");
+    setSettlementSide("all");
     setStartDate(new Date(2024, 9, 1));
     setEndDate(new Date(2024, 10, 30));
   };
@@ -235,6 +293,22 @@ const Settlement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* 批发侧/零售侧切换 */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">结算类型：</span>
+            <ToggleGroup type="single" value={settlementSide} onValueChange={(value) => value && setSettlementSide(value as "all" | "wholesale" | "retail")}>
+              <ToggleGroupItem value="all" className="data-[state=on]:bg-[#00B04D] data-[state=on]:text-white">
+                全部
+              </ToggleGroupItem>
+              <ToggleGroupItem value="wholesale" className="data-[state=on]:bg-[#00B04D] data-[state=on]:text-white">
+                批发侧
+              </ToggleGroupItem>
+              <ToggleGroupItem value="retail" className="data-[state=on]:bg-[#00B04D] data-[state=on]:text-white">
+                零售侧
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
           {/* 筛选器栏 */}
           <div className="flex items-end justify-between gap-4 pb-4 border-b">
             <div className="flex items-end gap-4 flex-1">
