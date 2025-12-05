@@ -34,7 +34,8 @@ import RenewableTradingLedger from "./pages/renewable/TradingLedger";
 import RetailBaseData from "./pages/retail/BaseData";
 import RetailConsole from "./pages/retail/Console";
 import RetailTrading from "./pages/retail/Trading";
-import RetailLoad from "./pages/retail/Load";
+import LoadPrediction from "./pages/retail/trading/LoadPrediction";
+import LoadAnalysis from "./pages/retail/trading/LoadAnalysis";
 import RetailClearing from "./pages/retail/Clearing";
 import RetailSettlement from "./pages/retail/Settlement";
 import RetailReview from "./pages/retail/Review";
@@ -97,7 +98,8 @@ const App = () => (
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
             <Route path="/retail/trading/energy-management" element={<EnergyManagement />} />
-            <Route path="/retail/trading/load-management" element={<RetailLoad />} />
+            <Route path="/retail/trading/load-prediction" element={<LoadPrediction />} />
+            <Route path="/retail/trading/load-analysis" element={<LoadAnalysis />} />
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/clearing" element={<RetailClearing />} />
