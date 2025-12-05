@@ -89,14 +89,8 @@ const navigation = [{
       name: "客户管理",
       href: "/retail/trading/customer-management"
     }, {
-      name: "用能管理",
-      href: "/retail/trading/energy-management"
-    }, {
-      name: "用电量预测",
-      href: "/retail/trading/load-prediction"
-    }, {
-      name: "用电量分析",
-      href: "/retail/trading/load-analysis"
+      name: "用电管理",
+      href: "/retail/trading/load-management"
     }, {
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
