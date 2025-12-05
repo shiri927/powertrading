@@ -10,7 +10,6 @@ import NotFound from "./pages/NotFound";
 
 
 // Market Fundamentals pages
-import MarketQuotes from "./pages/market-fundamentals/MarketQuotes";
 import MarketClearing from "./pages/market-fundamentals/MarketClearing";
 import MarketSupplyDemand from "./pages/market-fundamentals/MarketSupplyDemand";
 import WeatherData from "./pages/market-fundamentals/WeatherData";
@@ -72,7 +71,6 @@ const App = () => (
             
             
             {/* Market Fundamentals Routes */}
-            <Route path="/market-fundamentals/quotes" element={<MarketQuotes />} />
             <Route path="/market-fundamentals/clearing" element={<MarketClearing />} />
             <Route path="/market-fundamentals/supply-demand" element={<MarketSupplyDemand />} />
             <Route path="/market-fundamentals/weather" element={<WeatherData />} />

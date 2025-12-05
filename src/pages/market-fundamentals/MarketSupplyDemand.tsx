@@ -14,6 +14,7 @@ import { DateRangeDisplay } from "@/components/DateRangeDisplay";
 import { validateLoadValue } from "@/lib/data-validation";
 
 const tabs = [
+  { id: "market-quotes", label: "市场行情" },
   { id: "thermal-space", label: "火电竞价空间" },
   { id: "total-generation", label: "发电总出力" },
   { id: "renewable-load", label: "新能源负荷" },
@@ -23,6 +24,15 @@ const tabs = [
   { id: "renewable-load-inter", label: "新能源负荷（省间）" },
   { id: "dispatched-load-inter", label: "统调负荷（省间）" },
 ];
+
+// 市场行情数据
+const marketQuotesData = Array.from({ length: 24 }, (_, i) => ({
+  time: `${String(i).padStart(2, '0')}:00`,
+  gridLoad: 40000 + Math.sin((i / 24) * Math.PI * 2) * 10000 + Math.random() * 3000,
+  biddingSpace: 15000 + Math.random() * 5000,
+  dayAheadPrice: 300 + Math.sin((i / 24) * Math.PI * 2) * 80 + Math.random() * 40,
+  realtimePrice: 320 + Math.sin((i / 24) * Math.PI * 2) * 100 + Math.random() * 60,
+}));
 
 const chartData = Array.from({ length: 24 }, (_, i) => ({
   time: `${String(i).padStart(2, '0')}:00`,
@@ -92,7 +102,7 @@ const trendLines = {
 };
 
 const MarketSupplyDemand = () => {
-  const [activeTab, setActiveTab] = useState("thermal-space");
+  const [activeTab, setActiveTab] = useState("market-quotes");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
   const [timeGranularity, setTimeGranularity] = useState("96");
   const [dataDisplay, setDataDisplay] = useState("all");
@@ -214,7 +224,7 @@ const MarketSupplyDemand = () => {
         <CardContent className="pt-6">
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-8 w-full mb-6">
+            <TabsList className="grid grid-cols-9 w-full mb-6">
               {tabs.map((tab) => (
                 <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
                   {tab.label}
@@ -347,8 +357,103 @@ const MarketSupplyDemand = () => {
               </div>
             </div>
 
-            {/* Content for each tab */}
-            {tabs.map((tab) => (
+            {/* 市场行情 Tab */}
+            <TabsContent value="market-quotes" className="space-y-6">
+              {/* Metric Cards for Market Quotes */}
+              <div className="grid grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-normal text-muted-foreground">统调负荷(MW)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-primary">45,218</div>
+                    <p className="text-xs text-muted-foreground mt-1">当前时刻</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-normal text-muted-foreground">竞价空间(MW)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-chart-2">18,532</div>
+                    <p className="text-xs text-muted-foreground mt-1">当前时刻</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-normal text-muted-foreground">日前价格(元/MWh)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-chart-3">328.50</div>
+                    <p className="text-xs text-muted-foreground mt-1">当前时刻</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-normal text-muted-foreground">实时价格(元/MWh)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-chart-4">345.20</div>
+                    <p className="text-xs text-muted-foreground mt-1">当前时刻</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Price Trend Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">价格趋势</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={marketQuotesData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
+                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="dayAheadPrice" stroke="hsl(var(--primary))" name="日前价格" strokeWidth={2} />
+                      <Line type="monotone" dataKey="realtimePrice" stroke="hsl(var(--chart-2))" name="实时价格" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Load and Bidding Space Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">负荷与竞价空间</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={marketQuotesData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
+                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="gridLoad" stroke="hsl(var(--chart-3))" name="统调负荷" strokeWidth={2} />
+                      <Line type="monotone" dataKey="biddingSpace" stroke="hsl(var(--chart-4))" name="竞价空间" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Content for other tabs */}
+            {tabs.filter(tab => tab.id !== "market-quotes").map((tab) => (
               <TabsContent key={tab.id} value={tab.id} className="space-y-6">
                 {/* Metric Cards */}
                 <div className="grid grid-cols-3 gap-4">
