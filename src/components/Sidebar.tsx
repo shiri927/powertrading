@@ -11,9 +11,6 @@ const navigation = [{
   name: "市场与基本面数据",
   icon: BarChart3,
   children: [{
-    name: "市场行情",
-    href: "/market-fundamentals/quotes"
-  }, {
     name: "市场出清",
     href: "/market-fundamentals/clearing"
   }, {
