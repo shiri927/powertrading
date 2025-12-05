@@ -16,9 +16,11 @@ import { StrategyRecommendation } from "@/lib/trading/recommendation-engine";
 
 // 生成96点功率预测数据
 const generatePowerPredictionData = () => {
-  return Array.from({ length: 96 }, (_, i) => {
+  return Array.from({
+    length: 96
+  }, (_, i) => {
     const hour = Math.floor(i / 4);
-    const minute = (i % 4) * 15;
+    const minute = i % 4 * 15;
     const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     const basePower = 20 + Math.sin(i / 10) * 8 + Math.random() * 5;
     return {
@@ -26,16 +28,16 @@ const generatePowerPredictionData = () => {
       time: timeStr,
       originalPower: parseFloat(basePower.toFixed(3)),
       pendingPower: parseFloat(basePower.toFixed(3)),
-      expectedRevenue: null as number | null,
+      expectedRevenue: null as number | null
     };
   });
 };
-
 interface IntraProvincialSpotBiddingProps {
   showRecommendationAlert?: boolean;
 }
-
-const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincialSpotBiddingProps) => {
+const IntraProvincialSpotBidding = ({
+  showRecommendationAlert
+}: IntraProvincialSpotBiddingProps) => {
   const [activeTab, setActiveTab] = useState("bidding");
   const [tradingUnit, setTradingUnit] = useState("shanxi-demo");
   const [executionDate, setExecutionDate] = useState<Date>(new Date(2025, 10, 7));
@@ -46,21 +48,20 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
   const strategyPredictions = useMemo(() => ({
     pending: null as number | null,
     recommended: null as number | null,
-    default: null as number | null,
+    default: null as number | null
   }), []);
-
 
   // 应用推荐策略到申报
   const handleApplyRecommendation = (recommendation: StrategyRecommendation) => {
     // 根据推荐的操作调整功率数据
     const actions = recommendation.suggestedActions;
-    
+
     // 简化处理：根据推荐策略调整功率预测
     const adjustedData = powerData.map((item, index) => {
       // 根据时间段应用不同的调整
       const hour = Math.floor(index / 4);
       let adjustmentFactor = 1.0;
-      
+
       // 根据推荐操作类型调整
       actions.forEach(action => {
         const actionHour = parseInt(action.time.split(':')[0]);
@@ -72,24 +73,19 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
           }
         }
       });
-      
       return {
         ...item,
         pendingPower: parseFloat((item.originalPower * adjustmentFactor).toFixed(3)),
-        expectedRevenue: parseFloat((item.originalPower * adjustmentFactor * (300 + Math.random() * 100)).toFixed(2)),
+        expectedRevenue: parseFloat((item.originalPower * adjustmentFactor * (300 + Math.random() * 100)).toFixed(2))
       };
     });
-    
     setPowerData(adjustedData);
     setActiveTab("bidding");
-    
     toast.success("策略已应用", {
-      description: "推荐策略已预填到申报数据中，请检查并提交",
+      description: "推荐策略已预填到申报数据中，请检查并提交"
     });
   };
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       {/* 顶部筛选栏 */}
       <div className="flex items-center gap-4 p-4 bg-background rounded-lg border">
         <div className="flex items-center gap-2">
@@ -117,13 +113,7 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={executionDate}
-                onSelect={(date) => date && setExecutionDate(date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
+              <Calendar mode="single" selected={executionDate} onSelect={date => date && setExecutionDate(date)} initialFocus className="pointer-events-auto" />
             </PopoverContent>
           </Popover>
         </div>
@@ -181,11 +171,7 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
               <div className="flex items-center justify-end gap-2 p-3 bg-[#F1F8F4] rounded-lg">
                 <Button variant="outline" size="sm">自动申报</Button>
                 <Button variant="outline" size="sm">原始策略</Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setActiveTab("recommendation")}
-                >
+                <Button variant="outline" size="sm" onClick={() => setActiveTab("recommendation")}>
                   推荐策略
                 </Button>
                 <Button variant="outline" size="sm">操作记录</Button>
@@ -199,47 +185,33 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
                       <TableRow className="bg-[#E8F0EC] border-b-2 border-primary">
                         <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
                         <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
-                        <TableHead className="text-center font-semibold text-foreground">原始短期功率预测(MW)</TableHead>
+                        <TableHead className="text-center font-semibold text-foreground">预计用电量(MW)</TableHead>
                         <TableHead className="text-center font-semibold text-foreground">待下发短期功率预测(MW)</TableHead>
                         <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {powerData.map((row) => (
-                        <TableRow 
-                          key={row.id}
-                          className={cn(
-                            "transition-colors cursor-pointer",
-                            selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]"
-                          )}
-                          onClick={() => setSelectedRow(row.id)}
-                        >
+                      {powerData.map(row => <TableRow key={row.id} className={cn("transition-colors cursor-pointer", selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]")} onClick={() => setSelectedRow(row.id)}>
                           <TableCell className="text-center font-mono text-sm">{row.id}</TableCell>
                           <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
                           <TableCell className="text-center">
                             <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Input
-                              type="number"
-                              value={row.pendingPower}
-                              onChange={(e) => {
-                                const newValue = parseFloat(e.target.value);
-                                if (!isNaN(newValue)) {
-                                  setPowerData(prev => prev.map(item => 
-                                    item.id === row.id ? { ...item, pendingPower: newValue } : item
-                                  ));
-                                }
-                              }}
-                              className="w-28 h-8 text-center font-mono text-sm mx-auto"
-                              step="0.001"
-                            />
+                            <Input type="number" value={row.pendingPower} onChange={e => {
+                          const newValue = parseFloat(e.target.value);
+                          if (!isNaN(newValue)) {
+                            setPowerData(prev => prev.map(item => item.id === row.id ? {
+                              ...item,
+                              pendingPower: newValue
+                            } : item));
+                          }
+                        }} className="w-28 h-8 text-center font-mono text-sm mx-auto" step="0.001" />
                           </TableCell>
                           <TableCell className="text-center font-mono text-sm text-muted-foreground">
                             {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
                           </TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
@@ -253,8 +225,6 @@ const IntraProvincialSpotBidding = ({ showRecommendationAlert }: IntraProvincial
           <EmbeddedRecommendation onApplyRecommendation={handleApplyRecommendation} />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default IntraProvincialSpotBidding;
