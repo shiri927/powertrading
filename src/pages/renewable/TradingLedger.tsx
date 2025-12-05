@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
 const tradingData = [{
   date: "20240416",
   center: "山西电力交易中心",
@@ -124,22 +125,27 @@ const tradingData = [{
   time: "1000-1100",
   period: "20240406-20240415"
 }];
+
 const TradingLedger = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [tradingCenter, setTradingCenter] = useState("全部");
   const [tradingUnit, setTradingUnit] = useState("全部");
   const [keyword, setKeyword] = useState("");
-  const [showCompleted, setShowCompleted] = useState(true);
-  const [showOngoing, setShowOngoing] = useState(true);
-  const [showUpcoming, setShowUpcoming] = useState(true);
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [activeView, setActiveView] = useState("list");
+
   const filteredData = useMemo(() => {
     return tradingData.filter(item => {
       if (tradingCenter !== "全部" && item.center !== tradingCenter) return false;
       if (keyword && !item.content.toLowerCase().includes(keyword.toLowerCase())) return false;
+      if (filterDate) {
+        const filterDateStr = format(filterDate, "yyyyMMdd");
+        if (item.date !== filterDateStr) return false;
+      }
       return true;
     });
-  }, [tradingCenter, keyword]);
+  }, [tradingCenter, keyword, filterDate]);
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
     const year = dateStr.substring(0, 4);
@@ -147,7 +153,16 @@ const TradingLedger = () => {
     const day = dateStr.substring(6, 8);
     return `${year}-${month}-${day}`;
   };
-  return <div className="space-y-6 p-6">
+
+  const handleReset = () => {
+    setTradingCenter("全部");
+    setTradingUnit("全部");
+    setKeyword("");
+    setFilterDate(undefined);
+  };
+
+  return (
+    <div className="space-y-6 p-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">交易日历</h1>
         <p className="text-muted-foreground mt-2">
@@ -155,24 +170,30 @@ const TradingLedger = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* 左侧日历 */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>选择日期</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="rounded-md border" />
-            </CardContent>
-          </Card>
+      {/* 第一排：日期选择和筛选条件并列 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 日历选择 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>选择日期</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Calendar 
+              mode="single" 
+              selected={selectedDate} 
+              onSelect={setSelectedDate} 
+              className="rounded-md border w-full" 
+            />
+          </CardContent>
+        </Card>
 
-          {/* 筛选选项 */}
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>筛选条件</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {/* 筛选条件 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>筛选条件</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">交易中心</label>
                 <Select value={tradingCenter} onValueChange={setTradingCenter}>
@@ -196,119 +217,139 @@ const TradingLedger = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="全部">全部</SelectItem>
-                    <SelectItem value="单元1">单元1</SelectItem>
-                    <SelectItem value="单元2">单元2</SelectItem>
-                    <SelectItem value="单元3">单元3</SelectItem>
+                    <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+                    <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+                    <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+                    <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">关键字</label>
-                <Input placeholder="输入关键字搜索" value={keyword} onChange={e => setKeyword(e.target.value)} />
+                <Input 
+                  placeholder="输入关键字搜索" 
+                  value={keyword} 
+                  onChange={e => setKeyword(e.target.value)} 
+                />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium block">状态筛选</label>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="completed" checked={showCompleted} onCheckedChange={checked => setShowCompleted(checked as boolean)} />
-                  <label htmlFor="completed" className="text-sm cursor-pointer">
-                    已完成
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="ongoing" checked={showOngoing} onCheckedChange={checked => setShowOngoing(checked as boolean)} />
-                  <label htmlFor="ongoing" className="text-sm cursor-pointer">
-                    进行中
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="upcoming" checked={showUpcoming} onCheckedChange={checked => setShowUpcoming(checked as boolean)} />
-                  <label htmlFor="upcoming" className="text-sm cursor-pointer">
-                    未开始
-                  </label>
-                </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">日期</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterDate ? format(filterDate, "yyyy-MM-dd") : <span>选择日期</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar 
+                      mode="single" 
+                      selected={filterDate} 
+                      onSelect={setFilterDate} 
+                      initialFocus 
+                      className="pointer-events-auto" 
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* 右侧交易记录 */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>交易记录</CardTitle>
-                <Tabs value={activeView} onValueChange={setActiveView}>
-                  <TabsList>
-                    <TabsTrigger value="list">列表视图</TabsTrigger>
-                    <TabsTrigger value="timeline">时间轴视图</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              <div className="col-span-2 flex gap-2 justify-end mt-2">
+                <Button variant="outline" onClick={handleReset}>重置</Button>
+                <Button>查询</Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={activeView}>
-                <TabsContent value="list" className="mt-0">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>日期</TableHead>
-                          <TableHead>交易中心</TableHead>
-                          <TableHead>类型</TableHead>
-                          <TableHead>内容</TableHead>
-                          <TableHead>交易时间</TableHead>
-                          <TableHead>执行起止时间</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredData.length > 0 ? filteredData.map((item, index) => <TableRow key={index}>
-                              <TableCell>{formatDate(item.date)}</TableCell>
-                              <TableCell>{item.center}</TableCell>
-                              <TableCell>{item.type}</TableCell>
-                              <TableCell className="max-w-md">{item.content}</TableCell>
-                              <TableCell>{item.time}</TableCell>
-                              <TableCell>{item.period}</TableCell>
-                            </TableRow>) : <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
-                              暂无交易记录
-                            </TableCell>
-                          </TableRow>}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="timeline" className="mt-0">
-                  <div className="space-y-4">
-                    {filteredData.length > 0 ? filteredData.map((item, index) => <Card key={index}>
-                          <CardContent className="pt-6">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-24 text-sm text-muted-foreground">
-                                {formatDate(item.date)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-medium mb-1">{item.content}</div>
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                  <div>交易中心: {item.center}</div>
-                                  <div>类型: {item.type}</div>
-                                  <div>交易时间: {item.time}</div>
-                                  <div>执行期间: {item.period}</div>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>) : <div className="text-center text-muted-foreground py-8">
-                        暂无交易记录
-                      </div>}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>;
+
+      {/* 第二排：交易记录 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>交易记录</CardTitle>
+            <Tabs value={activeView} onValueChange={setActiveView}>
+              <TabsList>
+                <TabsTrigger value="list">列表视图</TabsTrigger>
+                <TabsTrigger value="timeline">时间轴视图</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeView}>
+            <TabsContent value="list" className="mt-0">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>日期</TableHead>
+                      <TableHead>交易中心</TableHead>
+                      <TableHead>类型</TableHead>
+                      <TableHead>内容</TableHead>
+                      <TableHead>交易时间</TableHead>
+                      <TableHead>执行起止时间</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredData.length > 0 ? filteredData.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{formatDate(item.date)}</TableCell>
+                        <TableCell>{item.center}</TableCell>
+                        <TableCell>{item.type}</TableCell>
+                        <TableCell className="max-w-md">{item.content}</TableCell>
+                        <TableCell>{item.time}</TableCell>
+                        <TableCell>{item.period}</TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          暂无交易记录
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-0">
+              <div className="space-y-4">
+                {filteredData.length > 0 ? filteredData.map((item, index) => (
+                  <Card key={index}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-24 text-sm text-muted-foreground">
+                          {formatDate(item.date)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium mb-1">{item.content}</div>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <div>交易中心: {item.center}</div>
+                            <div>类型: {item.type}</div>
+                            <div>交易时间: {item.time}</div>
+                            <div>执行期间: {item.period}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    暂无交易记录
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
+
 export default TradingLedger;

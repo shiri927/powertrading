@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
 const tradingData = [{
   date: "20240416",
   center: "山西电力交易中心",
@@ -131,17 +132,17 @@ const tradingData = [{
   time: "1000-1600",
   period: "20240408-20240408"
 }];
+
 export default function TradingLedger() {
-  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date(2024, 3, 1));
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date(2024, 3, 1));
   const [selectedCenter, setSelectedCenter] = useState("all");
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [keyword, setKeyword] = useState("");
   const [filterDate, setFilterDate] = useState<Date | undefined>();
+  const [activeTab, setActiveTab] = useState("sequence");
 
-  // 筛选后的数据
   const filteredData = useMemo(() => {
     return tradingData.filter(row => {
-      // 交易中心筛选
       if (selectedCenter !== "all") {
         const centerMap: Record<string, string> = {
           shanxi: "山西电力交易中心",
@@ -150,13 +151,9 @@ export default function TradingLedger() {
         };
         if (row.center !== centerMap[selectedCenter]) return false;
       }
-
-      // 关键字筛选
       if (keyword && !row.content.toLowerCase().includes(keyword.toLowerCase())) {
         return false;
       }
-
-      // 日期筛选
       if (filterDate) {
         const filterDateStr = format(filterDate, "yyyyMMdd");
         if (row.date !== filterDateStr) return false;
@@ -164,25 +161,44 @@ export default function TradingLedger() {
       return true;
     });
   }, [selectedCenter, keyword, filterDate]);
+
   const handleReset = () => {
     setSelectedCenter("all");
     setSelectedUnit("all");
     setKeyword("");
     setFilterDate(undefined);
   };
-  return <div className="p-6 space-y-6">
+
+  return (
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">交易日历</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar - Filters and Calendar */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">筛选条件</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* 第一排：日期选择和筛选条件并列 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 日历选择 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">选择日期</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Calendar 
+              mode="single" 
+              selected={selectedDate} 
+              onSelect={setSelectedDate} 
+              className="rounded-md border w-full" 
+            />
+          </CardContent>
+        </Card>
+
+        {/* 筛选条件 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">筛选条件</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block text-muted-foreground">
                   交易中心
@@ -222,7 +238,11 @@ export default function TradingLedger() {
                 <label className="text-sm font-medium mb-2 block text-muted-foreground">
                   关键字
                 </label>
-                <Input placeholder="请输入关键字" value={keyword} onChange={e => setKeyword(e.target.value)} />
+                <Input 
+                  placeholder="请输入关键字" 
+                  value={keyword} 
+                  onChange={e => setKeyword(e.target.value)} 
+                />
               </div>
 
               <div>
@@ -231,103 +251,110 @@ export default function TradingLedger() {
                 </label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
+                    <Button 
+                      variant="outline" 
+                      className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {filterDate ? format(filterDate, "yyyy-MM-dd") : <span>选择日期</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={filterDate} onSelect={setFilterDate} initialFocus className="pointer-events-auto" />
+                    <Calendar 
+                      mode="single" 
+                      selected={filterDate} 
+                      onSelect={setFilterDate} 
+                      initialFocus 
+                      className="pointer-events-auto" 
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={handleReset}>重 置</Button>
+              <div className="col-span-2 flex gap-2 justify-end mt-2">
+                <Button variant="outline" onClick={handleReset}>重置</Button>
+                <Button>查询</Button>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <Calendar mode="single" selected={calendarDate} onSelect={setCalendarDate} className="rounded-md" />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Content - Trading Details Table */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Tabs defaultValue="sequence" className="w-full">
-                  <div className="flex items-center justify-between">
-                    <TabsList>
-                      <TabsTrigger value="todo">待办</TabsTrigger>
-                      <TabsTrigger value="notice">公告</TabsTrigger>
-                      <TabsTrigger value="sequence">序列</TabsTrigger>
-                    </TabsList>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">批量操作</Button>
-                      <Button size="sm">+ 新建</Button>
-                    </div>
-                  </div>
-                  
-                  <TabsContent value="sequence" className="mt-4">
-                    <div className="border rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-12">
-                              <Checkbox />
-                            </TableHead>
-                            <TableHead>日期</TableHead>
-                            <TableHead>交易中心</TableHead>
-                            <TableHead>类型</TableHead>
-                            <TableHead className="min-w-[300px]">内容</TableHead>
-                            <TableHead>交易时间</TableHead>
-                            <TableHead>执行起止时间</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredData.length > 0 ? filteredData.map((row, index) => <TableRow key={index}>
-                                <TableCell>
-                                  <Checkbox />
-                                </TableCell>
-                                <TableCell className="font-medium">{row.date}</TableCell>
-                                <TableCell>{row.center}</TableCell>
-                                <TableCell>{row.type}</TableCell>
-                                <TableCell className="text-primary hover:underline cursor-pointer">
-                                  {row.content}
-                                </TableCell>
-                                <TableCell>{row.time}</TableCell>
-                                <TableCell>{row.period}</TableCell>
-                              </TableRow>) : <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                暂无符合条件的交易记录
-                              </TableCell>
-                            </TableRow>}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="todo">
-                    <div className="text-center py-8 text-muted-foreground">
-                      暂无待办事项
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="notice">
-                    <div className="text-center py-8 text-muted-foreground">
-                      暂无公告信息
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>;
+
+      {/* 第二排：交易记录 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex items-center justify-between">
+                <TabsList>
+                  <TabsTrigger value="todo">待办</TabsTrigger>
+                  <TabsTrigger value="notice">公告</TabsTrigger>
+                  <TabsTrigger value="sequence">序列</TabsTrigger>
+                </TabsList>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">批量操作</Button>
+                  <Button size="sm">+ 新建</Button>
+                </div>
+              </div>
+              
+              <TabsContent value="sequence" className="mt-4">
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox />
+                        </TableHead>
+                        <TableHead>日期</TableHead>
+                        <TableHead>交易中心</TableHead>
+                        <TableHead>类型</TableHead>
+                        <TableHead className="min-w-[300px]">内容</TableHead>
+                        <TableHead>交易时间</TableHead>
+                        <TableHead>执行起止时间</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.length > 0 ? filteredData.map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Checkbox />
+                          </TableCell>
+                          <TableCell className="font-medium">{row.date}</TableCell>
+                          <TableCell>{row.center}</TableCell>
+                          <TableCell>{row.type}</TableCell>
+                          <TableCell className="text-primary hover:underline cursor-pointer">
+                            {row.content}
+                          </TableCell>
+                          <TableCell>{row.time}</TableCell>
+                          <TableCell>{row.period}</TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            暂无符合条件的交易记录
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="todo">
+                <div className="text-center py-8 text-muted-foreground">
+                  暂无待办事项
+                </div>
+              </TabsContent>
+
+              <TabsContent value="notice">
+                <div className="text-center py-8 text-muted-foreground">
+                  暂无公告信息
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </CardHeader>
+      </Card>
+    </div>
+  );
 }
