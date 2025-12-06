@@ -75,9 +75,6 @@ const navigation = [{
     }, {
       name: "省内现货策略",
       href: "/retail/decision/intra-provincial"
-    }, {
-      name: "绿证交易策略",
-      href: "/retail/decision/green-certificate"
     }]
   }, {
     name: "交易操作台",
