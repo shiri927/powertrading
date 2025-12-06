@@ -11,7 +11,7 @@ const Decision = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -50,20 +50,6 @@ const Decision = () => {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               跨省现货交易策略分析与价差套利优化
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Brain className="h-5 w-5 text-primary" />
-              绿证交易策略
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              绿色电力证书交易策略与配额管理优化
             </p>
           </CardContent>
         </Card>
