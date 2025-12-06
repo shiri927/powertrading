@@ -84,8 +84,8 @@ const BaseData = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="power-plan" className="space-y-4">
-        <TabsList className="bg-[#F1F8F4]">
+      <Tabs defaultValue="power-plan" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="power-plan">电量计划</TabsTrigger>
           <TabsTrigger value="contract">合同管理</TabsTrigger>
           <TabsTrigger value="analysis">合同分析</TabsTrigger>
