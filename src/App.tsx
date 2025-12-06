@@ -49,7 +49,7 @@ import ExecutionTracking from "./pages/retail/trading/ExecutionTracking";
 import MediumLongTerm from "./pages/retail/decision/MediumLongTerm";
 import InterProvincial from "./pages/retail/decision/InterProvincial";
 import IntraProvincial from "./pages/retail/decision/IntraProvincial";
-import GreenCertificate from "./pages/retail/decision/GreenCertificate";
+
 
 // Reports pages
 import ReportManagement from "./pages/reports/ReportManagement";
@@ -91,7 +91,7 @@ const App = () => (
             <Route path="/retail/decision/medium-long-term" element={<MediumLongTerm />} />
             <Route path="/retail/decision/inter-provincial" element={<InterProvincial />} />
             <Route path="/retail/decision/intra-provincial" element={<IntraProvincial />} />
-            <Route path="/retail/decision/green-certificate" element={<GreenCertificate />} />
+            
             <Route path="/retail/console" element={<RetailConsole />} />
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
