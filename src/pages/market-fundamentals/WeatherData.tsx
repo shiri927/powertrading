@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from "recharts";
 import { CloudRain, Wind, Sun, Thermometer, AlertTriangle, Settings, Download, Play, Pause, MapPin } from "lucide-react";
+import { WeatherMapStatic } from "@/components/weather/WeatherMapStatic";
 
 // Sample data for hourly weather
 const hourlyData = [
@@ -203,66 +204,11 @@ const WeatherData = () => {
                 <CardDescription>2025-01-20 01:00</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="relative w-full aspect-[16/10] bg-gradient-to-br from-blue-100 to-orange-100 dark:from-blue-950 dark:to-orange-950 rounded-lg flex items-center justify-center border">
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2NjYyIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjEiLz48L3N2Zz4=')] opacity-20"></div>
-                  
-                  {/* Simulated map markers */}
-                  <div className="absolute top-1/4 left-1/3">
-                    <div className="relative">
-                      <Badge className="bg-blue-500 hover:bg-blue-600">多个预警</Badge>
-                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-500"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="absolute top-1/2 left-1/4">
-                    <div className="relative">
-                      <Badge className="bg-blue-500 hover:bg-blue-600">多个预警</Badge>
-                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-500"></div>
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-1/4 left-1/2 bg-orange-400/80 text-white px-3 py-1 rounded text-sm">
-                    -16.8°C
-                  </div>
-
-                  <div className="text-center text-muted-foreground">
-                    <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>中国气象地图热力图</p>
-                    <p className="text-sm">（演示界面）</p>
-                  </div>
-
-                  {/* Legend on the right */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm border rounded-lg p-3 space-y-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Thermometer className="h-4 w-4" />
-                      <span>温度-地面-2m (°C)</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
-                        <span>0</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-400 rounded-sm"></div>
-                        <span>-10</span>
-                      </div>
-                    </div>
-                    <div className="border-t pt-2 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Wind className="h-4 w-4" />
-                        <span>风速-地面-10m (m/s)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4" />
-                        <span>总云量 (%)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CloudRain className="h-4 w-4" />
-                        <span>辐照度 (W/m^2)</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <WeatherMapStatic 
+                  showStations={showStations} 
+                  showWarnings={showWarnings}
+                  selectedProvince={selectedProvince}
+                />
               </CardContent>
             </Card>
 
