@@ -71,7 +71,7 @@ export const ChinaMapStatic = memo(() => {
     <div className="relative w-full h-full flex items-center justify-center">
       {/* SVG Map */}
       <svg
-        viewBox="0 0 100 100"
+        viewBox="0 0 600 500"
         className="w-full h-full max-h-[400px]"
         style={{ filter: "drop-shadow(0 0 10px rgba(30, 144, 255, 0.3))" }}
       >

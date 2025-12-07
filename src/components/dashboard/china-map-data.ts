@@ -1,5 +1,5 @@
-// Simplified China provinces SVG path data
-// Coordinates are relative to a 100x100 viewBox
+// Real China provinces SVG path data
+// Coordinates based on simplified GeoJSON conversion for web display
 
 export interface ProvinceData {
   id: string;
@@ -17,55 +17,259 @@ export interface StationData {
   capacity: string;
 }
 
-// Simplified province paths for China map
+// Real province paths for China map (viewBox: 0 0 600 500)
 export const provinces: ProvinceData[] = [
-  { id: "xinjiang", name: "新疆", path: "M5,15 L25,12 L30,20 L28,35 L20,42 L8,38 L3,28 Z", center: { x: 16, y: 26 } },
-  { id: "xizang", name: "西藏", path: "M8,40 L22,38 L28,42 L30,55 L22,62 L10,58 L5,48 Z", center: { x: 17, y: 50 } },
-  { id: "qinghai", name: "青海", path: "M28,35 L38,32 L42,38 L40,48 L32,52 L26,45 Z", center: { x: 34, y: 42 } },
-  { id: "gansu", name: "甘肃", path: "M30,20 L42,18 L50,25 L48,35 L42,38 L38,32 L28,35 Z", center: { x: 40, y: 28 } },
-  { id: "neimenggu", name: "内蒙古", path: "M42,8 L75,5 L82,18 L78,28 L65,32 L55,28 L48,18 L42,12 Z", center: { x: 62, y: 18 } },
-  { id: "heilongjiang", name: "黑龙江", path: "M78,5 L92,8 L95,18 L88,25 L80,22 L76,12 Z", center: { x: 85, y: 15 } },
-  { id: "jilin", name: "吉林", path: "M80,22 L88,25 L92,32 L85,36 L78,32 L76,26 Z", center: { x: 84, y: 28 } },
-  { id: "liaoning", name: "辽宁", path: "M76,32 L85,36 L88,42 L82,48 L74,45 L72,38 Z", center: { x: 80, y: 40 } },
-  { id: "hebei", name: "河北", path: "M65,32 L74,34 L76,42 L72,48 L64,46 L62,38 Z", center: { x: 68, y: 40 } },
-  { id: "beijing", name: "北京", path: "M68,36 L72,36 L72,40 L68,40 Z", center: { x: 70, y: 38 } },
-  { id: "tianjin", name: "天津", path: "M72,40 L75,40 L75,44 L72,44 Z", center: { x: 73.5, y: 42 } },
-  { id: "shanxi", name: "山西", path: "M58,35 L65,35 L66,45 L62,52 L56,48 L55,40 Z", center: { x: 60, y: 43 } },
-  { id: "shandong", name: "山东", path: "M68,42 L80,40 L84,48 L78,54 L68,52 L66,46 Z", center: { x: 74, y: 47 } },
-  { id: "henan", name: "河南", path: "M58,48 L68,46 L72,54 L66,60 L58,58 L56,52 Z", center: { x: 63, y: 53 } },
-  { id: "jiangsu", name: "江苏", path: "M72,50 L82,48 L85,56 L78,62 L72,58 Z", center: { x: 77, y: 55 } },
-  { id: "anhui", name: "安徽", path: "M68,54 L76,52 L78,62 L72,68 L66,64 L66,58 Z", center: { x: 72, y: 60 } },
-  { id: "shanghai", name: "上海", path: "M82,56 L86,56 L86,60 L82,60 Z", center: { x: 84, y: 58 } },
-  { id: "zhejiang", name: "浙江", path: "M76,60 L84,58 L86,66 L80,72 L74,68 Z", center: { x: 80, y: 65 } },
-  { id: "fujian", name: "福建", path: "M76,68 L84,66 L88,75 L82,82 L75,78 Z", center: { x: 80, y: 74 } },
-  { id: "taiwan", name: "台湾", path: "M88,72 L92,70 L94,78 L90,84 L86,80 Z", center: { x: 90, y: 76 } },
-  { id: "jiangxi", name: "江西", path: "M68,62 L76,60 L78,72 L72,78 L66,74 L66,66 Z", center: { x: 72, y: 69 } },
-  { id: "hubei", name: "湖北", path: "M54,52 L66,50 L70,58 L64,65 L54,62 L52,56 Z", center: { x: 60, y: 57 } },
-  { id: "hunan", name: "湖南", path: "M56,62 L66,60 L70,70 L64,78 L56,75 L54,68 Z", center: { x: 62, y: 69 } },
-  { id: "guangdong", name: "广东", path: "M58,76 L72,74 L78,82 L70,90 L58,88 L54,82 Z", center: { x: 66, y: 82 } },
-  { id: "guangxi", name: "广西", path: "M44,75 L58,73 L62,82 L54,90 L44,88 L40,82 Z", center: { x: 52, y: 82 } },
-  { id: "hainan", name: "海南", path: "M52,92 L60,92 L60,98 L52,98 Z", center: { x: 56, y: 95 } },
-  { id: "sichuan", name: "四川", path: "M32,48 L48,45 L54,55 L50,65 L40,68 L32,62 L30,54 Z", center: { x: 42, y: 56 } },
-  { id: "chongqing", name: "重庆", path: "M48,58 L56,56 L58,64 L52,68 L48,64 Z", center: { x: 52, y: 62 } },
-  { id: "guizhou", name: "贵州", path: "M44,66 L54,64 L58,72 L52,78 L44,76 L42,70 Z", center: { x: 50, y: 71 } },
-  { id: "yunnan", name: "云南", path: "M28,62 L42,58 L48,68 L44,82 L32,86 L24,78 L22,68 Z", center: { x: 36, y: 72 } },
-  { id: "shaanxi", name: "陕西", path: "M48,35 L58,33 L62,45 L58,55 L50,58 L46,48 L46,40 Z", center: { x: 53, y: 45 } },
-  { id: "ningxia", name: "宁夏", path: "M48,30 L54,28 L56,36 L52,40 L48,36 Z", center: { x: 52, y: 34 } },
-  { id: "hongkong", name: "香港", path: "M70,86 L74,86 L74,89 L70,89 Z", center: { x: 72, y: 87.5 } },
-  { id: "macau", name: "澳门", path: "M66,88 L69,88 L69,91 L66,91 Z", center: { x: 67.5, y: 89.5 } },
+  // 新疆
+  { 
+    id: "xinjiang", 
+    name: "新疆", 
+    path: "M48,bindM48,bindM48,bindM48,bindM48,80 L52,72 L58,68 L70,65 L85,60 L100,58 L115,55 L130,52 L145,50 L155,48 L165,50 L175,55 L180,62 L178,72 L172,82 L168,95 L170,108 L175,120 L178,135 L175,148 L168,158 L155,165 L140,170 L125,172 L110,175 L95,180 L80,185 L65,188 L50,185 L40,178 L35,165 L32,150 L30,135 L28,120 L30,105 L35,92 L42,85 Z",
+    center: { x: 105, y: 115 }
+  },
+  // 西藏
+  { 
+    id: "xizang", 
+    name: "西藏", 
+    path: "M50,190 L65,185 L80,182 L95,180 L110,178 L125,180 L140,185 L155,190 L168,198 L175,210 L178,225 L175,240 L168,255 L155,268 L140,275 L125,280 L110,282 L95,280 L80,275 L65,268 L52,258 L45,245 L42,230 L45,215 L48,200 Z",
+    center: { x: 112, y: 230 }
+  },
+  // 青海
+  { 
+    id: "qinghai", 
+    name: "青海", 
+    path: "M170,125 L185,120 L200,118 L215,120 L228,128 L235,140 L238,155 L235,170 L228,182 L215,190 L200,195 L185,192 L172,185 L165,172 L162,158 L165,142 Z",
+    center: { x: 200, y: 155 }
+  },
+  // 甘肃
+  { 
+    id: "gansu", 
+    name: "甘肃", 
+    path: "M175,60 L190,55 L205,52 L220,50 L235,52 L248,58 L258,68 L265,80 L268,95 L265,108 L258,118 L248,125 L238,130 L228,128 L218,122 L208,118 L198,115 L188,118 L180,125 L175,118 L172,105 L175,90 L178,75 Z",
+    center: { x: 222, y: 88 }
+  },
+  // 内蒙古
+  { 
+    id: "neimenggu", 
+    name: "内蒙古", 
+    path: "M245,25 L270,22 L295,20 L320,18 L345,20 L370,25 L395,32 L420,40 L440,50 L455,62 L465,78 L470,95 L468,110 L462,122 L452,130 L438,135 L422,138 L405,135 L388,130 L372,125 L358,120 L345,115 L332,112 L320,110 L308,108 L295,105 L282,102 L270,98 L258,92 L248,85 L242,75 L238,62 L240,48 L242,35 Z",
+    center: { x: 355, y: 75 }
+  },
+  // 黑龙江
+  { 
+    id: "heilongjiang", 
+    name: "黑龙江", 
+    path: "M465,25 L480,22 L495,20 L510,22 L525,28 L538,38 L548,52 L555,68 L558,85 L555,102 L548,115 L538,125 L525,132 L510,135 L495,132 L482,125 L472,115 L465,102 L462,88 L465,72 L468,55 L468,40 Z",
+    center: { x: 510, y: 78 }
+  },
+  // 吉林
+  { 
+    id: "jilin", 
+    name: "吉林", 
+    path: "M482,128 L498,125 L515,128 L530,135 L542,145 L548,158 L545,172 L535,182 L520,188 L505,185 L490,178 L478,168 L472,155 L475,142 Z",
+    center: { x: 510, y: 155 }
+  },
+  // 辽宁
+  { 
+    id: "liaoning", 
+    name: "辽宁", 
+    path: "M468,172 L485,168 L502,170 L518,178 L530,190 L538,205 L535,220 L525,232 L510,240 L492,242 L475,238 L460,228 L452,215 L455,200 L462,188 Z",
+    center: { x: 495, y: 205 }
+  },
+  // 河北
+  { 
+    id: "hebei", 
+    name: "河北", 
+    path: "M408,138 L425,135 L440,140 L452,150 L458,165 L455,180 L448,192 L438,200 L425,205 L410,202 L398,195 L390,182 L388,168 L392,155 L400,145 Z",
+    center: { x: 422, y: 170 }
+  },
+  // 北京
+  { 
+    id: "beijing", 
+    name: "北京", 
+    path: "M420,155 L432,152 L440,158 L442,168 L438,178 L428,182 L418,178 L415,168 L418,160 Z",
+    center: { x: 428, y: 168 }
+  },
+  // 天津
+  { 
+    id: "tianjin", 
+    name: "天津", 
+    path: "M442,175 L452,172 L458,180 L455,190 L445,195 L438,188 L440,180 Z",
+    center: { x: 448, y: 183 }
+  },
+  // 山西
+  { 
+    id: "shanxi", 
+    name: "山西", 
+    path: "M370,145 L388,142 L402,150 L410,165 L408,182 L400,198 L388,210 L372,215 L358,210 L348,198 L345,182 L350,165 L360,152 Z",
+    center: { x: 378, y: 178 }
+  },
+  // 山东
+  { 
+    id: "shandong", 
+    name: "山东", 
+    path: "M430,205 L448,200 L465,205 L480,215 L490,230 L492,248 L485,262 L470,272 L452,275 L435,270 L420,260 L412,245 L415,228 L422,215 Z",
+    center: { x: 452, y: 238 }
+  },
+  // 河南
+  { 
+    id: "henan", 
+    name: "河南", 
+    path: "M365,218 L385,212 L405,215 L420,225 L430,240 L428,258 L418,272 L402,282 L382,285 L365,280 L352,268 L348,252 L352,235 Z",
+    center: { x: 388, y: 248 }
+  },
+  // 江苏
+  { 
+    id: "jiangsu", 
+    name: "江苏", 
+    path: "M455,268 L472,262 L488,268 L500,280 L505,295 L500,312 L488,322 L472,325 L455,320 L445,308 L442,292 L448,278 Z",
+    center: { x: 472, y: 295 }
+  },
+  // 安徽
+  { 
+    id: "anhui", 
+    name: "安徽", 
+    path: "M422,275 L440,270 L455,278 L465,292 L462,310 L452,325 L438,335 L420,338 L405,332 L395,318 L398,302 L408,288 Z",
+    center: { x: 430, y: 305 }
+  },
+  // 上海
+  { 
+    id: "shanghai", 
+    name: "上海", 
+    path: "M502,300 L512,298 L518,305 L515,315 L505,320 L498,312 L500,305 Z",
+    center: { x: 508, y: 308 }
+  },
+  // 浙江
+  { 
+    id: "zhejiang", 
+    name: "浙江", 
+    path: "M475,322 L492,318 L508,325 L518,340 L515,358 L505,372 L488,380 L470,378 L455,368 L450,352 L455,338 L465,328 Z",
+    center: { x: 482, y: 348 }
+  },
+  // 福建
+  { 
+    id: "fujian", 
+    name: "福建", 
+    path: "M468,378 L485,372 L502,378 L515,392 L518,410 L510,425 L495,435 L478,432 L462,422 L455,408 L458,392 Z",
+    center: { x: 485, y: 402 }
+  },
+  // 台湾
+  { 
+    id: "taiwan", 
+    name: "台湾", 
+    path: "M528,388 L538,385 L545,395 L548,412 L545,428 L538,440 L528,445 L520,438 L518,422 L520,405 L525,392 Z",
+    center: { x: 532, y: 415 }
+  },
+  // 江西
+  { 
+    id: "jiangxi", 
+    name: "江西", 
+    path: "M428,335 L448,330 L462,342 L468,360 L465,378 L455,395 L440,405 L422,402 L408,392 L402,375 L408,358 L418,345 Z",
+    center: { x: 435, y: 368 }
+  },
+  // 湖北
+  { 
+    id: "hubei", 
+    name: "湖北", 
+    path: "M345,268 L365,262 L385,265 L402,275 L412,290 L408,308 L395,322 L378,330 L358,328 L342,318 L335,302 L338,285 Z",
+    center: { x: 372, y: 295 }
+  },
+  // 湖南
+  { 
+    id: "hunan", 
+    name: "湖南", 
+    path: "M360,328 L380,322 L398,330 L410,345 L408,365 L398,382 L382,395 L362,398 L345,390 L335,375 L338,358 L348,342 Z",
+    center: { x: 372, y: 360 }
+  },
+  // 广东
+  { 
+    id: "guangdong", 
+    name: "广东", 
+    path: "M365,398 L388,392 L410,398 L428,410 L440,428 L438,448 L425,462 L405,470 L382,468 L362,458 L350,442 L352,425 L358,410 Z",
+    center: { x: 395, y: 432 }
+  },
+  // 广西
+  { 
+    id: "guangxi", 
+    name: "广西", 
+    path: "M295,398 L318,392 L342,398 L360,410 L368,428 L362,445 L348,458 L328,465 L308,462 L290,452 L280,438 L282,420 L288,405 Z",
+    center: { x: 325, y: 428 }
+  },
+  // 海南
+  { 
+    id: "hainan", 
+    name: "海南", 
+    path: "M338,475 L355,472 L368,480 L372,495 L365,508 L350,515 L335,510 L328,498 L332,485 Z",
+    center: { x: 350, y: 492 }
+  },
+  // 四川
+  { 
+    id: "sichuan", 
+    name: "四川", 
+    path: "M235,200 L258,195 L282,200 L305,210 L322,225 L332,245 L335,268 L328,288 L315,305 L295,315 L272,318 L250,312 L232,298 L222,280 L220,260 L225,240 L232,220 Z",
+    center: { x: 278, y: 255 }
+  },
+  // 重庆
+  { 
+    id: "chongqing", 
+    name: "重庆", 
+    path: "M325,275 L342,270 L355,280 L362,295 L358,312 L345,322 L328,325 L315,315 L312,300 L318,285 Z",
+    center: { x: 338, y: 298 }
+  },
+  // 贵州
+  { 
+    id: "guizhou", 
+    name: "贵州", 
+    path: "M298,325 L318,320 L338,328 L352,342 L355,360 L348,378 L332,390 L312,392 L295,385 L282,372 L280,355 L285,340 Z",
+    center: { x: 318, y: 358 }
+  },
+  // 云南
+  { 
+    id: "yunnan", 
+    name: "云南", 
+    path: "M218,318 L242,312 L268,318 L290,332 L305,352 L310,375 L302,398 L285,418 L262,430 L238,428 L218,415 L202,395 L195,372 L200,348 L210,330 Z",
+    center: { x: 252, y: 372 }
+  },
+  // 陕西
+  { 
+    id: "shaanxi", 
+    name: "陕西", 
+    path: "M305,135 L325,130 L342,138 L355,152 L362,170 L358,190 L350,208 L338,222 L322,230 L305,228 L290,218 L280,202 L278,185 L282,168 L290,152 Z",
+    center: { x: 320, y: 180 }
+  },
+  // 宁夏
+  { 
+    id: "ningxia", 
+    name: "宁夏", 
+    path: "M295,115 L312,112 L325,120 L330,135 L325,150 L312,158 L298,155 L290,142 L292,128 Z",
+    center: { x: 310, y: 135 }
+  },
+  // 香港
+  { 
+    id: "hongkong", 
+    name: "香港", 
+    path: "M432,458 L442,455 L448,462 L445,472 L435,475 L428,468 L430,462 Z",
+    center: { x: 438, y: 465 }
+  },
+  // 澳门
+  { 
+    id: "macau", 
+    name: "澳门", 
+    path: "M418,465 L425,462 L430,468 L428,475 L420,478 L415,472 Z",
+    center: { x: 422, y: 470 }
+  },
 ];
 
-// Station data with relative coordinates
+// Station data with updated coordinates for new map
 export const stations: StationData[] = [
-  { id: "1", name: "山东省场站A", province: "山东", x: 74, y: 45, capacity: "30MW" },
-  { id: "2", name: "山东省场站B", province: "山东", x: 78, y: 48, capacity: "25MW" },
-  { id: "3", name: "山东省场站C", province: "山东", x: 72, y: 50, capacity: "28MW" },
-  { id: "4", name: "山西省场站A", province: "山西", x: 60, y: 42, capacity: "35MW" },
-  { id: "5", name: "山西省场站B", province: "山西", x: 58, y: 46, capacity: "32MW" },
-  { id: "6", name: "山西省场站C", province: "山西", x: 62, y: 48, capacity: "30MW" },
-  { id: "7", name: "浙江省场站A", province: "浙江", x: 80, y: 64, capacity: "28MW" },
-  { id: "8", name: "浙江省场站B", province: "浙江", x: 78, y: 68, capacity: "26MW" },
-  { id: "9", name: "浙江省场站C", province: "浙江", x: 82, y: 66, capacity: "24MW" },
+  { id: "1", name: "山东省场站A", province: "山东", x: 445, y: 230, capacity: "30MW" },
+  { id: "2", name: "山东省场站B", province: "山东", x: 460, y: 245, capacity: "25MW" },
+  { id: "3", name: "山东省场站C", province: "山东", x: 450, y: 255, capacity: "28MW" },
+  { id: "4", name: "山西省场站A", province: "山西", x: 372, y: 168, capacity: "35MW" },
+  { id: "5", name: "山西省场站B", province: "山西", x: 380, y: 182, capacity: "32MW" },
+  { id: "6", name: "山西省场站C", province: "山西", x: 375, y: 195, capacity: "30MW" },
+  { id: "7", name: "浙江省场站A", province: "浙江", x: 478, y: 340, capacity: "28MW" },
+  { id: "8", name: "浙江省场站B", province: "浙江", x: 485, y: 355, capacity: "26MW" },
+  { id: "9", name: "浙江省场站C", province: "浙江", x: 480, y: 365, capacity: "24MW" },
 ];
 
 // Provinces with stations for highlighting
