@@ -1,29 +1,29 @@
 import React, { useState, memo } from "react";
 import { Thermometer, Wind, Sun, CloudRain } from "lucide-react";
-import { provinces, type ProvinceData } from '@/components/dashboard/china-map-data';
+import chinaMapBg from "@/assets/china-map-bg.png";
 
 interface StationData {
   id: string;
   name: string;
   province: string;
-  x: number;
-  y: number;
+  left: string;
+  top: string;
   temp: number;
   wind: number;
 }
 
-// Weather stations with temperature data (updated coordinates for 600x500 viewBox)
+// Weather stations with temperature data (percentage positions)
 const weatherStations: StationData[] = [
-  { id: "1", name: "乌鲁木齐", province: "新疆", x: 108, y: 100, temp: -12.5, wind: 3.2 },
-  { id: "2", name: "哈密", province: "新疆", x: 140, y: 120, temp: -8.3, wind: 4.1 },
-  { id: "3", name: "太原", province: "山西", x: 378, y: 178, temp: -6.8, wind: 2.2 },
-  { id: "4", name: "济南", province: "山东", x: 448, y: 230, temp: -2.1, wind: 1.8 },
-  { id: "5", name: "青岛", province: "山东", x: 475, y: 245, temp: 0.5, wind: 3.5 },
-  { id: "6", name: "杭州", province: "浙江", x: 482, y: 348, temp: 8.2, wind: 1.2 },
-  { id: "7", name: "哈尔滨", province: "黑龙江", x: 510, y: 70, temp: -22.5, wind: 2.8 },
-  { id: "8", name: "长春", province: "吉林", x: 510, y: 155, temp: -18.2, wind: 2.1 },
-  { id: "9", name: "成都", province: "四川", x: 278, y: 255, temp: 6.5, wind: 0.8 },
-  { id: "10", name: "广州", province: "广东", x: 395, y: 432, temp: 18.5, wind: 1.5 },
+  { id: "1", name: "乌鲁木齐", province: "新疆", left: "22%", top: "22%", temp: -12.5, wind: 3.2 },
+  { id: "2", name: "哈密", province: "新疆", left: "30%", top: "28%", temp: -8.3, wind: 4.1 },
+  { id: "3", name: "太原", province: "山西", left: "65%", top: "40%", temp: -6.8, wind: 2.2 },
+  { id: "4", name: "济南", province: "山东", left: "78%", top: "42%", temp: -2.1, wind: 1.8 },
+  { id: "5", name: "青岛", province: "山东", left: "82%", top: "46%", temp: 0.5, wind: 3.5 },
+  { id: "6", name: "杭州", province: "浙江", left: "82%", top: "62%", temp: 8.2, wind: 1.2 },
+  { id: "7", name: "哈尔滨", province: "黑龙江", left: "88%", top: "12%", temp: -22.5, wind: 2.8 },
+  { id: "8", name: "长春", province: "吉林", left: "88%", top: "18%", temp: -18.2, wind: 2.1 },
+  { id: "9", name: "成都", province: "四川", left: "48%", top: "55%", temp: 6.5, wind: 0.8 },
+  { id: "10", name: "广州", province: "广东", left: "68%", top: "78%", temp: 18.5, wind: 1.5 },
 ];
 
 interface TooltipState {
@@ -43,21 +43,6 @@ const getTempColor = (temp: number): string => {
   return "#ef4444"; // red
 };
 
-// Get province temperature (average of stations or random)
-const getProvinceTemp = (provinceName: string): number => {
-  const stationsInProvince = weatherStations.filter(s => s.province === provinceName);
-  if (stationsInProvince.length > 0) {
-    return stationsInProvince.reduce((sum, s) => sum + s.temp, 0) / stationsInProvince.length;
-  }
-  // Generate random temp based on latitude approximation (for 600x500 viewBox)
-  const province = provinces.find(p => p.name === provinceName);
-  if (province) {
-    const latFactor = (500 - province.center.y) / 500;
-    return -20 + latFactor * 10 + Math.random() * 20;
-  }
-  return 0;
-};
-
 interface WeatherMapStaticProps {
   showStations?: boolean;
   showWarnings?: boolean;
@@ -75,25 +60,9 @@ export const WeatherMapStatic = memo(({
     y: 0,
     content: "",
   });
-  const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
-
-  const handleProvinceMouseEnter = (
-    e: React.MouseEvent<SVGPathElement>,
-    province: ProvinceData
-  ) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const temp = getProvinceTemp(province.name);
-    setHoveredProvince(province.id);
-    setTooltip({
-      show: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top,
-      content: `${province.name} | ${temp.toFixed(1)}°C`,
-    });
-  };
 
   const handleStationMouseEnter = (
-    e: React.MouseEvent<SVGGElement>,
+    e: React.MouseEvent<HTMLDivElement>,
     station: StationData
   ) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -106,104 +75,80 @@ export const WeatherMapStatic = memo(({
   };
 
   const handleMouseLeave = () => {
-    setHoveredProvince(null);
     setTooltip({ show: false, x: 0, y: 0, content: "" });
-  };
-
-  const getProvinceFill = (province: ProvinceData) => {
-    const isSelected = selectedProvince === province.name || selectedProvince?.includes(province.name);
-    const isHovered = hoveredProvince === province.id;
-    const temp = getProvinceTemp(province.name);
-    
-    if (isHovered || isSelected) {
-      return getTempColor(temp);
-    }
-    // Lighter version for non-hovered
-    const baseColor = getTempColor(temp);
-    return baseColor + "99"; // Add transparency
   };
 
   return (
     <div className="relative w-full h-full min-h-[300px] flex items-center justify-center">
-      {/* SVG Map */}
-      <svg
-        viewBox="0 0 600 500"
-        className="w-full h-full"
-        style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}
-      >
-        {/* Gradient definitions for temperature scale */}
-        <defs>
-          <linearGradient id="tempGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor="#1e3a8a" />
-            <stop offset="25%" stopColor="#3b82f6" />
-            <stop offset="50%" stopColor="#22c55e" />
-            <stop offset="75%" stopColor="#eab308" />
-            <stop offset="100%" stopColor="#ef4444" />
-          </linearGradient>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="0.5" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Province paths with temperature colors */}
-        <g>
-          {provinces.map((province) => (
-            <path
-              key={province.id}
-              d={province.path}
-              fill={getProvinceFill(province)}
-              stroke={hoveredProvince === province.id ? "#000" : "#fff"}
-              strokeWidth={hoveredProvince === province.id ? "2" : "1"}
-              className="transition-all duration-200 cursor-pointer"
-              onMouseEnter={(e) => handleProvinceMouseEnter(e, province)}
-              onMouseLeave={handleMouseLeave}
+      {/* Background Map Image */}
+      <div className="relative w-full h-full flex items-center justify-center">
+        <img
+          src={chinaMapBg}
+          alt="中国地图"
+          className="w-full h-full object-contain max-h-[400px]"
+          style={{ 
+            filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))"
+          }}
+        />
+        
+        {/* Weather station markers overlay */}
+        {showStations && weatherStations.map((station) => (
+          <div
+            key={station.id}
+            className="absolute cursor-pointer flex items-center gap-1"
+            style={{
+              left: station.left,
+              top: station.top,
+              transform: "translate(-50%, -50%)",
+            }}
+            onMouseEnter={(e) => handleStationMouseEnter(e, station)}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* Station dot */}
+            <div
+              className="w-3 h-3 rounded-full border-2 border-white shadow-md"
+              style={{
+                backgroundColor: getTempColor(station.temp),
+              }}
             />
-          ))}
-
-          {/* Weather station markers */}
-          {showStations && weatherStations.map((station) => (
-            <g
-              key={station.id}
-              transform={`translate(${station.x}, ${station.y})`}
-              onMouseEnter={(e) => handleStationMouseEnter(e, station)}
-              onMouseLeave={handleMouseLeave}
-              className="cursor-pointer"
+            {/* Temperature label */}
+            <span
+              className="text-xs font-bold text-foreground bg-background/90 px-1 rounded shadow-sm"
+              style={{ fontSize: "10px" }}
             >
-              {/* Station dot */}
-              <circle r="6" fill="#fff" stroke="#333" strokeWidth="1.5" />
-              {/* Temperature label */}
-              <text
-                x="10"
-                y="3"
-                fontSize="11"
-                fill="#333"
-                fontWeight="bold"
-                className="select-none"
-              >
-                {station.temp}°
-              </text>
-            </g>
-          ))}
+              {station.temp}°
+            </span>
+          </div>
+        ))}
 
-          {/* Warning markers */}
-          {showWarnings && (
-            <>
-              <g transform="translate(105, 115)">
-                <rect x="-28" y="-12" width="56" height="24" rx="4" fill="#3b82f6" />
-                <text x="0" y="5" fontSize="12" fill="#fff" textAnchor="middle" className="select-none">多个预警</text>
-              </g>
-              <g transform="translate(510, 78)">
-                <rect x="-28" y="-12" width="56" height="24" rx="4" fill="#ef4444" />
-                <text x="0" y="5" fontSize="12" fill="#fff" textAnchor="middle" className="select-none">寒潮预警</text>
-              </g>
-            </>
-          )}
-        </g>
-      </svg>
+        {/* Warning markers */}
+        {showWarnings && (
+          <>
+            <div
+              className="absolute px-2 py-1 rounded text-white text-xs font-medium shadow-md"
+              style={{
+                left: "22%",
+                top: "26%",
+                transform: "translate(-50%, -50%)",
+                backgroundColor: "#3b82f6",
+              }}
+            >
+              多个预警
+            </div>
+            <div
+              className="absolute px-2 py-1 rounded text-white text-xs font-medium shadow-md"
+              style={{
+                left: "88%",
+                top: "15%",
+                transform: "translate(-50%, -50%)",
+                backgroundColor: "#ef4444",
+              }}
+            >
+              寒潮预警
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Tooltip */}
       {tooltip.show && (
