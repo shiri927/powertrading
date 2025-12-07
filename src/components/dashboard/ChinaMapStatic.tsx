@@ -71,7 +71,7 @@ export const ChinaMapStatic = memo(() => {
     <div className="relative w-full h-full flex items-center justify-center">
       {/* SVG Map */}
       <svg
-        viewBox="0 100 100 100"
+        viewBox="0 0 100 100"
         className="w-full h-full max-h-[400px]"
         style={{ filter: "drop-shadow(0 0 10px rgba(30, 144, 255, 0.3))" }}
       >
@@ -94,7 +94,7 @@ export const ChinaMapStatic = memo(() => {
         </defs>
 
         {/* Province paths */}
-        <g transform="translate(0, 95)">
+        <g>
           {provinces.map((province) => (
             <path
               key={province.id}
