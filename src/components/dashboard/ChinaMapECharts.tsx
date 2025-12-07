@@ -27,14 +27,22 @@ export const ChinaMapECharts = () => {
   useEffect(() => {
     const loadMap = async () => {
       try {
+        console.log("Loading China map GeoJSON...");
         // 从阿里云 DataV 加载中国省级 GeoJSON
         const response = await fetch(
           "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json"
         );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const geoJson = await response.json();
+        console.log("GeoJSON loaded successfully, features:", geoJson.features?.length);
         
         // 注册地图
         echarts.registerMap("china", geoJson);
+        console.log("Map registered successfully");
         setMapReady(true);
         setLoading(false);
       } catch (error) {
