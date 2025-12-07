@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { TechBorderCard } from "@/components/dashboard/TechBorderCard";
 import { ViewToggle } from "@/components/dashboard/ViewToggle";
-import { ChinaMapVisualization } from "@/components/dashboard/ChinaMapVisualization";
+import { ChinaMapSimple } from "@/components/dashboard/ChinaMapSimple";
 import { MetricCardGlow } from "@/components/dashboard/MetricCardGlow";
 import { FileX } from "lucide-react";
 import "@/styles/dashboard-screen.css";
@@ -225,7 +225,7 @@ const Dashboard = () => {
 
           {/* 中国地图 */}
           <TechBorderCard title="场站分布" className="flex-1">
-            <ChinaMapVisualization />
+            <ChinaMapSimple />
           </TechBorderCard>
         </div>
 
