@@ -5,7 +5,7 @@ import { Calendar, Plus, TrendingUp, TrendingDown, BarChart3, Table2, ArrowUpRig
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { format, addHours } from "date-fns";
+import { format, addMinutes } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -71,6 +71,8 @@ interface TradingSession {
   status: 'pending' | 'open' | 'closed';
 }
 
+type TimeInterval = '5' | '10' | '30' | '60' | 'all';
+
 // Mock数据生成函数
 const generateStations = (): StationData[] => {
   const stationNames = [
@@ -89,21 +91,29 @@ const generateStations = (): StationData[] => {
   }));
 };
 
+const DATA_INTERVAL_MINUTES = 5;
+const DATA_POINTS_PER_DAY = Math.floor((24 * 60) / DATA_INTERVAL_MINUTES);
+
 const generateMarketData = (points: number): MarketQuote[] => {
   const basePrice = 235;
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
   return Array.from({ length: points }, (_, i) => {
-    const hour = i % 24;
-    const timeFactor = Math.sin(hour / 24 * Math.PI * 2) * 15;
+    const timestamp = addMinutes(startOfDay, i * DATA_INTERVAL_MINUTES);
+    const minutesSinceStart = timestamp.getHours() * 60 + timestamp.getMinutes();
+    const normalizedHour = minutesSinceStart / (24 * 60);
+    const timeFactor = Math.sin(normalizedHour * Math.PI * 2) * 15;
     const transaction = basePrice + timeFactor + (Math.random() - 0.5) * 8;
     const buyBase = transaction - 3 - Math.random() * 2;
     const sellBase = transaction + 3 + Math.random() * 2;
     
     return {
-      time: format(addHours(new Date().setHours(0, 0, 0, 0), hour), 'HH:mm'),
+      time: format(timestamp, 'HH:mm'),
       buyerQuote: buyBase,
       sellerQuote: sellBase,
       transactionPrice: transaction,
-      volume: 3000 + Math.random() * 2000 + timeFactor * 100,
+      volume: Math.max(0, 3000 + Math.random() * 2000 + timeFactor * 100),
       buyerMin: buyBase - Math.random() * 3,
       buyerMax: buyBase + Math.random() * 3,
       sellerMin: sellBase - Math.random() * 3,
@@ -173,7 +183,7 @@ const generateTradingSessions = (date: Date): TradingSession[] => {
 const MediumLongTerm = () => {
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const [stations] = useState<StationData[]>(generateStations());
-  const [timeInterval, setTimeInterval] = useState<'5' | '10' | '30' | '60' | 'all'>('all');
+  const [timeInterval, setTimeInterval] = useState<TimeInterval>('all');
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
   const [dataItem, setDataItem] = useState<string>('price');
   const [indicators, setIndicators] = useState<IndicatorData[]>([
@@ -200,7 +210,20 @@ const MediumLongTerm = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  const marketData = useMemo(() => generateMarketData(24), []);
+  const marketData = useMemo(() => generateMarketData(DATA_POINTS_PER_DAY), []);
+  const filteredMarketData = useMemo(() => {
+    if (timeInterval === 'all') {
+      return marketData;
+    }
+
+    const minutes = Number(timeInterval);
+    const pointsToKeep = Math.max(
+      1,
+      Math.min(marketData.length, Math.round(minutes / DATA_INTERVAL_MINUTES))
+    );
+
+    return marketData.slice(-pointsToKeep);
+  }, [marketData, timeInterval]);
   const positionData = useMemo(() => generatePositionData(), []);
   const scatterData = useMemo(() => generateScatterData(), []);
   const tradingSessions = useMemo(() => generateTradingSessions(selectedDate), [selectedDate]);
@@ -503,7 +526,10 @@ const MediumLongTerm = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tabs value={timeInterval} onValueChange={(v: any) => setTimeInterval(v)}>
+                  <Tabs 
+                    value={timeInterval} 
+                    onValueChange={(value) => setTimeInterval(value as TimeInterval)}
+                  >
                     <TabsList>
                       <TabsTrigger value="5">5分钟</TabsTrigger>
                       <TabsTrigger value="10">10分钟</TabsTrigger>
@@ -525,7 +551,7 @@ const MediumLongTerm = () => {
             <CardContent>
               {viewMode === 'chart' ? (
                 <ResponsiveContainer width="100%" height={350}>
-                  <ComposedChart data={marketData}>
+                  <ComposedChart data={filteredMarketData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
                     <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" />
@@ -612,7 +638,7 @@ const MediumLongTerm = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {marketData.slice(0, 10).map((item, i) => (
+                      {filteredMarketData.slice(-10).map((item, i) => (
                         <tr key={i} className="border-t hover:bg-[#F8FBFA]">
                           <td className="p-3 text-sm">{item.time}</td>
                           <td className="p-3 text-sm text-right font-mono text-success">
