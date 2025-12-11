@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,10 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MetricCard } from "@/components/MetricCard";
 import { MultiDateRangePicker, DateRange } from "@/components/MultiDateRangePicker";
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from "recharts";
-import { BarChart3, Table2, Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart3, Table2, Download, TrendingUp, TrendingDown, Minus, Upload, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { format, addHours, startOfDay } from "date-fns";
+import { format } from "date-fns";
 
 type TimeGranularity = "96" | "24" | "day" | "month";
 type DataDisplay = "all" | "dayAhead" | "intraday";
@@ -21,109 +24,27 @@ type ViewMode = "chart" | "table";
 
 interface ClearingDataPoint {
   time: string;
-  dayAheadPrice: number;
-  realtimePrice: number;
+  dayAheadPrice: number | null;
+  realtimePrice: number | null;
   regulatedPrice?: number;
   volume?: number;
   deviation?: number;
 }
 
-// Mock data generation functions
-const generateClearingData = (
-  granularity: TimeGranularity,
-  dateRanges: DateRange[],
-  displayFormat: DisplayFormat,
-  dataDisplay: DataDisplay
-): ClearingDataPoint[] => {
-  const data: ClearingDataPoint[] = [];
-  const pointsPerDay = granularity === "96" ? 96 : granularity === "24" ? 24 : 1;
-
-  dateRanges.forEach((range) => {
-    const daysDiff = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    
-    for (let day = 0; day < daysDiff; day++) {
-      const currentDate = new Date(range.start);
-      currentDate.setDate(currentDate.getDate() + day);
-
-      if (granularity === "day") {
-        const dayAhead = 400 + Math.random() * 150;
-        const realtime = dayAhead + (Math.random() - 0.5) * 80;
-        data.push({
-          time: format(currentDate, "yyyy-MM-dd"),
-          dayAheadPrice: dayAhead,
-          realtimePrice: realtime,
-          regulatedPrice: dayAhead * 0.95,
-          volume: 8000 + Math.random() * 4000,
-          deviation: ((realtime - dayAhead) / dayAhead) * 100,
-        });
-      } else {
-        for (let point = 0; point < pointsPerDay; point++) {
-          const hour = granularity === "96" ? point * 0.25 : point;
-          const basePrice = 350 + Math.sin((hour / 24) * Math.PI * 2) * 100 + Math.random() * 50;
-          const dayAhead = basePrice + (Math.random() - 0.5) * 40;
-          const realtime = basePrice + (Math.random() - 0.5) * 60;
-          
-          const timePoint = granularity === "96" 
-            ? format(addHours(startOfDay(currentDate), Math.floor(hour)), "HH:mm")
-            : `${String(point).padStart(2, '0')}:00`;
-
-          data.push({
-            time: displayFormat === "flat" ? `${format(currentDate, "MM-dd")} ${timePoint}` : timePoint,
-            dayAheadPrice: dayAhead,
-            realtimePrice: realtime,
-            regulatedPrice: dayAhead * 0.95,
-            volume: 300 + Math.random() * 200,
-            deviation: ((realtime - dayAhead) / dayAhead) * 100,
-          });
-        }
-      }
-    }
-  });
-
-  // Apply display format aggregation
-  if (displayFormat === "grouped" && granularity !== "day") {
-    const grouped = new Map<string, ClearingDataPoint[]>();
-    data.forEach(point => {
-      const timeKey = point.time.split(' ')[1] || point.time;
-      if (!grouped.has(timeKey)) grouped.set(timeKey, []);
-      grouped.get(timeKey)!.push(point);
-    });
-
-    return Array.from(grouped.entries()).map(([time, points]) => ({
-      time,
-      dayAheadPrice: points.reduce((sum, p) => sum + p.dayAheadPrice, 0) / points.length,
-      realtimePrice: points.reduce((sum, p) => sum + p.realtimePrice, 0) / points.length,
-      regulatedPrice: points.reduce((sum, p) => sum + (p.regulatedPrice || 0), 0) / points.length,
-      volume: points.reduce((sum, p) => sum + (p.volume || 0), 0) / points.length,
-      deviation: points.reduce((sum, p) => sum + (p.deviation || 0), 0) / points.length,
-    }));
-  }
-
-  if (displayFormat === "summary" && granularity !== "day") {
-    const summary = new Map<string, ClearingDataPoint[]>();
-    data.forEach(point => {
-      const timeKey = point.time.includes(' ') ? point.time.split(' ')[1] : point.time;
-      if (!summary.has(timeKey)) summary.set(timeKey, []);
-      summary.get(timeKey)!.push(point);
-    });
-
-    return Array.from(summary.entries()).map(([time, points]) => ({
-      time,
-      dayAheadPrice: points.reduce((sum, p) => sum + p.dayAheadPrice, 0) / points.length,
-      realtimePrice: points.reduce((sum, p) => sum + p.realtimePrice, 0) / points.length,
-      regulatedPrice: points.reduce((sum, p) => sum + (p.regulatedPrice || 0), 0) / points.length,
-      volume: points.reduce((sum, p) => sum + (p.volume || 0), 0) / points.length,
-      deviation: points.reduce((sum, p) => sum + (p.deviation || 0), 0) / points.length,
-    }));
-  }
-
-  return data;
-};
+interface DBPriceRecord {
+  id: string;
+  province: string;
+  price_date: string;
+  hour: number;
+  day_ahead_price: number | null;
+  realtime_price: number | null;
+}
 
 const MarketClearing = () => {
   const [activeTab, setActiveTab] = useState("intra-price");
+  const [province, setProvince] = useState("山东");
   const [dateRanges, setDateRanges] = useState<DateRange[]>([
-    { start: new Date(2025, 10, 1), end: new Date(2025, 10, 10) }
+    { start: new Date(2024, 0, 1), end: new Date(2024, 0, 31) }
   ]);
   const [timeGranularity, setTimeGranularity] = useState<TimeGranularity>("24");
   const [dataDisplay, setDataDisplay] = useState<DataDisplay>("all");
@@ -135,26 +56,169 @@ const MarketClearing = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  
+  const dayAheadFileRef = useRef<HTMLInputElement>(null);
+  const realtimeFileRef = useRef<HTMLInputElement>(null);
+  const [dayAheadFile, setDayAheadFile] = useState<File | null>(null);
+  const [realtimeFile, setRealtimeFile] = useState<File | null>(null);
 
-  // Generate data based on filters
+  // Fetch data from database
+  const { data: dbData, isLoading, refetch } = useQuery({
+    queryKey: ['market-clearing-prices', province, dateRanges],
+    queryFn: async () => {
+      const startDate = dateRanges.length > 0 
+        ? format(Math.min(...dateRanges.map(r => r.start.getTime())), 'yyyy-MM-dd')
+        : '2024-01-01';
+      const endDate = dateRanges.length > 0
+        ? format(Math.max(...dateRanges.map(r => r.end.getTime())), 'yyyy-MM-dd')
+        : '2024-12-31';
+
+      const { data, error } = await supabase
+        .from('market_clearing_prices')
+        .select('*')
+        .eq('province', province)
+        .gte('price_date', startDate)
+        .lte('price_date', endDate)
+        .order('price_date', { ascending: true })
+        .order('hour', { ascending: true });
+
+      if (error) throw error;
+      return data as DBPriceRecord[];
+    },
+  });
+
+  // Transform database data to chart format
   const chartData = useMemo(() => {
-    return generateClearingData(timeGranularity, dateRanges, displayFormat, dataDisplay);
-  }, [timeGranularity, dateRanges, displayFormat, dataDisplay]);
+    if (!dbData || dbData.length === 0) return [];
 
-  // Calculate metrics
+    const processedData: ClearingDataPoint[] = [];
+
+    if (timeGranularity === "day") {
+      // Aggregate by day
+      const dayMap = new Map<string, { dayAhead: number[]; realtime: number[] }>();
+      
+      dbData.forEach(record => {
+        const dateKey = record.price_date;
+        if (!dayMap.has(dateKey)) {
+          dayMap.set(dateKey, { dayAhead: [], realtime: [] });
+        }
+        const day = dayMap.get(dateKey)!;
+        if (record.day_ahead_price !== null) day.dayAhead.push(record.day_ahead_price);
+        if (record.realtime_price !== null) day.realtime.push(record.realtime_price);
+      });
+
+      dayMap.forEach((values, date) => {
+        const avgDA = values.dayAhead.length > 0 
+          ? values.dayAhead.reduce((a, b) => a + b, 0) / values.dayAhead.length 
+          : null;
+        const avgRT = values.realtime.length > 0
+          ? values.realtime.reduce((a, b) => a + b, 0) / values.realtime.length
+          : null;
+        
+        processedData.push({
+          time: date,
+          dayAheadPrice: avgDA,
+          realtimePrice: avgRT,
+          regulatedPrice: avgDA ? avgDA * 0.95 : undefined,
+          deviation: avgDA && avgRT ? ((avgRT - avgDA) / avgDA) * 100 : undefined,
+        });
+      });
+    } else if (timeGranularity === "month") {
+      // Aggregate by month
+      const monthMap = new Map<string, { dayAhead: number[]; realtime: number[] }>();
+      
+      dbData.forEach(record => {
+        const monthKey = record.price_date.substring(0, 7); // YYYY-MM
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, { dayAhead: [], realtime: [] });
+        }
+        const month = monthMap.get(monthKey)!;
+        if (record.day_ahead_price !== null) month.dayAhead.push(record.day_ahead_price);
+        if (record.realtime_price !== null) month.realtime.push(record.realtime_price);
+      });
+
+      monthMap.forEach((values, month) => {
+        const avgDA = values.dayAhead.length > 0 
+          ? values.dayAhead.reduce((a, b) => a + b, 0) / values.dayAhead.length 
+          : null;
+        const avgRT = values.realtime.length > 0
+          ? values.realtime.reduce((a, b) => a + b, 0) / values.realtime.length
+          : null;
+        
+        processedData.push({
+          time: month,
+          dayAheadPrice: avgDA,
+          realtimePrice: avgRT,
+          regulatedPrice: avgDA ? avgDA * 0.95 : undefined,
+          deviation: avgDA && avgRT ? ((avgRT - avgDA) / avgDA) * 100 : undefined,
+        });
+      });
+    } else {
+      // Hourly data (24-point)
+      if (displayFormat === "flat") {
+        dbData.forEach(record => {
+          processedData.push({
+            time: `${record.price_date} ${String(record.hour).padStart(2, '0')}:00`,
+            dayAheadPrice: record.day_ahead_price,
+            realtimePrice: record.realtime_price,
+            regulatedPrice: record.day_ahead_price ? record.day_ahead_price * 0.95 : undefined,
+            deviation: record.day_ahead_price && record.realtime_price 
+              ? ((record.realtime_price - record.day_ahead_price) / record.day_ahead_price) * 100 
+              : undefined,
+          });
+        });
+      } else {
+        // Grouped or summary - aggregate by hour across all dates
+        const hourMap = new Map<number, { dayAhead: number[]; realtime: number[] }>();
+        
+        dbData.forEach(record => {
+          if (!hourMap.has(record.hour)) {
+            hourMap.set(record.hour, { dayAhead: [], realtime: [] });
+          }
+          const hour = hourMap.get(record.hour)!;
+          if (record.day_ahead_price !== null) hour.dayAhead.push(record.day_ahead_price);
+          if (record.realtime_price !== null) hour.realtime.push(record.realtime_price);
+        });
+
+        Array.from(hourMap.entries())
+          .sort((a, b) => a[0] - b[0])
+          .forEach(([hour, values]) => {
+            const avgDA = values.dayAhead.length > 0 
+              ? values.dayAhead.reduce((a, b) => a + b, 0) / values.dayAhead.length 
+              : null;
+            const avgRT = values.realtime.length > 0
+              ? values.realtime.reduce((a, b) => a + b, 0) / values.realtime.length
+              : null;
+            
+            processedData.push({
+              time: `${String(hour).padStart(2, '0')}:00`,
+              dayAheadPrice: avgDA,
+              realtimePrice: avgRT,
+              regulatedPrice: avgDA ? avgDA * 0.95 : undefined,
+              deviation: avgDA && avgRT ? ((avgRT - avgDA) / avgDA) * 100 : undefined,
+            });
+          });
+      }
+    }
+
+    return processedData;
+  }, [dbData, timeGranularity, displayFormat]);
+
+  // Calculate metrics from real data
   const metrics = useMemo(() => {
     if (chartData.length === 0) return { maxDA: 0, minDA: 0, avgDA: 0, maxRT: 0, minRT: 0, avgRT: 0 };
     
-    const dayAheadPrices = chartData.map(d => d.dayAheadPrice);
-    const realtimePrices = chartData.map(d => d.realtimePrice);
+    const dayAheadPrices = chartData.map(d => d.dayAheadPrice).filter((p): p is number => p !== null);
+    const realtimePrices = chartData.map(d => d.realtimePrice).filter((p): p is number => p !== null);
     
     return {
-      maxDA: Math.max(...dayAheadPrices),
-      minDA: Math.min(...dayAheadPrices),
-      avgDA: dayAheadPrices.reduce((a, b) => a + b, 0) / dayAheadPrices.length,
-      maxRT: Math.max(...realtimePrices),
-      minRT: Math.min(...realtimePrices),
-      avgRT: realtimePrices.reduce((a, b) => a + b, 0) / realtimePrices.length,
+      maxDA: dayAheadPrices.length > 0 ? Math.max(...dayAheadPrices) : 0,
+      minDA: dayAheadPrices.length > 0 ? Math.min(...dayAheadPrices) : 0,
+      avgDA: dayAheadPrices.length > 0 ? dayAheadPrices.reduce((a, b) => a + b, 0) / dayAheadPrices.length : 0,
+      maxRT: realtimePrices.length > 0 ? Math.max(...realtimePrices) : 0,
+      minRT: realtimePrices.length > 0 ? Math.min(...realtimePrices) : 0,
+      avgRT: realtimePrices.length > 0 ? realtimePrices.reduce((a, b) => a + b, 0) / realtimePrices.length : 0,
     };
   }, [chartData]);
 
@@ -168,6 +232,9 @@ const MarketClearing = () => {
         const bVal = b[sortConfig.key as keyof ClearingDataPoint];
         if (typeof aVal === 'number' && typeof bVal === 'number') {
           return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
         return 0;
       });
@@ -188,22 +255,64 @@ const MarketClearing = () => {
     const ws = XLSX.utils.json_to_sheet(chartData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Market Clearing Data");
-    XLSX.writeFile(wb, `market_clearing_${format(new Date(), "yyyyMMdd")}.xlsx`);
+    XLSX.writeFile(wb, `market_clearing_${province}_${format(new Date(), "yyyyMMdd")}.xlsx`);
   };
 
   const handleQuery = () => {
-    // Trigger data refresh by updating state
     setCurrentPage(1);
+    refetch();
   };
 
   const handleReset = () => {
-    setDateRanges([{ start: new Date(2025, 10, 1), end: new Date(2025, 10, 10) }]);
+    setDateRanges([{ start: new Date(2024, 0, 1), end: new Date(2024, 0, 31) }]);
     setTimeGranularity("24");
     setDataDisplay("all");
     setShowRegulatedPrice(false);
     setAnalysisMethod("trend");
     setDisplayFormat("flat");
     setCurrentPage(1);
+  };
+
+  const handleImport = async () => {
+    if (!dayAheadFile && !realtimeFile) {
+      toast.error("请选择至少一个CSV文件");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      let dayAheadCsv = '';
+      let realtimeCsv = '';
+
+      if (dayAheadFile) {
+        dayAheadCsv = await dayAheadFile.text();
+      }
+      if (realtimeFile) {
+        realtimeCsv = await realtimeFile.text();
+      }
+
+      const { data, error } = await supabase.functions.invoke('import-market-prices', {
+        body: { dayAheadCsv, realtimeCsv, province }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`成功导入 ${data.totalRecords} 条记录`);
+        setDayAheadFile(null);
+        setRealtimeFile(null);
+        if (dayAheadFileRef.current) dayAheadFileRef.current.value = '';
+        if (realtimeFileRef.current) realtimeFileRef.current.value = '';
+        refetch();
+      } else {
+        toast.error(data.message || "导入失败");
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      toast.error("导入失败，请检查文件格式");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const totalPages = Math.ceil(chartData.length / pageSize);
@@ -213,7 +322,7 @@ const MarketClearing = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">市场出清</h1>
         <p className="text-muted-foreground mt-2">
-          市场出清价格与电量的多维度分析
+          市场出清价格与电量的多维度分析（数据来源：数据库）
         </p>
       </div>
 
@@ -227,10 +336,82 @@ const MarketClearing = () => {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-6">
+          {/* Import Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">数据导入</CardTitle>
+              <CardDescription>上传CSV文件导入电价数据</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="space-y-2">
+                  <Label>省份</Label>
+                  <Select value={province} onValueChange={setProvince}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="山东">山东</SelectItem>
+                      <SelectItem value="山西">山西</SelectItem>
+                      <SelectItem value="浙江">浙江</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>日前电价CSV</Label>
+                  <input
+                    ref={dayAheadFileRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setDayAheadFile(e.target.files?.[0] || null)}
+                    className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F1F8F4] file:text-[#00B04D] hover:file:bg-[#E8F0EC]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>实时电价CSV</Label>
+                  <input
+                    ref={realtimeFileRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setRealtimeFile(e.target.files?.[0] || null)}
+                    className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F1F8F4] file:text-[#00B04D] hover:file:bg-[#E8F0EC]"
+                  />
+                </div>
+                <Button onClick={handleImport} disabled={isImporting || (!dayAheadFile && !realtimeFile)}>
+                  {isImporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      导入中...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      导入数据
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Filter Bar */}
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>省份</Label>
+                  <Select value={province} onValueChange={setProvince}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="山东">山东</SelectItem>
+                      <SelectItem value="山西">山西</SelectItem>
+                      <SelectItem value="浙江">浙江</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label>选择日期</Label>
                   <MultiDateRangePicker value={dateRanges} onChange={setDateRanges} />
@@ -243,7 +424,6 @@ const MarketClearing = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="96">96点 (15分钟)</SelectItem>
                       <SelectItem value="24">24点 (1小时)</SelectItem>
                       <SelectItem value="day">日</SelectItem>
                       <SelectItem value="month">月</SelectItem>
@@ -260,7 +440,7 @@ const MarketClearing = () => {
                     <SelectContent>
                       <SelectItem value="all">全部</SelectItem>
                       <SelectItem value="dayAhead">日前</SelectItem>
-                      <SelectItem value="intraday">日内</SelectItem>
+                      <SelectItem value="intraday">实时</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -308,23 +488,23 @@ const MarketClearing = () => {
           {/* Metric Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <MetricCard
-              title="最大值"
+              title="日前价格最大值"
               value={`¥${metrics.maxDA.toFixed(2)}`}
-              description={`实时: ¥${metrics.maxRT.toFixed(2)}`}
+              description={`实时最大: ¥${metrics.maxRT.toFixed(2)}`}
               icon={TrendingUp}
               changeType="neutral"
             />
             <MetricCard
-              title="最小值"
+              title="日前价格最小值"
               value={`¥${metrics.minDA.toFixed(2)}`}
-              description={`实时: ¥${metrics.minRT.toFixed(2)}`}
+              description={`实时最小: ¥${metrics.minRT.toFixed(2)}`}
               icon={TrendingDown}
               changeType="neutral"
             />
             <MetricCard
-              title="平均值"
+              title="日前价格平均值"
               value={`¥${metrics.avgDA.toFixed(2)}`}
-              description={`实时: ¥${metrics.avgRT.toFixed(2)}`}
+              description={`实时平均: ¥${metrics.avgRT.toFixed(2)}`}
               icon={Minus}
               changeType="neutral"
             />
@@ -340,6 +520,7 @@ const MarketClearing = () => {
                   {activeTab === "inter-price" && "省间统一出清价格"}
                   {activeTab === "inter-power" && "省间出清电力"}
                   {activeTab === "spot-overview" && "省内现货出清概况"}
+                  {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Button
@@ -364,7 +545,15 @@ const MarketClearing = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {viewMode === "chart" ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[500px]">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className="flex items-center justify-center h-[500px] text-muted-foreground">
+                  暂无数据，请先导入CSV文件或调整查询条件
+                </div>
+              ) : viewMode === "chart" ? (
                 <ResponsiveContainer width="100%" height={500}>
                   <ComposedChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
@@ -388,7 +577,13 @@ const MarketClearing = () => {
                         tick={{ fontSize: 11 }}
                       />
                     )}
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value: number | null, name: string) => {
+                        if (value === null) return ['--', name];
+                        if (name.includes('偏差')) return [`${value.toFixed(2)}%`, name];
+                        return [`¥${value.toFixed(2)}`, name];
+                      }}
+                    />
                     <Legend />
                     {(dataDisplay === "all" || dataDisplay === "dayAhead") && (
                       <Line 
@@ -398,6 +593,7 @@ const MarketClearing = () => {
                         stroke="#0088FE" 
                         name="日前价格"
                         strokeWidth={2}
+                        connectNulls
                       />
                     )}
                     {(dataDisplay === "all" || dataDisplay === "intraday") && (
@@ -408,6 +604,7 @@ const MarketClearing = () => {
                         stroke="#00C49F" 
                         name="实时价格"
                         strokeWidth={2}
+                        connectNulls
                       />
                     )}
                     {showRegulatedPrice && (
@@ -419,6 +616,7 @@ const MarketClearing = () => {
                         strokeDasharray="5 5"
                         name="调控后价格"
                         strokeWidth={2}
+                        connectNulls
                       />
                     )}
                     {showDeviation && (
@@ -441,36 +639,48 @@ const MarketClearing = () => {
                           <th className="text-left p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('time')}>
                             时间点 {sortConfig?.key === 'time' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                           </th>
-                          <th className="text-right p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('dayAheadPrice')}>
-                            日前价格 (¥/MWh) {sortConfig?.key === 'dayAheadPrice' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                          </th>
-                          <th className="text-right p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('realtimePrice')}>
-                            实时价格 (¥/MWh) {sortConfig?.key === 'realtimePrice' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                          </th>
+                          {(dataDisplay === "all" || dataDisplay === "dayAhead") && (
+                            <th className="text-right p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('dayAheadPrice')}>
+                              日前价格 (¥/MWh) {sortConfig?.key === 'dayAheadPrice' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                            </th>
+                          )}
+                          {(dataDisplay === "all" || dataDisplay === "intraday") && (
+                            <th className="text-right p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('realtimePrice')}>
+                              实时价格 (¥/MWh) {sortConfig?.key === 'realtimePrice' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                            </th>
+                          )}
                           {showRegulatedPrice && (
                             <th className="text-right p-3 text-sm font-medium">调控后价格 (¥/MWh)</th>
                           )}
                           <th className="text-right p-3 text-sm font-medium cursor-pointer hover:bg-[#E8F0EC]" onClick={() => handleSort('deviation')}>
                             偏差 (%) {sortConfig?.key === 'deviation' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                           </th>
-                          <th className="text-right p-3 text-sm font-medium">电量 (MWh)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tableData.map((row, index) => (
                           <tr key={index} className="border-b hover:bg-[#F8FBFA]">
                             <td className="p-3 text-sm">{row.time}</td>
-                            <td className="p-3 text-sm text-right font-mono">¥{row.dayAheadPrice.toFixed(2)}</td>
-                            <td className="p-3 text-sm text-right font-mono">¥{row.realtimePrice.toFixed(2)}</td>
+                            {(dataDisplay === "all" || dataDisplay === "dayAhead") && (
+                              <td className="p-3 text-sm text-right font-mono">
+                                {row.dayAheadPrice !== null ? `¥${row.dayAheadPrice.toFixed(2)}` : '--'}
+                              </td>
+                            )}
+                            {(dataDisplay === "all" || dataDisplay === "intraday") && (
+                              <td className="p-3 text-sm text-right font-mono">
+                                {row.realtimePrice !== null ? `¥${row.realtimePrice.toFixed(2)}` : '--'}
+                              </td>
+                            )}
                             {showRegulatedPrice && (
-                              <td className="p-3 text-sm text-right font-mono">¥{row.regulatedPrice?.toFixed(2)}</td>
+                              <td className="p-3 text-sm text-right font-mono">
+                                {row.regulatedPrice !== undefined ? `¥${row.regulatedPrice.toFixed(2)}` : '--'}
+                              </td>
                             )}
                             <td className={`p-3 text-sm text-right font-mono ${
                               (row.deviation || 0) > 0 ? 'text-destructive' : (row.deviation || 0) < 0 ? 'text-[#00A86B]' : ''
                             }`}>
-                              {row.deviation?.toFixed(2)}%
+                              {row.deviation !== undefined ? `${row.deviation.toFixed(2)}%` : '--'}
                             </td>
-                            <td className="p-3 text-sm text-right font-mono">{row.volume?.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -502,11 +712,11 @@ const MarketClearing = () => {
                       >
                         上一页
                       </Button>
-                      <span className="text-sm">第 {currentPage} / {totalPages} 页</span>
+                      <span className="text-sm">第 {currentPage} / {totalPages || 1} 页</span>
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || totalPages === 0}
                         onClick={() => setCurrentPage(p => p + 1)}
                       >
                         下一页
