@@ -9,8 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MetricCard } from "@/components/MetricCard";
 import { MultiDateRangePicker, DateRange } from "@/components/MultiDateRangePicker";
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { BarChart3, Table2, Download, TrendingUp, TrendingDown, Minus, Upload, Loader2 } from "lucide-react";
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from "recharts";
+import { BarChart3, Table2, Download, TrendingUp, TrendingDown, Minus, Upload, Loader2, Maximize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -56,6 +56,7 @@ const MarketClearing = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [brushRange, setBrushRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   
   const dayAheadFileRef = useRef<HTMLInputElement>(null);
@@ -205,12 +206,18 @@ const MarketClearing = () => {
     return processedData;
   }, [dbData, timeGranularity, displayFormat]);
 
-  // Calculate metrics from real data
+  // Calculate visible data based on brush range
+  const visibleData = useMemo(() => {
+    if (!brushRange || chartData.length === 0) return chartData;
+    return chartData.slice(brushRange.startIndex, brushRange.endIndex + 1);
+  }, [chartData, brushRange]);
+
+  // Calculate metrics from visible data (responds to brush range)
   const metrics = useMemo(() => {
-    if (chartData.length === 0) return { maxDA: 0, minDA: 0, avgDA: 0, maxRT: 0, minRT: 0, avgRT: 0 };
+    if (visibleData.length === 0) return { maxDA: 0, minDA: 0, avgDA: 0, maxRT: 0, minRT: 0, avgRT: 0 };
     
-    const dayAheadPrices = chartData.map(d => d.dayAheadPrice).filter((p): p is number => p !== null);
-    const realtimePrices = chartData.map(d => d.realtimePrice).filter((p): p is number => p !== null);
+    const dayAheadPrices = visibleData.map(d => d.dayAheadPrice).filter((p): p is number => p !== null);
+    const realtimePrices = visibleData.map(d => d.realtimePrice).filter((p): p is number => p !== null);
     
     return {
       maxDA: dayAheadPrices.length > 0 ? Math.max(...dayAheadPrices) : 0,
@@ -220,11 +227,11 @@ const MarketClearing = () => {
       minRT: realtimePrices.length > 0 ? Math.min(...realtimePrices) : 0,
       avgRT: realtimePrices.length > 0 ? realtimePrices.reduce((a, b) => a + b, 0) / realtimePrices.length : 0,
     };
-  }, [chartData]);
+  }, [visibleData]);
 
-  // Sort and paginate data for table view
+  // Sort and paginate data for table view (uses visible data)
   const tableData = useMemo(() => {
-    let sorted = [...chartData];
+    let sorted = [...visibleData];
     
     if (sortConfig) {
       sorted.sort((a, b) => {
@@ -242,7 +249,7 @@ const MarketClearing = () => {
 
     const start = (currentPage - 1) * pageSize;
     return sorted.slice(start, start + pageSize);
-  }, [chartData, sortConfig, currentPage, pageSize]);
+  }, [visibleData, sortConfig, currentPage, pageSize]);
 
   const handleSort = (key: string) => {
     setSortConfig(current => ({
@@ -271,6 +278,11 @@ const MarketClearing = () => {
     setAnalysisMethod("trend");
     setDisplayFormat("flat");
     setCurrentPage(1);
+    setBrushRange(null);
+  };
+
+  const handleBrushReset = () => {
+    setBrushRange(null);
   };
 
   const handleImport = async () => {
@@ -315,7 +327,7 @@ const MarketClearing = () => {
     }
   };
 
-  const totalPages = Math.ceil(chartData.length / pageSize);
+  const totalPages = Math.ceil(visibleData.length / pageSize);
 
   return (
     <div className="p-8 space-y-6">
@@ -523,6 +535,16 @@ const MarketClearing = () => {
                   {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />}
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  {brushRange && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBrushReset}
+                    >
+                      <Maximize2 className="h-4 w-4 mr-1" />
+                      重置视图
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -554,82 +576,104 @@ const MarketClearing = () => {
                   暂无数据，请先导入CSV文件或调整查询条件
                 </div>
               ) : viewMode === "chart" ? (
-                <ResponsiveContainer width="100%" height={500}>
-                  <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fontSize: 11 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis 
-                      yAxisId="price"
-                      label={{ value: '价格 (元/兆瓦时)', angle: -90, position: 'insideLeft' }}
-                      tick={{ fontSize: 11 }}
-                    />
-                    {showDeviation && (
+                <div className="space-y-2">
+                  {brushRange && chartData.length > 0 && (
+                    <div className="text-sm text-muted-foreground px-2">
+                      当前显示: {chartData[brushRange.startIndex]?.time} 至 {chartData[brushRange.endIndex]?.time}
+                      （共 {brushRange.endIndex - brushRange.startIndex + 1} 个数据点）
+                    </div>
+                  )}
+                  <ResponsiveContainer width="100%" height={500}>
+                    <ComposedChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                      <XAxis 
+                        dataKey="time" 
+                        tick={{ fontSize: 11 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
                       <YAxis 
-                        yAxisId="deviation"
-                        orientation="right"
-                        label={{ value: '偏差 (%)', angle: 90, position: 'insideRight' }}
+                        yAxisId="price"
+                        label={{ value: '价格 (元/兆瓦时)', angle: -90, position: 'insideLeft' }}
                         tick={{ fontSize: 11 }}
                       />
-                    )}
-                    <Tooltip 
-                      formatter={(value: number | null, name: string) => {
-                        if (value === null) return ['--', name];
-                        if (name.includes('偏差')) return [`${value.toFixed(2)}%`, name];
-                        return [`¥${value.toFixed(2)}`, name];
-                      }}
-                    />
-                    <Legend />
-                    {(dataDisplay === "all" || dataDisplay === "dayAhead") && (
-                      <Line 
-                        yAxisId="price"
-                        type="monotone" 
-                        dataKey="dayAheadPrice" 
-                        stroke="#0088FE" 
-                        name="日前价格"
-                        strokeWidth={2}
-                        connectNulls
+                      {showDeviation && (
+                        <YAxis 
+                          yAxisId="deviation"
+                          orientation="right"
+                          label={{ value: '偏差 (%)', angle: 90, position: 'insideRight' }}
+                          tick={{ fontSize: 11 }}
+                        />
+                      )}
+                      <Tooltip 
+                        formatter={(value: number | null, name: string) => {
+                          if (value === null) return ['--', name];
+                          if (name.includes('偏差')) return [`${value.toFixed(2)}%`, name];
+                          return [`¥${value.toFixed(2)}`, name];
+                        }}
                       />
-                    )}
-                    {(dataDisplay === "all" || dataDisplay === "intraday") && (
-                      <Line 
-                        yAxisId="price"
-                        type="monotone" 
-                        dataKey="realtimePrice" 
-                        stroke="#00C49F" 
-                        name="实时价格"
-                        strokeWidth={2}
-                        connectNulls
+                      <Legend verticalAlign="top" />
+                      <Brush 
+                        dataKey="time"
+                        height={40}
+                        stroke="#00B04D"
+                        fill="#F1F8F4"
+                        travellerWidth={10}
+                        onChange={(range) => {
+                          if (range && typeof range.startIndex === 'number' && typeof range.endIndex === 'number') {
+                            setBrushRange({ startIndex: range.startIndex, endIndex: range.endIndex });
+                          }
+                        }}
+                        startIndex={brushRange?.startIndex}
+                        endIndex={brushRange?.endIndex}
                       />
-                    )}
-                    {showRegulatedPrice && (
-                      <Line 
-                        yAxisId="price"
-                        type="monotone" 
-                        dataKey="regulatedPrice" 
-                        stroke="#FF8042" 
-                        strokeDasharray="5 5"
-                        name="调控后价格"
-                        strokeWidth={2}
-                        connectNulls
-                      />
-                    )}
-                    {showDeviation && (
-                      <Bar 
-                        yAxisId="deviation"
-                        dataKey="deviation" 
-                        fill="#FFBB28" 
-                        name="偏差"
-                        opacity={0.6}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      {(dataDisplay === "all" || dataDisplay === "dayAhead") && (
+                        <Line 
+                          yAxisId="price"
+                          type="monotone" 
+                          dataKey="dayAheadPrice" 
+                          stroke="#0088FE" 
+                          name="日前价格"
+                          strokeWidth={2}
+                          connectNulls
+                        />
+                      )}
+                      {(dataDisplay === "all" || dataDisplay === "intraday") && (
+                        <Line 
+                          yAxisId="price"
+                          type="monotone" 
+                          dataKey="realtimePrice" 
+                          stroke="#00C49F" 
+                          name="实时价格"
+                          strokeWidth={2}
+                          connectNulls
+                        />
+                      )}
+                      {showRegulatedPrice && (
+                        <Line 
+                          yAxisId="price"
+                          type="monotone" 
+                          dataKey="regulatedPrice" 
+                          stroke="#FF8042" 
+                          strokeDasharray="5 5"
+                          name="调控后价格"
+                          strokeWidth={2}
+                          connectNulls
+                        />
+                      )}
+                      {showDeviation && (
+                        <Bar 
+                          yAxisId="deviation"
+                          dataKey="deviation" 
+                          fill="#FFBB28" 
+                          name="偏差"
+                          opacity={0.6}
+                        />
+                      )}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="overflow-auto max-h-[500px]">
@@ -690,7 +734,7 @@ const MarketClearing = () => {
                   {/* Pagination */}
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      显示第 {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, chartData.length)} 条，共 {chartData.length} 条
+                      显示第 {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, visibleData.length)} 条，共 {visibleData.length} 条
                     </div>
                     <div className="flex items-center gap-2">
                       <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
