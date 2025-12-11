@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      market_clearing_prices: {
+        Row: {
+          created_at: string | null
+          day_ahead_price: number | null
+          hour: number
+          id: string
+          price_date: string
+          province: string
+          realtime_price: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_ahead_price?: number | null
+          hour: number
+          id?: string
+          price_date: string
+          province?: string
+          realtime_price?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          day_ahead_price?: number | null
+          hour?: number
+          id?: string
+          price_date?: string
+          province?: string
+          realtime_price?: number | null
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           can_approve: boolean
