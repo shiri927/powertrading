@@ -45,6 +45,7 @@ import PackageSimulation from "./pages/retail/trading/PackageSimulation";
 import ExecutionTracking from "./pages/retail/trading/ExecutionTracking";
 
 // Retail Decision pages
+import RetailDecision from "./pages/retail/Decision";
 import MediumLongTerm from "./pages/retail/decision/MediumLongTerm";
 import InterProvincial from "./pages/retail/decision/InterProvincial";
 import IntraProvincial from "./pages/retail/decision/IntraProvincial";
@@ -86,6 +87,7 @@ const App = () => (
             
             {/* Retail Routes */}
             <Route path="/retail/base-data" element={<RetailBaseData />} />
+            <Route path="/retail/decision" element={<RetailDecision />} />
             <Route path="/retail/decision/medium-long-term" element={<MediumLongTerm />} />
             <Route path="/retail/decision/inter-provincial" element={<InterProvincial />} />
             <Route path="/retail/decision/intra-provincial" element={<IntraProvincial />} />
