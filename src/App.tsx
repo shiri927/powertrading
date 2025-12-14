@@ -93,10 +93,11 @@ const App = () => (
             <Route path="/retail/decision/intra-provincial" element={<IntraProvincial />} />
             
             <Route path="/retail/console" element={<RetailConsole />} />
+            <Route path="/retail/load-management" element={<LoadManagement />} />
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
-            <Route path="/retail/trading/load-management" element={<LoadManagement />} />
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
+            <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/clearing" element={<RetailClearing />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />

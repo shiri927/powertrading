@@ -74,14 +74,14 @@ const navigation = [{
     name: "交易操作台",
     href: "/retail/console"
   }, {
+    name: "用电负荷管理",
+    href: "/retail/load-management"
+  }, {
     name: "零售交易",
     icon: ShoppingCart,
     children: [{
       name: "客户管理",
       href: "/retail/trading/customer-management"
-    }, {
-      name: "用电管理",
-      href: "/retail/trading/load-management"
     }, {
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
