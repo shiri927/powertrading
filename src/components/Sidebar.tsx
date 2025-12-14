@@ -113,15 +113,9 @@ const navigation = [{
     href: "/retail/review"
   }]
 }, {
-  name: "报表与报告",
-  icon: FileText,
-  children: [{
-    name: "报表管理",
-    href: "/reports/management"
-  }, {
-    name: "报告管理",
-    href: "/reports/analysis"
-  }]
+  name: "报表管理",
+  href: "/reports/management",
+  icon: FileText
 }, {
   name: "系统管理",
   href: "/settings",
