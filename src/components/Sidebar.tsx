@@ -43,9 +43,6 @@ const navigation = [{
   name: "新能源发电侧",
   icon: Zap,
   children: [{
-    name: "交易日历",
-    href: "/renewable/trading-ledger"
-  }, {
     name: "基础数据",
     href: "/renewable/base-data"
   }, {
