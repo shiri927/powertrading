@@ -53,7 +53,6 @@ import IntraProvincial from "./pages/retail/decision/IntraProvincial";
 
 // Reports pages
 import ReportManagement from "./pages/reports/ReportManagement";
-import ReportAnalysis from "./pages/reports/ReportAnalysis";
 
 const queryClient = new QueryClient();
 
@@ -109,7 +108,6 @@ const App = () => (
             
             {/* Reports Routes */}
             <Route path="/reports/management" element={<ReportManagement />} />
-            <Route path="/reports/analysis" element={<ReportAnalysis />} />
             
             {/* System Management */}
             <Route path="/settings" element={<SystemManagement />} />
