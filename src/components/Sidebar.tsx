@@ -74,9 +74,6 @@ const navigation = [{
     name: "交易操作台",
     href: "/retail/console"
   }, {
-    name: "用电负荷管理",
-    href: "/retail/load-management"
-  }, {
     name: "零售交易",
     icon: ShoppingCart,
     children: [{
@@ -86,6 +83,9 @@ const navigation = [{
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
     }]
+  }, {
+    name: "用电负荷管理",
+    href: "/retail/load-management"
   }, {
     name: "出清管理",
     href: "/retail/clearing"
