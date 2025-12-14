@@ -8,6 +8,19 @@ const navigation = [{
   href: "/",
   icon: LayoutDashboard
 }, {
+  name: "交易总览",
+  icon: PieChart,
+  children: [{
+    name: "发电侧收益",
+    href: "/revenue/generation"
+  }, {
+    name: "售电侧收益",
+    href: "/revenue/retail"
+  }, {
+    name: "气象数据",
+    href: "/market-fundamentals/weather"
+  }]
+}, {
   name: "市场与基本面数据",
   icon: BarChart3,
   children: [{
@@ -16,9 +29,6 @@ const navigation = [{
   }, {
     name: "市场供需",
     href: "/market-fundamentals/supply-demand"
-  }, {
-    name: "气象数据",
-    href: "/market-fundamentals/weather"
   }, {
     name: "电网系统",
     href: "/market-fundamentals/grid"
@@ -104,16 +114,6 @@ const navigation = [{
   }, {
     name: "复盘分析",
     href: "/retail/review"
-  }]
-}, {
-  name: "收益分析",
-  icon: PieChart,
-  children: [{
-    name: "发电侧收益",
-    href: "/revenue/generation"
-  }, {
-    name: "售电侧收益",
-    href: "/revenue/retail"
   }]
 }, {
   name: "报表与报告",
