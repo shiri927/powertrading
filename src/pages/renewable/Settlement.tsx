@@ -4,136 +4,450 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Receipt, ChevronRight, ChevronDown, Download, Upload, FileSpreadsheet, Calendar as CalendarIcon, Pencil, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Receipt, ChevronRight, ChevronDown, Download, Upload, FileSpreadsheet, Calendar as CalendarIcon, Eye, FileText, TrendingUp, PieChart, BarChart3, Table, Search, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PieChart as RechartsPie, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 
-interface SettlementRecord {
+// ============= 现货结算汇总 Tab =============
+interface SpotSettlementItem {
   id: string;
-  tradingUnit: string;
-  settlementNo: string;
-  settlementYear: string;
-  settlementPrice: number;
-  compensationPrice: number;
-  settlementVolume: number;
-  settlementFee: number;
-  contractPosition: string;
-  compensationIncome: number;
-  otherFees: number;
-  totalIncomeNoSubsidy: number;
-  totalIncomeWithSubsidy: number;
-  status: string;
-  vatRate: number;
-  remark: string;
-  month?: string;
-  children?: SettlementRecord[];
-  isGroup?: boolean;
-  isSummary?: boolean;
+  category: string;
+  subCategory: string;
+  amount: number;
+  percentage: number;
+  unitCost: number;
 }
 
-// 生成模拟数据
-const generateMockData = (): SettlementRecord[] => {
-  const months = ["202410", "202411"];
-  const tradingUnits = ["山东省场站A", "山东省场站B", "山东省场站C", "山西省场站A", "山西省场站B", "山西省场站C", "浙江省场站A", "浙江省场站B", "浙江省场站C"];
-  const statuses = ["已结算", "待结算", "结算中"];
+const generateSpotSettlementData = (): SpotSettlementItem[] => {
+  const categories = [
+    { category: "电能量费用", subCategory: "日前电能量费用", base: 5000000 },
+    { category: "电能量费用", subCategory: "实时电能量费用", base: 1200000 },
+    { category: "偏差考核费用", subCategory: "正偏差考核", base: 150000 },
+    { category: "偏差考核费用", subCategory: "负偏差考核", base: 85000 },
+    { category: "辅助服务费用", subCategory: "调频服务费用", base: 320000 },
+    { category: "辅助服务费用", subCategory: "备用服务费用", base: 180000 },
+    { category: "辅助服务费用", subCategory: "调峰服务费用", base: 250000 },
+    { category: "容量补偿费用", subCategory: "容量补偿收入", base: 420000 },
+    { category: "其他费用", subCategory: "输配电费用", base: 680000 },
+    { category: "其他费用", subCategory: "系统运行费用", base: 95000 },
+  ];
   
-  const monthlyData = months.map((month, monthIndex) => {
-    const records: SettlementRecord[] = [];
-    const recordCount = 6 + Math.floor(Math.random() * 4);
-    
-    for (let i = 0; i < recordCount; i++) {
-      const settlementVolume = 1000 + Math.random() * 9000;
-      const settlementPrice = 300 + Math.random() * 200;
-      const compensationPrice = 50 + Math.random() * 100;
-      const settlementFee = settlementVolume * settlementPrice;
-      const compensationIncome = settlementVolume * compensationPrice;
-      const otherFees = Math.random() * 10000;
-      const totalIncomeNoSubsidy = settlementFee + otherFees;
-      const totalIncomeWithSubsidy = totalIncomeNoSubsidy + compensationIncome;
-      
-      records.push({
-        id: `${month}-${i + 1}`,
-        tradingUnit: tradingUnits[Math.floor(Math.random() * tradingUnits.length)],
-        settlementNo: `JS${month}${String(i + 1).padStart(4, '0')}`,
-        settlementYear: month.substring(0, 4),
-        settlementPrice,
-        compensationPrice,
-        settlementVolume,
-        settlementFee,
-        contractPosition: `合同${i + 1}`,
-        compensationIncome,
-        otherFees,
-        totalIncomeNoSubsidy,
-        totalIncomeWithSubsidy,
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        vatRate: 13,
-        remark: i % 3 === 0 ? "正常结算" : "",
-        month,
-      });
-    }
-    
-    // 计算月度汇总
-    const monthSummary: SettlementRecord = {
-      id: `month-${month}`,
-      tradingUnit: `结算月份 ${month}`,
-      settlementNo: "-",
-      settlementYear: month.substring(0, 4),
-      settlementPrice: records.reduce((sum, r) => sum + r.settlementPrice, 0) / records.length,
-      compensationPrice: records.reduce((sum, r) => sum + r.compensationPrice, 0) / records.length,
-      settlementVolume: records.reduce((sum, r) => sum + r.settlementVolume, 0),
-      settlementFee: records.reduce((sum, r) => sum + r.settlementFee, 0),
-      contractPosition: "-",
-      compensationIncome: records.reduce((sum, r) => sum + r.compensationIncome, 0),
-      otherFees: records.reduce((sum, r) => sum + r.otherFees, 0),
-      totalIncomeNoSubsidy: records.reduce((sum, r) => sum + r.totalIncomeNoSubsidy, 0),
-      totalIncomeWithSubsidy: records.reduce((sum, r) => sum + r.totalIncomeWithSubsidy, 0),
-      status: "-",
-      vatRate: 13,
-      remark: `${records.length}条记录`,
-      month,
-      isGroup: true,
-      children: records,
+  const total = categories.reduce((sum, c) => sum + c.base + Math.random() * c.base * 0.2, 0);
+  
+  return categories.map((c, i) => {
+    const amount = c.base + Math.random() * c.base * 0.2;
+    return {
+      id: `spot-${i}`,
+      category: c.category,
+      subCategory: c.subCategory,
+      amount,
+      percentage: (amount / total) * 100,
+      unitCost: amount / (10000 + Math.random() * 5000),
     };
-    
-    return monthSummary;
   });
-  
-  // 计算总计
-  const totalSummary: SettlementRecord = {
-    id: "total-summary",
-    tradingUnit: "结算月份 合计",
-    settlementNo: "-",
-    settlementYear: "2024",
-    settlementPrice: monthlyData.reduce((sum, m) => sum + m.settlementPrice, 0) / monthlyData.length,
-    compensationPrice: monthlyData.reduce((sum, m) => sum + m.compensationPrice, 0) / monthlyData.length,
-    settlementVolume: monthlyData.reduce((sum, m) => sum + m.settlementVolume, 0),
-    settlementFee: monthlyData.reduce((sum, m) => sum + m.settlementFee, 0),
-    contractPosition: "-",
-    compensationIncome: monthlyData.reduce((sum, m) => sum + m.compensationIncome, 0),
-    otherFees: monthlyData.reduce((sum, m) => sum + m.otherFees, 0),
-    totalIncomeNoSubsidy: monthlyData.reduce((sum, m) => sum + m.totalIncomeNoSubsidy, 0),
-    totalIncomeWithSubsidy: monthlyData.reduce((sum, m) => sum + m.totalIncomeWithSubsidy, 0),
-    status: "-",
-    vatRate: 13,
-    remark: `${monthlyData.length}个月`,
-    isSummary: true,
-    children: monthlyData,
-  };
-  
-  return [totalSummary];
 };
 
-const Settlement = () => {
-  const [data] = useState<SettlementRecord[]>(generateMockData());
-  const [tradingCenter, setTradingCenter] = useState("山西电力交易中心");
-  const [tradingUnit, setTradingUnit] = useState("all");
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date(2024, 9, 1));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date(2024, 10, 30));
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set(["total-summary"]));
+const SpotSettlementSummaryTab = () => {
+  const [region, setRegion] = useState("all");
+  const [month, setMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
+  const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
+  
+  const data = useMemo(() => generateSpotSettlementData(), []);
+  
+  const categoryData = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    data.forEach(item => {
+      grouped[item.category] = (grouped[item.category] || 0) + item.amount;
+    });
+    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
+  }, [data]);
+  
+  const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
+  const avgUnitCost = data.reduce((sum, item) => sum + item.unitCost, 0) / data.length;
+  
+  const COLORS = ["#00B04D", "#0088FE", "#FFBB28", "#FF8042", "#8884d8"];
+  
+  return (
+    <div className="space-y-6">
+      {/* 筛选器 */}
+      <div className="flex items-end gap-4 pb-4 border-b">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">区域</label>
+          <Select value={region} onValueChange={setRegion}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部区域</SelectItem>
+              <SelectItem value="shandong">山东省</SelectItem>
+              <SelectItem value="shanxi">山西省</SelectItem>
+              <SelectItem value="zhejiang">浙江省</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">结算月份</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {month ? format(month, "yyyy-MM", { locale: zhCN }) : "选择月份"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={month} onSelect={setMonth} className="pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <Button className="bg-[#00B04D] hover:bg-[#009644]">查询</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant={viewMode === "chart" ? "default" : "outline"} size="sm" onClick={() => setViewMode("chart")}>
+            <PieChart className="mr-2 h-4 w-4" />图表
+          </Button>
+          <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
+            <Table className="mr-2 h-4 w-4" />表格
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />导出
+          </Button>
+        </div>
+      </div>
+      
+      {/* 汇总指标 */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">费用总计</div>
+            <div className="text-2xl font-bold font-mono text-[#00B04D]">¥{(totalAmount / 10000).toFixed(2)}万</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">电能量费用占比</div>
+            <div className="text-2xl font-bold font-mono">{((categoryData.find(c => c.name === "电能量费用")?.value || 0) / totalAmount * 100).toFixed(1)}%</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">平均度电成本</div>
+            <div className="text-2xl font-bold font-mono">¥{avgUnitCost.toFixed(2)}/kWh</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">场站数量</div>
+            <div className="text-2xl font-bold font-mono">9个</div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {viewMode === "chart" ? (
+        <div className="grid grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">费用分类占比</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPie>
+                  <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                    {categoryData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => `¥${(value / 10000).toFixed(2)}万`} />
+                </RechartsPie>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">各场站费用对比</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[
+                  { name: "山东A", amount: 850000 },
+                  { name: "山东B", amount: 720000 },
+                  { name: "山东C", amount: 680000 },
+                  { name: "山西A", amount: 920000 },
+                  { name: "山西B", amount: 580000 },
+                  { name: "山西C", amount: 450000 },
+                  { name: "浙江A", amount: 1100000 },
+                  { name: "浙江B", amount: 890000 },
+                  { name: "浙江C", amount: 760000 },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
+                  <Tooltip formatter={(value: number) => `¥${(value / 10000).toFixed(2)}万`} />
+                  <Bar dataKey="amount" fill="#00B04D" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="bg-[#F1F8F4]">
+              <tr className="border-b">
+                <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs">费用类别</th>
+                <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs">费用子项</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs">金额(元)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs">占比(%)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs">度电成本(元/kWh)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map(item => (
+                <tr key={item.id} className="border-b hover:bg-[#F8FBFA]">
+                  <td className="p-4">{item.category}</td>
+                  <td className="p-4">{item.subCategory}</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.amount.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.percentage.toFixed(2)}%</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.unitCost.toFixed(4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
-  const toggleRow = (id: string) => {
-    setExpandedRows(prev => {
+// ============= 中长期结算汇总 Tab =============
+interface MediumLongTermItem {
+  id: string;
+  tradingUnit: string;
+  contractName: string;
+  period: string;
+  settlementVolume: number;
+  settlementPrice: number;
+  settlementFee: number;
+  deviationVolume: number;
+  deviationFee: number;
+}
+
+const generateMediumLongTermData = (): MediumLongTermItem[] => {
+  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A"];
+  const contracts = ["年度双边合同", "月度集中竞价", "月内挂牌交易", "日滚动合同"];
+  const periods = ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"];
+  
+  const items: MediumLongTermItem[] = [];
+  units.forEach((unit, ui) => {
+    contracts.forEach((contract, ci) => {
+      periods.forEach((period, pi) => {
+        const volume = 500 + Math.random() * 1500;
+        const price = 300 + Math.random() * 150;
+        const deviation = (Math.random() - 0.5) * 100;
+        items.push({
+          id: `mlt-${ui}-${ci}-${pi}`,
+          tradingUnit: unit,
+          contractName: contract,
+          period,
+          settlementVolume: volume,
+          settlementPrice: price,
+          settlementFee: volume * price,
+          deviationVolume: deviation,
+          deviationFee: deviation * price * 0.5,
+        });
+      });
+    });
+  });
+  return items;
+};
+
+const MediumLongTermSettlementTab = () => {
+  const [tradingUnit, setTradingUnit] = useState("all");
+  const [contract, setContract] = useState("all");
+  const [viewMode, setViewMode] = useState<"chart" | "table">("table");
+  
+  const data = useMemo(() => generateMediumLongTermData(), []);
+  
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
+      if (contract !== "all" && item.contractName !== contract) return false;
+      return true;
+    });
+  }, [data, tradingUnit, contract]);
+  
+  const chartData = useMemo(() => {
+    const grouped: Record<string, { period: string; volume: number; fee: number }> = {};
+    filteredData.forEach(item => {
+      if (!grouped[item.period]) {
+        grouped[item.period] = { period: item.period, volume: 0, fee: 0 };
+      }
+      grouped[item.period].volume += item.settlementVolume;
+      grouped[item.period].fee += item.settlementFee;
+    });
+    return Object.values(grouped).sort((a, b) => a.period.localeCompare(b.period));
+  }, [filteredData]);
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end gap-4 pb-4 border-b">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">交易单元</label>
+          <Select value={tradingUnit} onValueChange={setTradingUnit}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部交易单元</SelectItem>
+              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">合同类型</label>
+          <Select value={contract} onValueChange={setContract}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部合同</SelectItem>
+              <SelectItem value="年度双边合同">年度双边合同</SelectItem>
+              <SelectItem value="月度集中竞价">月度集中竞价</SelectItem>
+              <SelectItem value="月内挂牌交易">月内挂牌交易</SelectItem>
+              <SelectItem value="日滚动合同">日滚动合同</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button className="bg-[#00B04D] hover:bg-[#009644]">查询</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant={viewMode === "chart" ? "default" : "outline"} size="sm" onClick={() => setViewMode("chart")}>
+            <BarChart3 className="mr-2 h-4 w-4" />图表
+          </Button>
+          <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
+            <Table className="mr-2 h-4 w-4" />表格
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />导出
+          </Button>
+        </div>
+      </div>
+      
+      {viewMode === "chart" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">结算电量与电费趋势</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(0)}`} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
+                <Tooltip />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="volume" stroke="#00B04D" name="结算电量(MWh)" strokeWidth={2} />
+                <Line yAxisId="right" type="monotone" dataKey="fee" stroke="#0088FE" name="结算电费(元)" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-md border max-h-[500px] overflow-y-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+              <tr className="border-b">
+                <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">交易单元</th>
+                <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">合同名称</th>
+                <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">结算周期</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">结算电量(MWh)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">结算单价(元/MWh)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">结算电费(元)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">偏差电量(MWh)</th>
+                <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">偏差费用(元)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.slice(0, 50).map(item => (
+                <tr key={item.id} className="border-b hover:bg-[#F8FBFA]">
+                  <td className="p-4">{item.tradingUnit}</td>
+                  <td className="p-4">{item.contractName}</td>
+                  <td className="p-4 text-center">{item.period}</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.settlementVolume.toFixed(3)}</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.settlementPrice.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-xs">{item.settlementFee.toFixed(2)}</td>
+                  <td className={cn("p-4 text-right font-mono text-xs", item.deviationVolume >= 0 ? "text-green-600" : "text-red-600")}>
+                    {item.deviationVolume >= 0 ? "+" : ""}{item.deviationVolume.toFixed(3)}
+                  </td>
+                  <td className={cn("p-4 text-right font-mono text-xs", item.deviationFee >= 0 ? "text-green-600" : "text-red-600")}>
+                    {item.deviationFee >= 0 ? "+" : ""}{item.deviationFee.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============= 结算单管理 Tab =============
+interface SettlementDocument {
+  id: string;
+  tradingUnit: string;
+  documentType: "日清分" | "日结算单" | "月结算单";
+  documentNo: string;
+  period: string;
+  createTime: string;
+  status: "已确认" | "待确认" | "已驳回";
+  amount: number;
+}
+
+const generateSettlementDocuments = (): SettlementDocument[] => {
+  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A", "浙江省场站B"];
+  const types: ("日清分" | "日结算单" | "月结算单")[] = ["日清分", "日结算单", "月结算单"];
+  const statuses: ("已确认" | "待确认" | "已驳回")[] = ["已确认", "待确认", "已驳回"];
+  
+  const docs: SettlementDocument[] = [];
+  for (let i = 0; i < 50; i++) {
+    const type = types[Math.floor(Math.random() * types.length)];
+    docs.push({
+      id: `doc-${i}`,
+      tradingUnit: units[Math.floor(Math.random() * units.length)],
+      documentType: type,
+      documentNo: `${type === "月结算单" ? "M" : type === "日结算单" ? "D" : "C"}${2024}${String(i + 1).padStart(6, '0')}`,
+      period: type === "月结算单" ? "2024-11" : `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+      createTime: `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      amount: 50000 + Math.random() * 500000,
+    });
+  }
+  return docs;
+};
+
+const SettlementDocumentTab = () => {
+  const [tradingUnit, setTradingUnit] = useState("all");
+  const [docType, setDocType] = useState("all");
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  
+  const data = useMemo(() => generateSettlementDocuments(), []);
+  
+  const filteredData = useMemo(() => {
+    return data.filter(doc => {
+      if (tradingUnit !== "all" && doc.tradingUnit !== tradingUnit) return false;
+      if (docType !== "all" && doc.documentType !== docType) return false;
+      return true;
+    });
+  }, [data, tradingUnit, docType]);
+  
+  const toggleSelect = (id: string) => {
+    setSelectedDocs(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -143,84 +457,313 @@ const Settlement = () => {
       return newSet;
     });
   };
-
-  const filteredData = useMemo(() => {
-    // 筛选逻辑可在此实现
-    return data;
-  }, [data, tradingCenter, tradingUnit, startDate, endDate]);
-
-  const handleReset = () => {
-    setTradingCenter("山西电力交易中心");
-    setTradingUnit("all");
-    setStartDate(new Date(2024, 9, 1));
-    setEndDate(new Date(2024, 10, 30));
-  };
-
-  const renderRow = (record: SettlementRecord, level: number = 0): JSX.Element[] => {
-    const isExpanded = expandedRows.has(record.id);
-    const hasChildren = record.children && record.children.length > 0;
-    const bgColor = record.isSummary ? "bg-[#E8F0EC]" : record.isGroup ? "bg-[#F1F8F4]" : "";
-    const fontWeight = record.isSummary || record.isGroup ? "font-semibold" : "";
-    
-    const rows: JSX.Element[] = [
-      <tr key={record.id} className={cn("border-b transition-colors hover:bg-[#F8FBFA]", bgColor)}>
-        <td className={cn("p-4 align-middle", fontWeight)} style={{ paddingLeft: `${16 + level * 24}px` }}>
-          <div className="flex items-center gap-2">
-            {hasChildren && (
-              <button onClick={() => toggleRow(record.id)} className="hover:text-[#00B04D]">
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </button>
-            )}
-            {!hasChildren && <span className="w-4" />}
-            <span>{record.tradingUnit}</span>
-          </div>
-        </td>
-        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.settlementNo}</td>
-        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.settlementYear}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementPrice.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.compensationPrice.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementVolume.toFixed(3)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.settlementFee.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.contractPosition}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.compensationIncome.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.otherFees.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.totalIncomeNoSubsidy.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.totalIncomeWithSubsidy.toFixed(2)}</td>
-        <td className={cn("p-4 align-middle text-center", fontWeight)}>{record.status}</td>
-        <td className={cn("p-4 align-middle text-right font-mono text-xs", fontWeight)}>{record.vatRate}</td>
-        <td className={cn("p-4 align-middle text-center text-xs text-muted-foreground", fontWeight)}>{record.remark}</td>
-        <td className="p-4 align-middle text-center">
-          {!record.isSummary && !record.isGroup && (
-            <div className="flex items-center justify-center gap-3">
-              <button className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                <Pencil className="h-3.5 w-3.5" />
-                <span className="text-xs">编辑</span>
-              </button>
-              <button className="text-red-600 hover:text-red-800 flex items-center gap-1">
-                <Trash2 className="h-3.5 w-3.5" />
-                <span className="text-xs">删除</span>
-              </button>
-            </div>
-          )}
-        </td>
-      </tr>
-    ];
-
-    if (isExpanded && hasChildren) {
-      record.children!.forEach(child => {
-        rows.push(...renderRow(child, level + 1));
-      });
+  
+  const toggleSelectAll = () => {
+    if (selectedDocs.size === filteredData.length) {
+      setSelectedDocs(new Set());
+    } else {
+      setSelectedDocs(new Set(filteredData.map(d => d.id)));
     }
-
-    return rows;
   };
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end gap-4 pb-4 border-b">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">交易单元</label>
+          <Select value={tradingUnit} onValueChange={setTradingUnit}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部交易单元</SelectItem>
+              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+              <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">单据类型</label>
+          <Select value={docType} onValueChange={setDocType}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              <SelectItem value="日清分">日清分</SelectItem>
+              <SelectItem value="日结算单">日结算单</SelectItem>
+              <SelectItem value="月结算单">月结算单</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button className="bg-[#00B04D] hover:bg-[#009644]">
+          <Search className="mr-2 h-4 w-4" />查询
+        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={selectedDocs.size === 0}>
+            <Download className="mr-2 h-4 w-4" />批量下载 ({selectedDocs.size})
+          </Button>
+          <Button variant="outline" size="sm">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />批量导出
+          </Button>
+        </div>
+      </div>
+      
+      <div className="rounded-md border max-h-[500px] overflow-y-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+            <tr className="border-b">
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] w-12">
+                <input type="checkbox" checked={selectedDocs.size === filteredData.length && filteredData.length > 0} onChange={toggleSelectAll} className="h-4 w-4" />
+              </th>
+              <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">交易单元</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">单据类型</th>
+              <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">单据编号</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">结算周期</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">生成时间</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">状态</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">金额(元)</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4]">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map(doc => (
+              <tr key={doc.id} className="border-b hover:bg-[#F8FBFA]">
+                <td className="p-4 text-center">
+                  <input type="checkbox" checked={selectedDocs.has(doc.id)} onChange={() => toggleSelect(doc.id)} className="h-4 w-4" />
+                </td>
+                <td className="p-4">{doc.tradingUnit}</td>
+                <td className="p-4 text-center">
+                  <span className={cn("px-2 py-1 rounded text-xs", 
+                    doc.documentType === "月结算单" ? "bg-blue-100 text-blue-700" :
+                    doc.documentType === "日结算单" ? "bg-green-100 text-green-700" :
+                    "bg-gray-100 text-gray-700"
+                  )}>{doc.documentType}</span>
+                </td>
+                <td className="p-4 font-mono text-xs">{doc.documentNo}</td>
+                <td className="p-4 text-center">{doc.period}</td>
+                <td className="p-4 text-center font-mono text-xs">{doc.createTime}</td>
+                <td className="p-4 text-center">
+                  <span className={cn("px-2 py-1 rounded text-xs",
+                    doc.status === "已确认" ? "bg-green-100 text-green-700" :
+                    doc.status === "待确认" ? "bg-yellow-100 text-yellow-700" :
+                    "bg-red-100 text-red-700"
+                  )}>{doc.status}</span>
+                </td>
+                <td className="p-4 text-right font-mono text-xs">{doc.amount.toFixed(2)}</td>
+                <td className="p-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span className="text-xs">预览</span>
+                    </button>
+                    <button className="text-green-600 hover:text-green-800 flex items-center gap-1">
+                      <Download className="h-3.5 w-3.5" />
+                      <span className="text-xs">下载</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
+// ============= 电费结算明细 Tab =============
+interface ElectricityBillDetail {
+  id: string;
+  tradingUnit: string;
+  month: string;
+  dayAheadVolume: number;
+  dayAheadFee: number;
+  realtimeVolume: number;
+  realtimeFee: number;
+  deviationFee: number;
+  ancillaryFee: number;
+  capacityFee: number;
+  otherFee: number;
+  totalFee: number;
+  fetchTime: string;
+  status: "已解析" | "解析中" | "待解析";
+}
+
+const generateElectricityBillDetails = (): ElectricityBillDetail[] => {
+  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A", "浙江省场站B"];
+  const months = ["2024-08", "2024-09", "2024-10", "2024-11"];
+  const statuses: ("已解析" | "解析中" | "待解析")[] = ["已解析", "解析中", "待解析"];
+  
+  const details: ElectricityBillDetail[] = [];
+  units.forEach((unit, ui) => {
+    months.forEach((month, mi) => {
+      const dayAheadVolume = 2000 + Math.random() * 3000;
+      const realtimeVolume = 500 + Math.random() * 1000;
+      const dayAheadFee = dayAheadVolume * (350 + Math.random() * 100);
+      const realtimeFee = realtimeVolume * (320 + Math.random() * 150);
+      const deviationFee = (Math.random() - 0.5) * 50000;
+      const ancillaryFee = 10000 + Math.random() * 30000;
+      const capacityFee = 20000 + Math.random() * 40000;
+      const otherFee = 5000 + Math.random() * 15000;
+      
+      details.push({
+        id: `bill-${ui}-${mi}`,
+        tradingUnit: unit,
+        month,
+        dayAheadVolume,
+        dayAheadFee,
+        realtimeVolume,
+        realtimeFee,
+        deviationFee,
+        ancillaryFee,
+        capacityFee,
+        otherFee,
+        totalFee: dayAheadFee + realtimeFee + deviationFee + ancillaryFee + capacityFee + otherFee,
+        fetchTime: `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+        status: mi === months.length - 1 ? statuses[Math.floor(Math.random() * statuses.length)] : "已解析",
+      });
+    });
+  });
+  return details;
+};
+
+const ElectricityBillDetailTab = () => {
+  const [tradingUnit, setTradingUnit] = useState("all");
+  const [month, setMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
+  
+  const data = useMemo(() => generateElectricityBillDetails(), []);
+  
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
+      if (month) {
+        const itemMonth = item.month;
+        const selectedMonth = format(month, "yyyy-MM");
+        if (itemMonth !== selectedMonth) return false;
+      }
+      return true;
+    });
+  }, [data, tradingUnit, month]);
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end gap-4 pb-4 border-b">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">交易单元</label>
+          <Select value={tradingUnit} onValueChange={setTradingUnit}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部交易单元</SelectItem>
+              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
+              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
+              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
+              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+              <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">结算月份</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {month ? format(month, "yyyy-MM", { locale: zhCN }) : "选择月份"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={month} onSelect={setMonth} className="pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <Button className="bg-[#00B04D] hover:bg-[#009644]">
+          <Search className="mr-2 h-4 w-4" />查询
+        </Button>
+        <Button variant="outline">
+          <RefreshCw className="mr-2 h-4 w-4" />同步数据
+        </Button>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />导出明细
+          </Button>
+        </div>
+      </div>
+      
+      <div className="rounded-md border overflow-x-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+            <tr className="border-b">
+              <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">交易单元</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算月份</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">日前电量<br/>(MWh)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">日前电费<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">实时电量<br/>(MWh)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">实时电费<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">偏差费用<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">辅助服务费<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">容量费用<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">其他费用<br/>(元)</th>
+              <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">合计费用<br/>(元)</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">抓取时间</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">状态</th>
+              <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map(item => (
+              <tr key={item.id} className="border-b hover:bg-[#F8FBFA]">
+                <td className="p-4">{item.tradingUnit}</td>
+                <td className="p-4 text-center">{item.month}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.dayAheadVolume.toFixed(3)}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.dayAheadFee.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.realtimeVolume.toFixed(3)}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.realtimeFee.toFixed(2)}</td>
+                <td className={cn("p-4 text-right font-mono text-xs", item.deviationFee >= 0 ? "text-green-600" : "text-red-600")}>
+                  {item.deviationFee >= 0 ? "+" : ""}{item.deviationFee.toFixed(2)}
+                </td>
+                <td className="p-4 text-right font-mono text-xs">{item.ancillaryFee.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.capacityFee.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono text-xs">{item.otherFee.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono text-xs font-semibold">{item.totalFee.toFixed(2)}</td>
+                <td className="p-4 text-center font-mono text-xs">{item.fetchTime}</td>
+                <td className="p-4 text-center">
+                  <span className={cn("px-2 py-1 rounded text-xs",
+                    item.status === "已解析" ? "bg-green-100 text-green-700" :
+                    item.status === "解析中" ? "bg-blue-100 text-blue-700" :
+                    "bg-gray-100 text-gray-700"
+                  )}>{item.status}</span>
+                </td>
+                <td className="p-4 text-center">
+                  <button className="text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto">
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="text-xs">查看明细</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ============= 主组件 =============
+const Settlement = () => {
   return (
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">结算管理</h1>
         <p className="text-muted-foreground mt-2">
-          电费结算明细查询与管理
+          电费结算汇总分析与明细查询
         </p>
       </div>
 
@@ -228,129 +771,37 @@ const Settlement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            电费结算明细
+            结算数据管理
           </CardTitle>
           <CardDescription>
-            结算数据查询、导入导出及明细管理
+            现货与中长期结算汇总、结算单管理及电费明细查询
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* 筛选器栏 */}
-          <div className="flex items-end justify-between gap-4 pb-4 border-b">
-            <div className="flex items-end gap-4 flex-1">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">交易中心</label>
-                <Select value={tradingCenter} onValueChange={setTradingCenter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="山西电力交易中心">山西电力交易中心</SelectItem>
-                    <SelectItem value="山东电力交易中心">山东电力交易中心</SelectItem>
-                    <SelectItem value="浙江电力交易中心">浙江电力交易中心</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">交易单元</label>
-                <Select value={tradingUnit} onValueChange={setTradingUnit}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部交易单元</SelectItem>
-                    <SelectItem value="unit001">山东省场站A</SelectItem>
-                    <SelectItem value="unit002">山东省场站B</SelectItem>
-                    <SelectItem value="unit003">山东省场站C</SelectItem>
-                    <SelectItem value="unit004">山西省场站A</SelectItem>
-                    <SelectItem value="unit005">山西省场站B</SelectItem>
-                    <SelectItem value="unit006">山西省场站C</SelectItem>
-                    <SelectItem value="unit007">浙江省场站A</SelectItem>
-                    <SelectItem value="unit008">浙江省场站B</SelectItem>
-                    <SelectItem value="unit009">浙江省场站C</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">起始月份</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "yyyy-MM", { locale: zhCN }) : "选择月份"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} className="pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">结束月份</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "yyyy-MM", { locale: zhCN }) : "选择月份"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} className="pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <Button className="bg-[#00B04D] hover:bg-[#009644]">查询</Button>
-              <Button variant="outline" onClick={handleReset}>重置</Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                导出任务
-              </Button>
-              <Button variant="outline" size="sm">
-                <Upload className="mr-2 h-4 w-4" />
-                导入
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                导出
-              </Button>
-            </div>
-          </div>
-
-          {/* 数据表格 */}
-          <div className="rounded-md border max-h-[600px] overflow-y-auto relative">
-            <table className="w-full caption-bottom text-sm">
-              <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                <tr className="border-b bg-[#F1F8F4]">
-                  <th className="h-10 px-4 text-left align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">交易单元</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单号</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算年号</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算单价<br/>(元/MWh)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿单价<br/>(元/MWh)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电量<br/>(MWh)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算电费<br/>(元)</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">合同序位</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">补偿结算收入<br/>(元)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">其他结算费用<br/>(元)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>不含补贴(元)</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">总结算收入<br/>含补贴(元)</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">结算状态</th>
-                  <th className="h-10 px-4 text-right align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">增值税率<br/>(%)</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">备注</th>
-                  <th className="h-10 px-4 text-center align-middle font-semibold text-gray-700 text-xs bg-[#F1F8F4] whitespace-nowrap">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map(record => renderRow(record))}
-              </tbody>
-            </table>
-          </div>
+        <CardContent>
+          <Tabs defaultValue="spot-summary" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="spot-summary">现货结算汇总</TabsTrigger>
+              <TabsTrigger value="medium-long-term">中长期结算汇总</TabsTrigger>
+              <TabsTrigger value="settlement-docs">结算单管理</TabsTrigger>
+              <TabsTrigger value="bill-details">电费结算明细</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="spot-summary">
+              <SpotSettlementSummaryTab />
+            </TabsContent>
+            
+            <TabsContent value="medium-long-term">
+              <MediumLongTermSettlementTab />
+            </TabsContent>
+            
+            <TabsContent value="settlement-docs">
+              <SettlementDocumentTab />
+            </TabsContent>
+            
+            <TabsContent value="bill-details">
+              <ElectricityBillDetailTab />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
