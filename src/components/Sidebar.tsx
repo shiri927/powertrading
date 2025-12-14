@@ -24,11 +24,14 @@ const navigation = [{
   name: "市场与基本面数据",
   icon: BarChart3,
   children: [{
-    name: "市场出清",
-    href: "/market-fundamentals/clearing"
+    name: "机组结算披露",
+    href: "/market-fundamentals/unit-settlement"
   }, {
-    name: "市场供需",
-    href: "/market-fundamentals/supply-demand"
+    name: "省内现货披露",
+    href: "/market-fundamentals/spot-disclosure"
+  }, {
+    name: "中长期行情",
+    href: "/market-fundamentals/medium-long-term"
   }, {
     name: "电网系统",
     href: "/market-fundamentals/grid"
