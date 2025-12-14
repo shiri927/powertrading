@@ -105,7 +105,6 @@ const App = () => (
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
-            <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/clearing-settlement" element={<RetailClearingSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
             
