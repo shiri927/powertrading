@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, Download, Upload, Search, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Users, Plus, Download, Upload, Search, TrendingUp, AlertCircle, CheckCircle, History } from "lucide-react";
 import { Customer, generateCustomers } from "@/lib/retail-data";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,7 +19,7 @@ const CustomerManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [packageFilter, setPackageFilter] = useState<string>("all");
-  const [voltageFilter, setVoltageFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<string>("all"); // 全部用户 / 已签约 / 历史用户
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -34,11 +35,18 @@ const CustomerManagement = () => {
                           customer.agentName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || customer.contractStatus === statusFilter;
       const matchesPackage = packageFilter === "all" || customer.packageType === packageFilter;
-      const matchesVoltage = voltageFilter === "all" || customer.voltageLevel === voltageFilter;
       
-      return matchesSearch && matchesStatus && matchesPackage && matchesVoltage;
+      // 视图模式筛选
+      let matchesView = true;
+      if (viewMode === "signed") {
+        matchesView = customer.contractStatus === "active";
+      } else if (viewMode === "history") {
+        matchesView = customer.contractStatus === "expired";
+      }
+      
+      return matchesSearch && matchesStatus && matchesPackage && matchesView;
     });
-  }, [customers, searchTerm, statusFilter, packageFilter, voltageFilter]);
+  }, [customers, searchTerm, statusFilter, packageFilter, viewMode]);
 
   // 分页
   const paginatedCustomers = useMemo(() => {
@@ -108,20 +116,20 @@ const CustomerManagement = () => {
       ));
       toast({
         title: "成功",
-        description: "客户信息已更新"
+        description: "用户信息已更新"
       });
     } else {
       // 新增
       const newCustomer: Customer = {
         ...editingCustomer,
-        id: `CUST-${String(customers.length + 1).padStart(4, '0')}`,
+        id: `USER-${String(customers.length + 1).padStart(4, '0')}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       } as Customer;
       setCustomers(prev => [newCustomer, ...prev]);
       toast({
         title: "成功",
-        description: "客户已添加"
+        description: "用户已添加"
       });
     }
     setIsEditOpen(false);
@@ -132,7 +140,7 @@ const CustomerManagement = () => {
       setCustomers(prev => prev.filter(c => c.id !== selectedCustomer.id));
       toast({
         title: "成功",
-        description: "客户已删除"
+        description: "用户已删除"
       });
       setIsDeleteOpen(false);
       setSelectedCustomer(null);
@@ -152,9 +160,9 @@ const CustomerManagement = () => {
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">客户管理</h1>
+        <h1 className="text-3xl font-bold text-foreground">用户管理</h1>
         <p className="text-muted-foreground mt-2">
-          零售客户信息管理与分析
+          集中存储与更新零售用户信息，支持已签约及历史签约用户信息的查看、维护与检索
         </p>
       </div>
 
@@ -162,20 +170,20 @@ const CustomerManagement = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">总客户数</CardTitle>
+            <CardTitle className="text-sm font-medium">总用户数</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              客户总数
+              用户总数
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">已签约客户</CardTitle>
+            <CardTitle className="text-sm font-medium">已签约用户</CardTitle>
             <CheckCircle className="h-4 w-4 text-[#00B04D]" />
           </CardHeader>
           <CardContent>
@@ -194,7 +202,7 @@ const CustomerManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.thisMonth}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              本月新签客户
+              本月新签用户
             </p>
           </CardContent>
         </Card>
@@ -213,6 +221,25 @@ const CustomerManagement = () => {
         </Card>
       </div>
 
+      {/* 视图切换 */}
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-medium text-muted-foreground">视图模式：</span>
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v)}>
+          <ToggleGroupItem value="all" className="px-4">
+            <Users className="h-4 w-4 mr-2" />
+            全部用户
+          </ToggleGroupItem>
+          <ToggleGroupItem value="signed" className="px-4">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            已签约用户
+          </ToggleGroupItem>
+          <ToggleGroupItem value="history" className="px-4">
+            <History className="h-4 w-4 mr-2" />
+            历史用户
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
       {/* 筛选和操作区 */}
       <Card>
         <CardHeader>
@@ -221,7 +248,7 @@ const CustomerManagement = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="搜索客户名称或代理名称..."
+                  placeholder="搜索用户名称或代理名称..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -253,22 +280,9 @@ const CustomerManagement = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={voltageFilter} onValueChange={setVoltageFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="电压等级" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部等级</SelectItem>
-                  <SelectItem value="10kV">10kV</SelectItem>
-                  <SelectItem value="35kV">35kV</SelectItem>
-                  <SelectItem value="110kV">110kV</SelectItem>
-                  <SelectItem value="220kV">220kV</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Button onClick={handleAddCustomer} className="bg-[#00B04D] hover:bg-[#009644]">
                 <Plus className="h-4 w-4 mr-2" />
-                新增客户
+                新增用户
               </Button>
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
@@ -286,14 +300,12 @@ const CustomerManagement = () => {
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
                 <tr className="border-b-2 border-[#00B04D]">
-                  <th className="text-left p-3 text-sm font-semibold">客户名称</th>
+                  <th className="text-left p-3 text-sm font-semibold">用户名称</th>
                   <th className="text-left p-3 text-sm font-semibold">套餐类型</th>
                   <th className="text-left p-3 text-sm font-semibold">代理名称</th>
-                  <th className="text-left p-3 text-sm font-semibold">签约起止时间</th>
+                  <th className="text-left p-3 text-sm font-semibold">签订起止时间</th>
                   <th className="text-left p-3 text-sm font-semibold">价格模式</th>
-                  <th className="text-right p-3 text-sm font-semibold">居间成本</th>
                   <th className="text-left p-3 text-sm font-semibold">签约状态</th>
-                  <th className="text-left p-3 text-sm font-semibold">电压等级</th>
                   <th className="text-right p-3 text-sm font-semibold">操作</th>
                 </tr>
               </thead>
@@ -315,11 +327,9 @@ const CustomerManagement = () => {
                       <Badge variant="outline">{customer.packageType}</Badge>
                     </td>
                     <td className="p-3">{customer.agentName}</td>
-                    <td className="p-3 text-sm">{customer.contractStartDate} ~ {customer.contractEndDate}</td>
+                    <td className="p-3 text-sm font-mono">{customer.contractStartDate} ~ {customer.contractEndDate}</td>
                     <td className="p-3">{customer.priceMode}</td>
-                    <td className="p-3 text-right font-mono">{customer.intermediaryCost.toFixed(2)}</td>
                     <td className="p-3">{getStatusBadge(customer.contractStatus)}</td>
-                    <td className="p-3">{customer.voltageLevel}</td>
                     <td className="p-3">
                       <div className="flex gap-2 justify-end">
                         <Button
@@ -375,11 +385,11 @@ const CustomerManagement = () => {
         </CardContent>
       </Card>
 
-      {/* 客户详情对话框 */}
+      {/* 用户详情对话框 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>客户详情</DialogTitle>
+            <DialogTitle>用户详情</DialogTitle>
           </DialogHeader>
           {selectedCustomer && (
             <Tabs defaultValue="basic" className="w-full">
@@ -390,11 +400,11 @@ const CustomerManagement = () => {
               <TabsContent value="basic" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-muted-foreground">客户名称</Label>
+                    <Label className="text-muted-foreground">用户名称</Label>
                     <p className="font-medium mt-1">{selectedCustomer.name}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">客户ID</Label>
+                    <Label className="text-muted-foreground">用户ID</Label>
                     <p className="font-medium font-mono mt-1">{selectedCustomer.id}</p>
                   </div>
                   <div>
@@ -456,16 +466,16 @@ const CustomerManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 新增/编辑客户对话框 */}
+      {/* 新增/编辑用户对话框 */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingCustomer.id ? '编辑客户' : '新增客户'}</DialogTitle>
+            <DialogTitle>{editingCustomer.id ? '编辑用户' : '新增用户'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>客户名称 *</Label>
+                <Label>用户名称 *</Label>
                 <Input
                   value={editingCustomer.name || ''}
                   onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
@@ -594,7 +604,7 @@ const CustomerManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除客户 "{selectedCustomer?.name}" 吗？此操作无法撤销。
+              确定要删除用户 "{selectedCustomer?.name}" 吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
