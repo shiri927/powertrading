@@ -6,10 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, Save, GitCompare, Download, RotateCcw, TrendingUp, DollarSign, Percent, AlertTriangle } from "lucide-react";
-import { PackageSimulation as PackageSimulationType } from "@/lib/retail-data";
+import { Calculator, Save, Download, RotateCcw, TrendingUp, TrendingDown, DollarSign, Percent, AlertTriangle, CheckCircle, XCircle, Users } from "lucide-react";
+import { PackageSimulation as PackageSimulationType, generateCustomers, Customer } from "@/lib/retail-data";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -17,6 +16,12 @@ const PackageSimulation = () => {
   const { toast } = useToast();
   const [calculationType, setCalculationType] = useState<'fixed' | 'floating'>('fixed');
   const [savedSchemes, setSavedSchemes] = useState<PackageSimulationType[]>([]);
+  
+  // 待签约用户列表
+  const [pendingCustomers] = useState<Customer[]>(() => 
+    generateCustomers(20).filter(c => c.contractStatus === 'pending')
+  );
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('manual');
   
   // 输入参数
   const [customerName, setCustomerName] = useState('');
@@ -43,20 +48,35 @@ const PackageSimulation = () => {
   // 计算结果
   const [calculationResult, setCalculationResult] = useState<PackageSimulationType | null>(null);
 
+  // 当选择待签约用户时，自动填充数据
+  useEffect(() => {
+    if (selectedCustomerId !== 'manual') {
+      const customer = pendingCustomers.find(c => c.id === selectedCustomerId);
+      if (customer) {
+        setCustomerName(customer.name);
+        setEstimatedUsage(customer.totalCapacity || 10000);
+        setIntermediaryCost(customer.intermediaryCost || 15);
+        // 模拟历史用电结构
+        setPeakRatio(25 + Math.floor(Math.random() * 15));
+        setFlatRatio(45 + Math.floor(Math.random() * 15));
+      }
+    }
+  }, [selectedCustomerId, pendingCustomers]);
+
   // 自动调整占比确保总和为100
   useEffect(() => {
     const total = peakRatio + flatRatio + valleyRatio;
     if (total !== 100) {
       const diff = 100 - total;
-      setFlatRatio(prev => Math.max(0, Math.min(100, prev + diff)));
+      setValleyRatio(prev => Math.max(0, Math.min(100, prev + diff)));
     }
-  }, [peakRatio, valleyRatio]);
+  }, [peakRatio, flatRatio]);
 
   const handleCalculate = () => {
     if (!customerName) {
       toast({
         title: "错误",
-        description: "请输入客户名称",
+        description: "请输入用户名称",
         variant: "destructive"
       });
       return;
@@ -146,6 +166,7 @@ const PackageSimulation = () => {
   };
 
   const handleReset = () => {
+    setSelectedCustomerId('manual');
     setCustomerName('');
     setSchemeName('');
     setEstimatedUsage(10000);
@@ -209,12 +230,49 @@ const PackageSimulation = () => {
     ];
   }, [calculationResult]);
 
+  // 敏感性分析数据
+  const sensitivityData = useMemo(() => {
+    if (!calculationResult) return [];
+    const basePrice = calculationType === 'fixed' ? fixedPrice : floatingBasePrice * (1 + floatingAdjustment / 100);
+    const totalCostValue = purchaseCost + intermediaryCost + transmissionCost + otherCosts;
+    
+    return [-10, -5, 5, 10].map(pct => {
+      const adjustedPrice = basePrice * (1 + pct / 100);
+      const peakEnergy = estimatedUsage * (peakRatio / 100);
+      const flatEnergy = estimatedUsage * (flatRatio / 100);
+      const valleyEnergy = estimatedUsage * (valleyRatio / 100);
+      const revenue = peakEnergy * adjustedPrice * 1.2 + flatEnergy * adjustedPrice + valleyEnergy * adjustedPrice * 0.6;
+      const cost = estimatedUsage * totalCostValue;
+      const profit = revenue - cost;
+      const margin = (profit / revenue) * 100;
+      
+      return {
+        label: `${pct > 0 ? '+' : ''}${pct}%`,
+        profit: profit / 10000,
+        margin: margin
+      };
+    });
+  }, [calculationResult, calculationType, fixedPrice, floatingBasePrice, floatingAdjustment, purchaseCost, intermediaryCost, transmissionCost, otherCosts, estimatedUsage, peakRatio, flatRatio, valleyRatio]);
+
+  // 签约建议
+  const signingRecommendation = useMemo(() => {
+    if (!calculationResult) return null;
+    const margin = calculationResult.profitMargin;
+    if (margin >= 15) {
+      return { level: 'recommend', text: '推荐签约', reason: '利润率 ≥ 15%，安全边际充足', color: 'text-[#00B04D]', bgColor: 'bg-[#00B04D]/10', icon: CheckCircle };
+    } else if (margin >= 8) {
+      return { level: 'caution', text: '谨慎签约', reason: '利润率 8% ~ 15%，需关注成本控制', color: 'text-orange-500', bgColor: 'bg-orange-500/10', icon: AlertTriangle };
+    } else {
+      return { level: 'not-recommend', text: '不建议签约', reason: '利润率 < 8%，风险较高', color: 'text-red-500', bgColor: 'bg-red-500/10', icon: XCircle };
+    }
+  }, [calculationResult]);
+
   return (
     <div className="p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-foreground">套餐模拟计算</h1>
         <p className="text-muted-foreground mt-2">
-          零售套餐方案测算与优化
+          标前计算器 - 帮助测算待签约用户的购电成本和利润空间，为零售交易签约提供参考依据
         </p>
       </div>
 
@@ -258,13 +316,37 @@ const PackageSimulation = () => {
               <CardTitle className="text-lg">基本信息</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* 待签约用户选择 */}
+              <div>
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  选择待签约用户
+                </Label>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="选择用户或手动输入" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">手动输入</SelectItem>
+                    {pendingCustomers.map(customer => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.packageType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  选择待签约用户后将自动填充预估用电量和峰平谷比例
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>客户名称 *</Label>
+                  <Label>用户名称 *</Label>
                   <Input
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="请输入客户名称"
+                    placeholder="请输入用户名称"
                   />
                 </div>
                 <div>
@@ -407,7 +489,7 @@ const PackageSimulation = () => {
                     className="font-mono text-right"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    适用于价格稳定期，客户承受固定电价
+                    适用于价格稳定期，用户承受固定电价
                   </p>
                 </div>
               ) : (
@@ -584,6 +666,42 @@ const PackageSimulation = () => {
                     </Card>
                   </div>
 
+                  {/* 签约建议 */}
+                  {signingRecommendation && (
+                    <div className={`p-4 rounded-lg border ${signingRecommendation.bgColor}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <signingRecommendation.icon className={`h-5 w-5 ${signingRecommendation.color}`} />
+                        <span className={`font-bold ${signingRecommendation.color}`}>
+                          {signingRecommendation.text}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{signingRecommendation.reason}</p>
+                    </div>
+                  )}
+
+                  {/* 敏感性分析 */}
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">敏感性分析</span>
+                    </div>
+                    <div className="space-y-2">
+                      {sensitivityData.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center text-sm p-2 bg-muted/30 rounded">
+                          <span className="text-muted-foreground">电价波动 {item.label}</span>
+                          <div className="flex gap-4">
+                            <span className={`font-mono ${item.profit >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                              ¥{item.profit.toFixed(2)}万
+                            </span>
+                            <span className={`font-mono ${item.margin >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                              ({item.margin.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="pt-4 border-t space-y-3">
                     <h4 className="font-semibold text-sm">详细分析</h4>
                     
@@ -684,7 +802,7 @@ const PackageSimulation = () => {
                 <thead className="bg-[#F1F8F4]">
                   <tr className="border-b-2 border-[#00B04D]">
                     <th className="text-left p-3 text-sm font-semibold">时间</th>
-                    <th className="text-left p-3 text-sm font-semibold">客户名称</th>
+                    <th className="text-left p-3 text-sm font-semibold">用户名称</th>
                     <th className="text-left p-3 text-sm font-semibold">方案名称</th>
                     <th className="text-left p-3 text-sm font-semibold">套餐类型</th>
                     <th className="text-right p-3 text-sm font-semibold">预估电量</th>
