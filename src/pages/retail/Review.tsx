@@ -1052,11 +1052,12 @@ const MediumLongTermReview = () => {
               <ComposedChart data={timeSeriesData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#888" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#888" label={{ value: '收益 (元)', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#888" label={{ value: '收益 (元)', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" label={{ value: '电价 (元/MWh)', angle: 90, position: 'insideRight', style: { fontSize: 12 } }} />
                 <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E8F0EC', borderRadius: '6px' }} formatter={(value: number) => [`¥${value.toFixed(2)}`, '']} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="revenueWithTrade" fill="#00B04D" name="做交易收益" opacity={0.8} />
-                <Bar dataKey="revenueWithoutTrade" fill="#9CA3AF" name="不做交易收益" opacity={0.6} />
+                <Bar dataKey="revenueWithTrade" fill="#00B04D" name="做交易收益" opacity={0.8} yAxisId="left" />
+                <Bar dataKey="revenueWithoutTrade" fill="#9CA3AF" name="不做交易收益" opacity={0.6} yAxisId="left" />
                 <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="电价趋势" dot={false} yAxisId="right" />
               </ComposedChart>
             </ResponsiveContainer>
