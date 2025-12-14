@@ -69,17 +69,7 @@ const navigation = [{
     href: "/retail/base-data"
   }, {
     name: "交易决策",
-    icon: ShoppingCart,
-    children: [{
-      name: "中长期交易策略",
-      href: "/retail/decision/medium-long-term"
-    }, {
-      name: "省间现货策略",
-      href: "/retail/decision/inter-provincial"
-    }, {
-      name: "省内现货策略",
-      href: "/retail/decision/intra-provincial"
-    }]
+    href: "/retail/decision"
   }, {
     name: "交易操作台",
     href: "/retail/console"
