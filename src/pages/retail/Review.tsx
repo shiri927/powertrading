@@ -23,7 +23,8 @@ import {
   FileText,
   DollarSign,
   Zap,
-  TrendingUpIcon
+  TrendingUpIcon,
+  Eye
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useState, useMemo } from "react";
@@ -45,6 +46,133 @@ import {
   ComposedChart 
 } from "recharts";
 import { cn } from "@/lib/utils";
+
+// ============= 报告管理组件 =============
+const analysisReportData = [
+  { id: 1, name: "2024年3月市场分析报告", category: "市场分析", period: "2024年3月", author: "分析团队", status: "已发布", publishDate: "2024-03-28", views: 156 },
+  { id: 2, name: "新能源发电效益分析报告", category: "效益分析", period: "2024年3月", author: "技术部", status: "已发布", publishDate: "2024-03-25", views: 98 },
+  { id: 3, name: "现货市场价格趋势分析", category: "价格分析", period: "2024年3月", author: "市场部", status: "已发布", publishDate: "2024-03-20", views: 203 },
+  { id: 4, name: "售电业务年度总结报告", category: "业务总结", period: "2023年度", author: "业务部", status: "审核中", publishDate: "-", views: 0 },
+  { id: 5, name: "电网系统运行分析报告", category: "运行分析", period: "2024年2月", author: "运维团队", status: "已发布", publishDate: "2024-03-01", views: 142 },
+];
+
+const ReportManagementTab = () => {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-3">
+          <Button variant="outline">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            选择时间
+          </Button>
+          <Button className="bg-[#00B04D] hover:bg-[#009644]">
+            <FileText className="h-4 w-4 mr-2" />
+            新建报告
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">总报告数</div>
+            <div className="text-2xl font-bold text-[#00B04D]">86</div>
+            <p className="text-xs text-muted-foreground mt-1">份报告</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">已发布</div>
+            <div className="text-2xl font-bold">72</div>
+            <p className="text-xs text-muted-foreground mt-1">份报告</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">审核中</div>
+            <div className="text-2xl font-bold text-orange-500">8</div>
+            <p className="text-xs text-muted-foreground mt-1">份报告</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">总浏览量</div>
+            <div className="text-2xl font-bold">12.5K</div>
+            <p className="text-xs text-muted-foreground mt-1">次</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">报告列表</CardTitle>
+          <CardDescription>查看和管理分析报告</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader className="bg-[#F1F8F4]">
+              <TableRow>
+                <TableHead>报告名称</TableHead>
+                <TableHead>类别</TableHead>
+                <TableHead>周期</TableHead>
+                <TableHead>作者</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>发布日期</TableHead>
+                <TableHead>浏览量</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {analysisReportData.map((report) => (
+                <TableRow key={report.id} className="hover:bg-[#F8FBFA]">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      {report.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{report.category}</Badge>
+                  </TableCell>
+                  <TableCell>{report.period}</TableCell>
+                  <TableCell className="text-muted-foreground">{report.author}</TableCell>
+                  <TableCell>
+                    <Badge variant={report.status === "已发布" ? "default" : "secondary"}>
+                      {report.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{report.publishDate}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {report.views}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {report.status === "已发布" && (
+                        <>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            查看
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Download className="h-4 w-4 mr-1" />
+                            下载
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 // ============= 数据结构定义 =============
 
@@ -2010,6 +2138,7 @@ const Review = () => {
           <TabsTrigger value="medium-long-term">中长期策略复盘</TabsTrigger>
           <TabsTrigger value="intra-provincial">省内现货复盘</TabsTrigger>
           <TabsTrigger value="inter-provincial">省间现货复盘</TabsTrigger>
+          <TabsTrigger value="report-management">报告管理</TabsTrigger>
         </TabsList>
 
         <TabsContent value="medium-long-term" className="mt-6">
@@ -2022,6 +2151,10 @@ const Review = () => {
 
         <TabsContent value="inter-provincial" className="mt-6">
           <InterProvincialReview />
+        </TabsContent>
+
+        <TabsContent value="report-management" className="mt-6">
+          <ReportManagementTab />
         </TabsContent>
       </Tabs>
     </div>
