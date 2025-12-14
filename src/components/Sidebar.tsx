@@ -80,14 +80,11 @@ const navigation = [{
     name: "零售交易",
     icon: ShoppingCart,
     children: [{
-      name: "客户管理",
+      name: "用户管理",
       href: "/retail/trading/customer-management"
     }, {
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
-    }, {
-      name: "零售执行情况追踪",
-      href: "/retail/trading/execution-tracking"
     }]
   }, {
     name: "出清管理",
