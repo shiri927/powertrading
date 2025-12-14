@@ -47,6 +47,10 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
+// 导入新的优化组件
+import IntraProvincialReviewTab from "./review/IntraProvincialReviewTab";
+import ForecastAdjustmentReviewTab from "./review/ForecastAdjustmentReviewTab";
+
 // ============= 报告管理组件 =============
 const analysisReportData = [
   { id: 1, name: "2024年3月市场分析报告", category: "市场分析", period: "2024年3月", author: "分析团队", status: "已发布", publishDate: "2024-03-28", views: 156 },
@@ -2942,7 +2946,7 @@ const Review = () => {
         </TabsContent>
 
         <TabsContent value="intra-provincial" className="mt-6">
-          <IntraProvincialReview />
+          <IntraProvincialReviewTab />
         </TabsContent>
 
         <TabsContent value="inter-provincial" className="mt-6">
@@ -2950,7 +2954,7 @@ const Review = () => {
         </TabsContent>
 
         <TabsContent value="forecast-adjustment" className="mt-6">
-          <ForecastAdjustmentReview />
+          <ForecastAdjustmentReviewTab />
         </TabsContent>
 
         <TabsContent value="report-management" className="mt-6">
