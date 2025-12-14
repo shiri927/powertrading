@@ -37,7 +37,6 @@ import RetailTrading from "./pages/retail/Trading";
 import RetailClearing from "./pages/retail/Clearing";
 import RetailSettlement from "./pages/retail/Settlement";
 import RetailReview from "./pages/retail/Review";
-import TradingLedger from "./pages/retail/TradingLedger";
 
 // Retail Trading pages
 import CustomerManagement from "./pages/retail/trading/CustomerManagement";
@@ -100,7 +99,6 @@ const App = () => (
             <Route path="/retail/clearing" element={<RetailClearing />} />
             <Route path="/retail/settlement" element={<RetailSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
-            <Route path="/retail/trading-ledger" element={<TradingLedger />} />
             
             {/* Revenue Analysis Routes */}
             <Route path="/revenue/generation" element={<GenerationRevenue />} />
