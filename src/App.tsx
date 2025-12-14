@@ -17,6 +17,9 @@ import GridSystem from "./pages/market-fundamentals/GridSystem";
 import EnergyQuotes from "./pages/market-fundamentals/EnergyQuotes";
 import NewsPolicy from "./pages/market-fundamentals/NewsPolicy";
 
+// Forecast pages
+import ForecastData from "./pages/forecast/ForecastData";
+
 // Revenue pages
 import GenerationRevenue from "./pages/revenue/Generation";
 import RetailRevenue from "./pages/revenue/Retail";
@@ -74,6 +77,9 @@ const App = () => (
             <Route path="/market-fundamentals/grid" element={<GridSystem />} />
             <Route path="/market-fundamentals/energy" element={<EnergyQuotes />} />
             <Route path="/market-fundamentals/news-policy" element={<NewsPolicy />} />
+            
+            {/* Forecast Routes */}
+            <Route path="/forecast" element={<ForecastData />} />
             
             {/* Renewable Energy Routes */}
             <Route path="/renewable/base-data" element={<RenewableBaseData />} />

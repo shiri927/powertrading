@@ -1,5 +1,5 @@
 import { NavLink } from "./NavLink";
-import { LayoutDashboard, TrendingUp, BarChart3, Zap, ShoppingCart, PieChart, Settings, ChevronDown, LineChart, FileText } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BarChart3, Zap, ShoppingCart, PieChart, Settings, ChevronDown, LineChart, FileText, Activity } from "lucide-react";
 import { useState } from "react";
 import heengyLogo from "@/assets/heengy-logo.png";
 import shanshuLogo from "@/assets/shanshu-logo.png";
@@ -39,6 +39,10 @@ const navigation = [{
     name: "新闻与政策",
     href: "/market-fundamentals/news-policy"
   }]
+}, {
+  name: "预测数据",
+  href: "/forecast",
+  icon: Activity
 }, {
   name: "新能源发电侧",
   icon: Zap,
