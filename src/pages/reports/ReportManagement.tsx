@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { Download, Save, RefreshCw, Settings2, FileText, LayoutGrid } from 'lucide-react';
+import { Download, Save, RefreshCw, Settings2, FileText, LayoutGrid, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -21,7 +21,6 @@ import PivotTable from '@/components/reports/PivotTable';
 import ReportTemplateList, { ReportTemplate } from '@/components/reports/ReportTemplateList';
 import {
   DATA_SOURCES,
-  DataSource,
   FieldMeta,
   getDataSourceById,
   generateSettlementData,
@@ -31,89 +30,80 @@ import {
 import {
   PivotConfig,
   PivotResult,
-  ValueFieldConfig,
-  FilterConfig,
   calculatePivot,
   createDefaultPivotConfig,
   exportToExcelData,
 } from '@/lib/reports/pivot-engine';
 import { supabase } from '@/integrations/supabase/client';
 
-// 预设报表模板
-const PRESET_TEMPLATES: ReportTemplate[] = [
-  {
-    id: 'settlement-detail',
-    name: '结算分类明细报表',
-    description: '按分类和交易类型汇总结算数据',
-    isPreset: true,
-    createdAt: new Date().toISOString(),
-    config: {
-      dataSourceId: 'settlement_data',
-      rowFields: ['category', 'trade_type', 'item_name'],
-      columnFields: [],
-      valueFields: [
-        { field: 'volume', aggregation: 'sum' },
-        { field: 'income_no_subsidy', aggregation: 'sum' },
-        { field: 'income_with_subsidy', aggregation: 'sum' },
-      ],
-      filters: [],
-      showRowTotals: true,
-      showColumnTotals: true,
-      showGrandTotal: true,
-    },
-  },
-  {
-    id: 'price-trend',
-    name: '日电价趋势分析',
-    description: '按省份和日期分析电价趋势',
-    isPreset: true,
-    createdAt: new Date().toISOString(),
-    config: {
-      dataSourceId: 'market_clearing_prices',
-      rowFields: ['province', 'price_date'],
-      columnFields: [],
-      valueFields: [
-        { field: 'day_ahead_price', aggregation: 'avg' },
-        { field: 'realtime_price', aggregation: 'avg' },
-      ],
-      filters: [],
-      showRowTotals: true,
-      showColumnTotals: true,
-      showGrandTotal: true,
-    },
-  },
-  {
-    id: 'trading-summary',
-    name: '交易数据汇总',
-    description: '按交易中心和品种汇总交易量',
-    isPreset: true,
-    createdAt: new Date().toISOString(),
-    config: {
-      dataSourceId: 'trading_data',
-      rowFields: ['trading_center', 'trade_type'],
-      columnFields: ['direction'],
-      valueFields: [
-        { field: 'contract_volume', aggregation: 'sum' },
-        { field: 'profit', aggregation: 'sum' },
-      ],
-      filters: [],
-      showRowTotals: true,
-      showColumnTotals: true,
-      showGrandTotal: true,
-    },
-  },
-];
-
 const ReportManagement = () => {
   const { toast } = useToast();
   
   // 状态管理
-  const [templates, setTemplates] = useState<ReportTemplate[]>(PRESET_TEMPLATES);
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [config, setConfig] = useState<PivotConfig>(createDefaultPivotConfig('settlement_data'));
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [showDesigner, setShowDesigner] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // 获取当前用户
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    getUser();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setCurrentUserId(session?.user?.id || null);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+  
+  // 从数据库加载模板
+  const loadTemplates = useCallback(async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .select('*')
+        .order('is_preset', { ascending: false })
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const loadedTemplates: ReportTemplate[] = (data || []).map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description || undefined,
+        config: row.config as unknown as PivotConfig,
+        isPreset: row.is_preset,
+        createdAt: row.created_at,
+        userId: row.user_id,
+      }));
+      
+      setTemplates(loadedTemplates);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast({
+        title: '加载模板失败',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, [toast]);
+  
+  // 初始加载模板
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
   
   // 获取当前数据源
   const currentDataSource = useMemo(() => 
@@ -167,9 +157,9 @@ const ReportManagement = () => {
   }, [config.dataSourceId, toast]);
   
   // 初始加载数据
-  useState(() => {
+  useEffect(() => {
     loadData();
-  });
+  }, []);
   
   // 计算透视表结果
   const pivotResult = useMemo<PivotResult | null>(() => {
@@ -298,48 +288,206 @@ const ReportManagement = () => {
     loadData();
   };
   
-  const handleCreateNewTemplate = () => {
-    const newTemplate: ReportTemplate = {
-      id: `custom-${Date.now()}`,
-      name: '新建报表',
-      createdAt: new Date().toISOString(),
-      config: createDefaultPivotConfig('settlement_data'),
-    };
-    setTemplates(prev => [...prev, newTemplate]);
-    setActiveTemplateId(newTemplate.id);
-    setConfig(newTemplate.config);
-  };
-  
-  const handleDeleteTemplate = (templateId: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== templateId));
-    if (activeTemplateId === templateId) {
-      setActiveTemplateId(null);
-      setConfig(createDefaultPivotConfig('settlement_data'));
+  const handleCreateNewTemplate = async () => {
+    if (!currentUserId) {
+      toast({
+        title: '请先登录',
+        description: '登录后即可创建和保存报表模板',
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const newConfig = createDefaultPivotConfig('settlement_data');
+      const { data, error } = await supabase
+        .from('report_templates')
+        .insert([{
+          user_id: currentUserId,
+          name: '新建报表',
+          config: JSON.parse(JSON.stringify(newConfig)),
+          is_preset: false,
+          is_shared: false,
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const newTemplate: ReportTemplate = {
+        id: data.id,
+        name: data.name,
+        config: data.config as unknown as PivotConfig,
+        createdAt: data.created_at,
+        isPreset: false,
+        userId: data.user_id,
+      };
+      
+      setTemplates(prev => [...prev, newTemplate]);
+      setActiveTemplateId(newTemplate.id);
+      setConfig(newTemplate.config);
+      
+      toast({ title: '报表已创建' });
+    } catch (error) {
+      console.error('Error creating template:', error);
+      toast({
+        title: '创建失败',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
   
-  const handleRenameTemplate = (templateId: string, newName: string) => {
-    setTemplates(prev =>
-      prev.map(t => t.id === templateId ? { ...t, name: newName } : t)
-    );
+  const handleDeleteTemplate = async (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template?.isPreset) {
+      toast({ title: '预设模板不可删除' });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('report_templates')
+        .delete()
+        .eq('id', templateId);
+      
+      if (error) throw error;
+      
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
+      if (activeTemplateId === templateId) {
+        setActiveTemplateId(null);
+        setConfig(createDefaultPivotConfig('settlement_data'));
+      }
+      
+      toast({ title: '模板已删除' });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast({
+        title: '删除失败',
+        variant: 'destructive',
+      });
+    }
   };
   
-  const handleSaveTemplate = () => {
-    if (activeTemplateId) {
+  const handleRenameTemplate = async (templateId: string, newName: string) => {
+    try {
+      const { error } = await supabase
+        .from('report_templates')
+        .update({ name: newName })
+        .eq('id', templateId);
+      
+      if (error) throw error;
+      
       setTemplates(prev =>
-        prev.map(t => t.id === activeTemplateId ? { ...t, config } : t)
+        prev.map(t => t.id === templateId ? { ...t, name: newName } : t)
       );
-      toast({ title: '报表已保存' });
-    } else {
-      const newTemplate: ReportTemplate = {
-        id: `custom-${Date.now()}`,
-        name: '新建报表',
-        createdAt: new Date().toISOString(),
-        config,
-      };
-      setTemplates(prev => [...prev, newTemplate]);
-      setActiveTemplateId(newTemplate.id);
-      toast({ title: '报表已保存' });
+    } catch (error) {
+      console.error('Error renaming template:', error);
+      toast({
+        title: '重命名失败',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const handleSaveTemplate = async () => {
+    if (!currentUserId) {
+      toast({
+        title: '请先登录',
+        description: '登录后即可保存报表模板',
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      if (activeTemplateId) {
+        // 更新现有模板
+        const template = templates.find(t => t.id === activeTemplateId);
+        if (template?.isPreset) {
+          // 预设模板另存为新模板
+          const { data, error } = await supabase
+            .from('report_templates')
+            .insert([{
+              user_id: currentUserId,
+              name: `${template.name} (副本)`,
+              description: template.description,
+              config: JSON.parse(JSON.stringify(config)),
+              is_preset: false,
+              is_shared: false,
+            }])
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          const newTemplate: ReportTemplate = {
+            id: data.id,
+            name: data.name,
+            description: data.description || undefined,
+            config: data.config as unknown as PivotConfig,
+            createdAt: data.created_at,
+            isPreset: false,
+            userId: data.user_id,
+          };
+          
+          setTemplates(prev => [...prev, newTemplate]);
+          setActiveTemplateId(newTemplate.id);
+          toast({ title: '已另存为新模板' });
+        } else {
+          // 更新自定义模板
+          const { error } = await supabase
+            .from('report_templates')
+            .update({ config: JSON.parse(JSON.stringify(config)) })
+            .eq('id', activeTemplateId);
+          
+          if (error) throw error;
+          
+          setTemplates(prev =>
+            prev.map(t => t.id === activeTemplateId ? { ...t, config } : t)
+          );
+          toast({ title: '报表已保存' });
+        }
+      } else {
+        // 创建新模板
+        const { data, error } = await supabase
+          .from('report_templates')
+          .insert([{
+            user_id: currentUserId,
+            name: '新建报表',
+            config: JSON.parse(JSON.stringify(config)),
+            is_preset: false,
+            is_shared: false,
+          }])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        const newTemplate: ReportTemplate = {
+          id: data.id,
+          name: data.name,
+          config: data.config as unknown as PivotConfig,
+          createdAt: data.created_at,
+          isPreset: false,
+          userId: data.user_id,
+        };
+        
+        setTemplates(prev => [...prev, newTemplate]);
+        setActiveTemplateId(newTemplate.id);
+        toast({ title: '报表已保存' });
+      }
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({
+        title: '保存失败',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -372,14 +520,20 @@ const ReportManagement = () => {
           <FileText className="h-4 w-4" />
           报表模板
         </h2>
-        <ReportTemplateList
-          templates={templates}
-          activeTemplateId={activeTemplateId}
-          onSelect={handleSelectTemplate}
-          onDelete={handleDeleteTemplate}
-          onRename={handleRenameTemplate}
-          onCreateNew={handleCreateNewTemplate}
-        />
+        {isLoadingTemplates ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <ReportTemplateList
+            templates={templates}
+            activeTemplateId={activeTemplateId}
+            onSelect={handleSelectTemplate}
+            onDelete={handleDeleteTemplate}
+            onRename={handleRenameTemplate}
+            onCreateNew={handleCreateNewTemplate}
+          />
+        )}
       </div>
       
       {/* 右侧主内容区 */}
@@ -416,8 +570,12 @@ const ReportManagement = () => {
               <RefreshCw className={`h-4 w-4 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
               刷新
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveTemplate}>
-              <Save className="h-4 w-4 mr-1.5" />
+            <Button variant="outline" size="sm" onClick={handleSaveTemplate} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1.5" />
+              )}
               保存
             </Button>
             <Button size="sm" onClick={handleExport} className="bg-[#00B04D] hover:bg-[#009040]">
