@@ -14,6 +14,459 @@ export type Database = {
   }
   public: {
     Tables: {
+      backtest_results: {
+        Row: {
+          avg_holding_time: number | null
+          backtest_end: string
+          backtest_start: string
+          created_at: string
+          cumulative_return: number | null
+          final_capital: number | null
+          id: string
+          initial_capital: number | null
+          max_drawdown: number | null
+          sharpe_ratio: number | null
+          strategy_id: string | null
+          total_trades: number | null
+          trades_detail: Json | null
+          user_id: string | null
+          win_rate: number | null
+        }
+        Insert: {
+          avg_holding_time?: number | null
+          backtest_end: string
+          backtest_start: string
+          created_at?: string
+          cumulative_return?: number | null
+          final_capital?: number | null
+          id?: string
+          initial_capital?: number | null
+          max_drawdown?: number | null
+          sharpe_ratio?: number | null
+          strategy_id?: string | null
+          total_trades?: number | null
+          trades_detail?: Json | null
+          user_id?: string | null
+          win_rate?: number | null
+        }
+        Update: {
+          avg_holding_time?: number | null
+          backtest_end?: string
+          backtest_start?: string
+          created_at?: string
+          cumulative_return?: number | null
+          final_capital?: number | null
+          id?: string
+          initial_capital?: number | null
+          max_drawdown?: number | null
+          sharpe_ratio?: number | null
+          strategy_id?: string | null
+          total_trades?: number | null
+          trades_detail?: Json | null
+          user_id?: string | null
+          win_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backtest_results_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "trading_strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clearing_records: {
+        Row: {
+          bid_id: string | null
+          clearing_date: string
+          created_at: string
+          day_ahead_clear_price: number | null
+          day_ahead_clear_volume: number | null
+          hour: number
+          id: string
+          realtime_clear_price: number | null
+          realtime_clear_volume: number | null
+          status: string
+          trading_type: string
+          trading_unit_id: string | null
+        }
+        Insert: {
+          bid_id?: string | null
+          clearing_date: string
+          created_at?: string
+          day_ahead_clear_price?: number | null
+          day_ahead_clear_volume?: number | null
+          hour: number
+          id?: string
+          realtime_clear_price?: number | null
+          realtime_clear_volume?: number | null
+          status?: string
+          trading_type: string
+          trading_unit_id?: string | null
+        }
+        Update: {
+          bid_id?: string | null
+          clearing_date?: string
+          created_at?: string
+          day_ahead_clear_price?: number | null
+          day_ahead_clear_volume?: number | null
+          hour?: number
+          id?: string
+          realtime_clear_price?: number | null
+          realtime_clear_volume?: number | null
+          status?: string
+          trading_type?: string
+          trading_unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clearing_records_bid_id_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "trading_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clearing_records_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_time_series: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          effective_date: string
+          id: string
+          price: number | null
+          time_point: number
+          volume: number | null
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          effective_date: string
+          id?: string
+          price?: number | null
+          time_point: number
+          volume?: number | null
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          effective_date?: string
+          id?: string
+          price?: number | null
+          time_point?: number
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_time_series_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          contract_name: string
+          contract_no: string
+          contract_type: string
+          counterparty: string | null
+          created_at: string
+          direction: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string
+          total_amount: number | null
+          total_volume: number | null
+          trading_unit_id: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          contract_name: string
+          contract_no: string
+          contract_type: string
+          counterparty?: string | null
+          created_at?: string
+          direction: string
+          end_date: string
+          id?: string
+          start_date: string
+          status?: string
+          total_amount?: number | null
+          total_volume?: number | null
+          trading_unit_id?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contract_name?: string
+          contract_no?: string
+          contract_type?: string
+          counterparty?: string | null
+          created_at?: string
+          direction?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string
+          total_amount?: number | null
+          total_volume?: number | null
+          trading_unit_id?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          agent_name: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          contract_status: string
+          created_at: string
+          customer_code: string
+          id: string
+          industry_type: string | null
+          intermediary_cost: number | null
+          is_active: boolean
+          name: string
+          package_type: string
+          price_mode: string | null
+          total_capacity: number | null
+          updated_at: string
+          voltage_level: string
+        }
+        Insert: {
+          address?: string | null
+          agent_name?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_status?: string
+          created_at?: string
+          customer_code: string
+          id?: string
+          industry_type?: string | null
+          intermediary_cost?: number | null
+          is_active?: boolean
+          name: string
+          package_type: string
+          price_mode?: string | null
+          total_capacity?: number | null
+          updated_at?: string
+          voltage_level: string
+        }
+        Update: {
+          address?: string | null
+          agent_name?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_status?: string
+          created_at?: string
+          customer_code?: string
+          id?: string
+          industry_type?: string | null
+          intermediary_cost?: number | null
+          is_active?: boolean
+          name?: string
+          package_type?: string
+          price_mode?: string | null
+          total_capacity?: number | null
+          updated_at?: string
+          voltage_level?: string
+        }
+        Relationships: []
+      }
+      energy_usage: {
+        Row: {
+          actual_energy: number | null
+          created_at: string
+          customer_id: string | null
+          deviation_rate: number | null
+          flat_energy: number | null
+          id: string
+          peak_energy: number | null
+          predicted_energy: number | null
+          profit_loss: number | null
+          total_energy: number
+          usage_date: string
+          valley_energy: number | null
+        }
+        Insert: {
+          actual_energy?: number | null
+          created_at?: string
+          customer_id?: string | null
+          deviation_rate?: number | null
+          flat_energy?: number | null
+          id?: string
+          peak_energy?: number | null
+          predicted_energy?: number | null
+          profit_loss?: number | null
+          total_energy: number
+          usage_date: string
+          valley_energy?: number | null
+        }
+        Update: {
+          actual_energy?: number | null
+          created_at?: string
+          customer_id?: string | null
+          deviation_rate?: number | null
+          flat_energy?: number | null
+          id?: string
+          peak_energy?: number | null
+          predicted_energy?: number | null
+          profit_loss?: number | null
+          total_energy?: number
+          usage_date?: string
+          valley_energy?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "energy_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_records: {
+        Row: {
+          allocation_price: number | null
+          created_at: string
+          customer_id: string | null
+          executed_price: number | null
+          executed_revenue: number | null
+          executed_volume: number
+          execution_date: string
+          execution_period: string | null
+          execution_progress: number | null
+          id: string
+          predicted_volume: number | null
+          status: string
+          volume_deviation: number | null
+          volume_deviation_rate: number | null
+        }
+        Insert: {
+          allocation_price?: number | null
+          created_at?: string
+          customer_id?: string | null
+          executed_price?: number | null
+          executed_revenue?: number | null
+          executed_volume: number
+          execution_date: string
+          execution_period?: string | null
+          execution_progress?: number | null
+          id?: string
+          predicted_volume?: number | null
+          status?: string
+          volume_deviation?: number | null
+          volume_deviation_rate?: number | null
+        }
+        Update: {
+          allocation_price?: number | null
+          created_at?: string
+          customer_id?: string | null
+          executed_price?: number | null
+          executed_revenue?: number | null
+          executed_volume?: number
+          execution_date?: string
+          execution_period?: string | null
+          execution_progress?: number | null
+          id?: string
+          predicted_volume?: number | null
+          status?: string
+          volume_deviation?: number | null
+          volume_deviation_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_records_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      load_predictions: {
+        Row: {
+          actual_load: number | null
+          confidence: number | null
+          created_at: string
+          hour: number
+          id: string
+          p10: number | null
+          p50: number | null
+          p90: number | null
+          prediction_date: string
+          prediction_type: string | null
+          trading_unit_id: string | null
+        }
+        Insert: {
+          actual_load?: number | null
+          confidence?: number | null
+          created_at?: string
+          hour: number
+          id?: string
+          p10?: number | null
+          p50?: number | null
+          p90?: number | null
+          prediction_date: string
+          prediction_type?: string | null
+          trading_unit_id?: string | null
+        }
+        Update: {
+          actual_load?: number | null
+          confidence?: number | null
+          created_at?: string
+          hour?: number
+          id?: string
+          p10?: number | null
+          p50?: number | null
+          p90?: number | null
+          prediction_date?: string
+          prediction_type?: string | null
+          trading_unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_predictions_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market_clearing_prices: {
         Row: {
           created_at: string | null
@@ -43,6 +496,92 @@ export type Database = {
           realtime_price?: number | null
         }
         Relationships: []
+      }
+      package_simulations: {
+        Row: {
+          break_even_price: number | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          estimated_monthly_usage: number | null
+          fixed_price: number | null
+          flat_ratio: number | null
+          floating_adjustment: number | null
+          floating_base_price: number | null
+          floating_price_type: string | null
+          gross_profit: number | null
+          id: string
+          intermediary_cost: number | null
+          other_costs: number | null
+          package_type: string
+          peak_ratio: number | null
+          profit_margin: number | null
+          purchase_cost: number | null
+          scheme_name: string
+          total_cost: number | null
+          total_revenue: number | null
+          transmission_cost: number | null
+          valley_ratio: number | null
+        }
+        Insert: {
+          break_even_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          estimated_monthly_usage?: number | null
+          fixed_price?: number | null
+          flat_ratio?: number | null
+          floating_adjustment?: number | null
+          floating_base_price?: number | null
+          floating_price_type?: string | null
+          gross_profit?: number | null
+          id?: string
+          intermediary_cost?: number | null
+          other_costs?: number | null
+          package_type: string
+          peak_ratio?: number | null
+          profit_margin?: number | null
+          purchase_cost?: number | null
+          scheme_name: string
+          total_cost?: number | null
+          total_revenue?: number | null
+          transmission_cost?: number | null
+          valley_ratio?: number | null
+        }
+        Update: {
+          break_even_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          estimated_monthly_usage?: number | null
+          fixed_price?: number | null
+          flat_ratio?: number | null
+          floating_adjustment?: number | null
+          floating_base_price?: number | null
+          floating_price_type?: string | null
+          gross_profit?: number | null
+          id?: string
+          intermediary_cost?: number | null
+          other_costs?: number | null
+          package_type?: string
+          peak_ratio?: number | null
+          profit_margin?: number | null
+          purchase_cost?: number | null
+          scheme_name?: string
+          total_cost?: number | null
+          total_revenue?: number | null
+          transmission_cost?: number | null
+          valley_ratio?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_simulations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {
@@ -77,6 +616,99 @@ export type Database = {
           module?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      power_stations: {
+        Row: {
+          commission_date: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string
+          grid_connection_voltage: string | null
+          id: string
+          installed_capacity: number
+          is_active: boolean
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          province: string
+          region: string | null
+          station_type: string
+          updated_at: string
+        }
+        Insert: {
+          commission_date?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          grid_connection_voltage?: string | null
+          id?: string
+          installed_capacity: number
+          is_active?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          province?: string
+          region?: string | null
+          station_type: string
+          updated_at?: string
+        }
+        Update: {
+          commission_date?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          grid_connection_voltage?: string | null
+          id?: string
+          installed_capacity?: number
+          is_active?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          province?: string
+          region?: string | null
+          station_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      price_predictions: {
+        Row: {
+          actual_day_ahead: number | null
+          actual_realtime: number | null
+          confidence: number | null
+          created_at: string
+          hour: number
+          id: string
+          predicted_day_ahead: number | null
+          predicted_realtime: number | null
+          prediction_date: string
+          province: string
+        }
+        Insert: {
+          actual_day_ahead?: number | null
+          actual_realtime?: number | null
+          confidence?: number | null
+          created_at?: string
+          hour: number
+          id?: string
+          predicted_day_ahead?: number | null
+          predicted_realtime?: number | null
+          prediction_date: string
+          province: string
+        }
+        Update: {
+          actual_day_ahead?: number | null
+          actual_realtime?: number | null
+          confidence?: number | null
+          created_at?: string
+          hour?: number
+          id?: string
+          predicted_day_ahead?: number | null
+          predicted_realtime?: number | null
+          prediction_date?: string
+          province?: string
         }
         Relationships: []
       }
@@ -154,6 +786,396 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      settlement_records: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          id: string
+          price: number | null
+          remark: string | null
+          settlement_month: string
+          settlement_no: string
+          side: string
+          status: string
+          sub_category: string | null
+          trading_unit_id: string | null
+          updated_at: string
+          volume: number
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          id?: string
+          price?: number | null
+          remark?: string | null
+          settlement_month: string
+          settlement_no: string
+          side: string
+          status?: string
+          sub_category?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+          volume: number
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          price?: number | null
+          remark?: string | null
+          settlement_month?: string
+          settlement_no?: string
+          side?: string
+          status?: string
+          sub_category?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_records_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_statements: {
+        Row: {
+          audited_at: string | null
+          audited_by: string | null
+          created_at: string
+          file_path: string | null
+          generated_at: string
+          id: string
+          period_end: string
+          period_start: string
+          statement_no: string
+          statement_type: string
+          status: string
+          total_amount: number
+          total_volume: number
+          trading_unit_id: string | null
+        }
+        Insert: {
+          audited_at?: string | null
+          audited_by?: string | null
+          created_at?: string
+          file_path?: string | null
+          generated_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          statement_no: string
+          statement_type: string
+          status?: string
+          total_amount: number
+          total_volume: number
+          trading_unit_id?: string | null
+        }
+        Update: {
+          audited_at?: string | null
+          audited_by?: string | null
+          created_at?: string
+          file_path?: string | null
+          generated_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          statement_no?: string
+          statement_type?: string
+          status?: string
+          total_amount?: number
+          total_volume?: number
+          trading_unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_statements_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_recommendations: {
+        Row: {
+          applied_at: string | null
+          confidence_level: number | null
+          created_at: string
+          expected_return: number | null
+          id: string
+          is_applied: boolean
+          market_status: Json | null
+          reasoning: string[] | null
+          recommendation_time: string
+          result_profit: number | null
+          risk_score: number | null
+          strategy_id: string | null
+          suggested_actions: Json | null
+          trading_unit_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          expected_return?: number | null
+          id?: string
+          is_applied?: boolean
+          market_status?: Json | null
+          reasoning?: string[] | null
+          recommendation_time?: string
+          result_profit?: number | null
+          risk_score?: number | null
+          strategy_id?: string | null
+          suggested_actions?: Json | null
+          trading_unit_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          expected_return?: number | null
+          id?: string
+          is_applied?: boolean
+          market_status?: Json | null
+          reasoning?: string[] | null
+          recommendation_time?: string
+          result_profit?: number | null
+          risk_score?: number | null
+          strategy_id?: string | null
+          suggested_actions?: Json | null
+          trading_unit_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_recommendations_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "trading_strategies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trading_bids: {
+        Row: {
+          bid_no: string
+          bid_price: number
+          bid_type: string
+          bid_volume: number
+          calendar_id: string | null
+          created_at: string
+          id: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          time_period: string | null
+          trading_unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bid_no: string
+          bid_price: number
+          bid_type: string
+          bid_volume: number
+          calendar_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          time_period?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bid_no?: string
+          bid_price?: number
+          bid_type?: string
+          bid_volume?: number
+          calendar_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          time_period?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trading_bids_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "trading_calendar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trading_bids_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trading_calendar: {
+        Row: {
+          announcement_time: string | null
+          created_at: string
+          execution_end: string | null
+          execution_start: string | null
+          id: string
+          sequence_no: string
+          status: string
+          submission_deadline: string | null
+          trading_center: string
+          trading_date: string
+          trading_type: string
+        }
+        Insert: {
+          announcement_time?: string | null
+          created_at?: string
+          execution_end?: string | null
+          execution_start?: string | null
+          id?: string
+          sequence_no: string
+          status?: string
+          submission_deadline?: string | null
+          trading_center: string
+          trading_date: string
+          trading_type: string
+        }
+        Update: {
+          announcement_time?: string | null
+          created_at?: string
+          execution_end?: string | null
+          execution_start?: string | null
+          id?: string
+          sequence_no?: string
+          status?: string
+          submission_deadline?: string | null
+          trading_center?: string
+          trading_date?: string
+          trading_type?: string
+        }
+        Relationships: []
+      }
+      trading_strategies: {
+        Row: {
+          created_at: string
+          description: string | null
+          expected_return: number | null
+          id: string
+          is_active: boolean
+          is_preset: boolean
+          name: string
+          risk_control: Json | null
+          risk_level: string
+          strategy_type: string
+          trading_params: Json | null
+          trigger_conditions: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expected_return?: number | null
+          id?: string
+          is_active?: boolean
+          is_preset?: boolean
+          name: string
+          risk_control?: Json | null
+          risk_level: string
+          strategy_type: string
+          trading_params?: Json | null
+          trigger_conditions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expected_return?: number | null
+          id?: string
+          is_active?: boolean
+          is_preset?: boolean
+          name?: string
+          risk_control?: Json | null
+          risk_level?: string
+          strategy_type?: string
+          trading_params?: Json | null
+          trigger_conditions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      trading_units: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          registered_capacity: number | null
+          station_id: string | null
+          trading_category: string
+          trading_center: string
+          unit_code: string
+          unit_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          registered_capacity?: number | null
+          station_id?: string | null
+          trading_category: string
+          trading_center: string
+          unit_code: string
+          unit_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          registered_capacity?: number | null
+          station_id?: string | null
+          trading_category?: string
+          trading_center?: string
+          unit_code?: string
+          unit_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trading_units_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "power_stations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_business_scope: {
         Row: {
