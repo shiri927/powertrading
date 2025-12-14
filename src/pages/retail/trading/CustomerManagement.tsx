@@ -11,10 +11,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Users, Plus, Download, Upload, Search, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
 import { Customer, generateCustomers } from "@/lib/retail-data";
 import { useToast } from "@/hooks/use-toast";
+
 const CustomerManagement = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>(() => generateCustomers(50));
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -31,10 +30,12 @@ const CustomerManagement = () => {
   // 筛选和搜索
   const filteredCustomers = useMemo(() => {
     return customers.filter(customer => {
-      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) || customer.agentName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          customer.agentName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || customer.contractStatus === statusFilter;
       const matchesPackage = packageFilter === "all" || customer.packageType === packageFilter;
       const matchesVoltage = voltageFilter === "all" || customer.voltageLevel === voltageFilter;
+      
       return matchesSearch && matchesStatus && matchesPackage && matchesVoltage;
     });
   }, [customers, searchTerm, statusFilter, packageFilter, voltageFilter]);
@@ -44,6 +45,7 @@ const CustomerManagement = () => {
     const start = (currentPage - 1) * pageSize;
     return filteredCustomers.slice(start, start + pageSize);
   }, [filteredCustomers, currentPage]);
+
   const totalPages = Math.ceil(filteredCustomers.length / pageSize);
 
   // 统计数据
@@ -61,13 +63,10 @@ const CustomerManagement = () => {
       const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
     }).length;
-    return {
-      total,
-      active,
-      thisMonth,
-      expiringSoon
-    };
+
+    return { total, active, thisMonth, expiringSoon };
   }, [customers]);
+
   const handleAddCustomer = () => {
     setEditingCustomer({
       name: '',
@@ -86,10 +85,12 @@ const CustomerManagement = () => {
     });
     setIsEditOpen(true);
   };
+
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
     setIsEditOpen(true);
   };
+
   const handleSaveCustomer = () => {
     if (!editingCustomer.name || !editingCustomer.agentName) {
       toast({
@@ -99,13 +100,12 @@ const CustomerManagement = () => {
       });
       return;
     }
+
     if (editingCustomer.id) {
       // 编辑
-      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? {
-        ...c,
-        ...editingCustomer,
-        updatedAt: new Date().toISOString()
-      } as Customer : c));
+      setCustomers(prev => prev.map(c => 
+        c.id === editingCustomer.id ? { ...c, ...editingCustomer, updatedAt: new Date().toISOString() } as Customer : c
+      ));
       toast({
         title: "成功",
         description: "客户信息已更新"
@@ -126,6 +126,7 @@ const CustomerManagement = () => {
     }
     setIsEditOpen(false);
   };
+
   const handleDeleteCustomer = () => {
     if (selectedCustomer) {
       setCustomers(prev => prev.filter(c => c.id !== selectedCustomer.id));
@@ -137,30 +138,21 @@ const CustomerManagement = () => {
       setSelectedCustomer(null);
     }
   };
+
   const getStatusBadge = (status: Customer['contractStatus']) => {
     const variants = {
-      active: {
-        variant: "default" as const,
-        label: "已签约",
-        className: "bg-[#00B04D] hover:bg-[#009644]"
-      },
-      expired: {
-        variant: "secondary" as const,
-        label: "已到期",
-        className: ""
-      },
-      pending: {
-        variant: "outline" as const,
-        label: "待签约",
-        className: "border-orange-500 text-orange-500"
-      }
+      active: { variant: "default" as const, label: "已签约", className: "bg-[#00B04D] hover:bg-[#009644]" },
+      expired: { variant: "secondary" as const, label: "已到期", className: "" },
+      pending: { variant: "outline" as const, label: "待签约", className: "border-orange-500 text-orange-500" }
     };
     const config = variants[status];
     return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
-  return <div className="p-8 space-y-8">
+
+  return (
+    <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">用户管理</h1>
+        <h1 className="text-3xl font-bold text-foreground">客户管理</h1>
         <p className="text-muted-foreground mt-2">
           零售客户信息管理与分析
         </p>
@@ -189,7 +181,7 @@ const CustomerManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.active}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              占比 {(stats.active / stats.total * 100).toFixed(1)}%
+              占比 {((stats.active / stats.total) * 100).toFixed(1)}%
             </p>
           </CardContent>
         </Card>
@@ -228,7 +220,12 @@ const CustomerManagement = () => {
             <div className="flex-1 w-full lg:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="搜索客户名称或代理名称..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+                <Input
+                  placeholder="搜索客户名称或代理名称..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -301,12 +298,16 @@ const CustomerManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedCustomers.map(customer => <tr key={customer.id} className="border-b hover:bg-[#F8FBFA] transition-colors">
+                {paginatedCustomers.map((customer) => (
+                  <tr key={customer.id} className="border-b hover:bg-[#F8FBFA] transition-colors">
                     <td className="p-3">
-                      <button className="text-[#00B04D] hover:underline font-medium" onClick={() => {
-                    setSelectedCustomer(customer);
-                    setIsDetailOpen(true);
-                  }}>
+                      <button
+                        className="text-[#00B04D] hover:underline font-medium"
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setIsDetailOpen(true);
+                        }}
+                      >
                         {customer.name}
                       </button>
                     </td>
@@ -321,18 +322,28 @@ const CustomerManagement = () => {
                     <td className="p-3">{customer.voltageLevel}</td>
                     <td className="p-3">
                       <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="ghost" onClick={() => handleEditCustomer(customer)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditCustomer(customer)}
+                        >
                           编辑
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => {
-                      setSelectedCustomer(customer);
-                      setIsDeleteOpen(true);
-                    }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setIsDeleteOpen(true);
+                          }}
+                        >
                           删除
                         </Button>
                       </div>
                     </td>
-                  </tr>)}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -343,10 +354,20 @@ const CustomerManagement = () => {
               共 {filteredCustomers.length} 条记录，第 {currentPage} / {totalPages} 页
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
                 上一页
               </Button>
-              <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
                 下一页
               </Button>
             </div>
@@ -360,7 +381,8 @@ const CustomerManagement = () => {
           <DialogHeader>
             <DialogTitle>客户详情</DialogTitle>
           </DialogHeader>
-          {selectedCustomer && <Tabs defaultValue="basic" className="w-full">
+          {selectedCustomer && (
+            <Tabs defaultValue="basic" className="w-full">
               <TabsList>
                 <TabsTrigger value="basic">基本信息</TabsTrigger>
                 <TabsTrigger value="contract">合同信息</TabsTrigger>
@@ -429,7 +451,8 @@ const CustomerManagement = () => {
                   </div>
                 </div>
               </TabsContent>
-            </Tabs>}
+            </Tabs>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -443,24 +466,24 @@ const CustomerManagement = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>客户名称 *</Label>
-                <Input value={editingCustomer.name || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                name: e.target.value
-              })} />
+                <Input
+                  value={editingCustomer.name || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                />
               </div>
               <div>
                 <Label>代理名称 *</Label>
-                <Input value={editingCustomer.agentName || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                agentName: e.target.value
-              })} />
+                <Input
+                  value={editingCustomer.agentName || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, agentName: e.target.value })}
+                />
               </div>
               <div>
                 <Label>套餐类型</Label>
-                <Select value={editingCustomer.packageType} onValueChange={value => setEditingCustomer({
-                ...editingCustomer,
-                packageType: value as Customer['packageType']
-              })}>
+                <Select
+                  value={editingCustomer.packageType}
+                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, packageType: value as Customer['packageType'] })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -473,10 +496,10 @@ const CustomerManagement = () => {
               </div>
               <div>
                 <Label>价格模式</Label>
-                <Select value={editingCustomer.priceMode} onValueChange={value => setEditingCustomer({
-                ...editingCustomer,
-                priceMode: value as Customer['priceMode']
-              })}>
+                <Select
+                  value={editingCustomer.priceMode}
+                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, priceMode: value as Customer['priceMode'] })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -488,31 +511,34 @@ const CustomerManagement = () => {
               </div>
               <div>
                 <Label>签约起始时间</Label>
-                <Input type="date" value={editingCustomer.contractStartDate || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                contractStartDate: e.target.value
-              })} />
+                <Input
+                  type="date"
+                  value={editingCustomer.contractStartDate || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contractStartDate: e.target.value })}
+                />
               </div>
               <div>
                 <Label>签约终止时间</Label>
-                <Input type="date" value={editingCustomer.contractEndDate || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                contractEndDate: e.target.value
-              })} />
+                <Input
+                  type="date"
+                  value={editingCustomer.contractEndDate || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contractEndDate: e.target.value })}
+                />
               </div>
               <div>
                 <Label>居间成本 (元/MWh)</Label>
-                <Input type="number" value={editingCustomer.intermediaryCost || 0} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                intermediaryCost: parseFloat(e.target.value) || 0
-              })} />
+                <Input
+                  type="number"
+                  value={editingCustomer.intermediaryCost || 0}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, intermediaryCost: parseFloat(e.target.value) || 0 })}
+                />
               </div>
               <div>
                 <Label>电压等级</Label>
-                <Select value={editingCustomer.voltageLevel} onValueChange={value => setEditingCustomer({
-                ...editingCustomer,
-                voltageLevel: value as Customer['voltageLevel']
-              })}>
+                <Select
+                  value={editingCustomer.voltageLevel}
+                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, voltageLevel: value as Customer['voltageLevel'] })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -526,31 +552,32 @@ const CustomerManagement = () => {
               </div>
               <div>
                 <Label>总用电容量 (MWh)</Label>
-                <Input type="number" value={editingCustomer.totalCapacity || 0} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                totalCapacity: parseFloat(e.target.value) || 0
-              })} />
+                <Input
+                  type="number"
+                  value={editingCustomer.totalCapacity || 0}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, totalCapacity: parseFloat(e.target.value) || 0 })}
+                />
               </div>
               <div>
                 <Label>行业类型</Label>
-                <Input value={editingCustomer.industryType || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                industryType: e.target.value
-              })} />
+                <Input
+                  value={editingCustomer.industryType || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, industryType: e.target.value })}
+                />
               </div>
               <div>
                 <Label>联系人</Label>
-                <Input value={editingCustomer.contactPerson || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                contactPerson: e.target.value
-              })} />
+                <Input
+                  value={editingCustomer.contactPerson || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contactPerson: e.target.value })}
+                />
               </div>
               <div>
                 <Label>联系电话</Label>
-                <Input value={editingCustomer.contactPhone || ''} onChange={e => setEditingCustomer({
-                ...editingCustomer,
-                contactPhone: e.target.value
-              })} />
+                <Input
+                  value={editingCustomer.contactPhone || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contactPhone: e.target.value })}
+                />
               </div>
             </div>
           </div>
@@ -578,6 +605,8 @@ const CustomerManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>;
+    </div>
+  );
 };
+
 export default CustomerManagement;
