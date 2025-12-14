@@ -108,10 +108,12 @@ const BaseData = () => {
       </div>
 
       <Tabs defaultValue="generation-plan" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="generation-plan">场站发电计划</TabsTrigger>
+          <TabsTrigger value="power-prediction">短期功率预测</TabsTrigger>
           <TabsTrigger value="contract-management">合同管理</TabsTrigger>
           <TabsTrigger value="contract-analysis">合同分析</TabsTrigger>
+          <TabsTrigger value="trading-calendar">交易日历</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generation-plan" className="space-y-6">
@@ -869,6 +871,295 @@ const BaseData = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* 短期功率预测 Tab */}
+        <TabsContent value="power-prediction" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Select defaultValue="all">
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="选择交易单元" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部交易单元</SelectItem>
+                  {tradingUnits.map((unit) => (
+                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[180px] justify-start">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(new Date(), "yyyy-MM-dd")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={new Date()} />
+                </PopoverContent>
+              </Popover>
+              <Button>查询</Button>
+              <Button variant="outline">重置</Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline">
+                <FileText className="h-4 w-4 mr-2" />
+                导出数据
+              </Button>
+            </div>
+          </div>
+
+          {/* 预测准确率指标卡片 */}
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">超短期准确率</p>
+                    <p className="text-2xl font-bold text-primary font-mono">94.2%</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">短期准确率</p>
+                    <p className="text-2xl font-bold text-primary font-mono">91.8%</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">平均预测偏差</p>
+                    <p className="text-2xl font-bold text-warning font-mono">3.6%</p>
+                  </div>
+                  <BarChart3 className="h-5 w-5 text-warning" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">预测覆盖率</p>
+                    <p className="text-2xl font-bold text-primary font-mono">100%</p>
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 功率预测图表 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">短期功率预测曲线</CardTitle>
+                  <CardDescription>P10/P50/P90 置信区间与实际出力对比</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Badge variant="outline">15分钟</Badge>
+                  <Badge variant="secondary">1小时</Badge>
+                  <Badge variant="secondary">日</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={Array.from({ length: 96 }, (_, i) => {
+                  const hour = Math.floor(i / 4);
+                  const minute = (i % 4) * 15;
+                  const baseValue = 80 + Math.sin(i / 10) * 30 + Math.random() * 10;
+                  return {
+                    time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                    p10: Math.max(0, baseValue - 15 - Math.random() * 5),
+                    p50: baseValue,
+                    p90: baseValue + 15 + Math.random() * 5,
+                    actual: baseValue + (Math.random() - 0.5) * 10,
+                  };
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10 }} interval={11} />
+                  <YAxis tick={{ fontSize: 10 }} domain={[0, 150]} unit=" MW" />
+                  <Tooltip 
+                    contentStyle={{ fontSize: 12 }}
+                    formatter={(value: number) => [`${value.toFixed(1)} MW`]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line type="monotone" dataKey="p90" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" name="P90" dot={false} />
+                  <Line type="monotone" dataKey="p50" stroke="#00B04D" strokeWidth={2} name="P50预测" dot={false} />
+                  <Line type="monotone" dataKey="p10" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" name="P10" dot={false} />
+                  <Line type="monotone" dataKey="actual" stroke="#f59e0b" strokeWidth={2} name="实际出力" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* 预测偏差分析表格 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">预测偏差分析</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border max-h-[400px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
+                    <TableRow>
+                      <TableHead>时间</TableHead>
+                      <TableHead className="text-right">预测功率 (MW)</TableHead>
+                      <TableHead className="text-right">实际功率 (MW)</TableHead>
+                      <TableHead className="text-right">偏差 (MW)</TableHead>
+                      <TableHead className="text-right">偏差率 (%)</TableHead>
+                      <TableHead>状态</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const predicted = 80 + Math.sin(i / 3) * 30;
+                      const actual = predicted + (Math.random() - 0.5) * 15;
+                      const deviation = actual - predicted;
+                      const deviationRate = (deviation / predicted) * 100;
+                      return (
+                        <TableRow key={i} className="hover:bg-[#F8FBFA]">
+                          <TableCell className="font-mono">{`${i.toString().padStart(2, '0')}:00`}</TableCell>
+                          <TableCell className="text-right font-mono">{predicted.toFixed(1)}</TableCell>
+                          <TableCell className="text-right font-mono">{actual.toFixed(1)}</TableCell>
+                          <TableCell className={cn("text-right font-mono", deviation > 0 ? "text-red-500" : "text-green-500")}>
+                            {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}
+                          </TableCell>
+                          <TableCell className={cn("text-right font-mono", Math.abs(deviationRate) > 10 ? "text-red-500" : "text-green-500")}>
+                            {deviationRate > 0 ? '+' : ''}{deviationRate.toFixed(1)}%
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={Math.abs(deviationRate) > 10 ? "destructive" : "secondary"}>
+                              {Math.abs(deviationRate) > 10 ? "偏差过大" : "正常"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 交易日历 Tab */}
+        <TabsContent value="trading-calendar" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Select defaultValue="all">
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="选择交易中心" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部交易中心</SelectItem>
+                  <SelectItem value="shandong">山东交易中心</SelectItem>
+                  <SelectItem value="shanxi">山西交易中心</SelectItem>
+                  <SelectItem value="zhejiang">浙江交易中心</SelectItem>
+                  <SelectItem value="national">国家交易中心</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select defaultValue="all">
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="选择交易类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部类型</SelectItem>
+                  <SelectItem value="medium-long">中长期交易</SelectItem>
+                  <SelectItem value="spot">现货交易</SelectItem>
+                  <SelectItem value="green">绿电交易</SelectItem>
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[180px] justify-start">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(new Date(), "yyyy-MM")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={new Date()} />
+                </PopoverContent>
+              </Popover>
+              <Button>查询</Button>
+              <Button variant="outline">重置</Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            {/* 日历视图 */}
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle className="text-base">交易日历</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar mode="single" className="rounded-md border" />
+              </CardContent>
+            </Card>
+
+            {/* 交易记录列表 */}
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">本月交易安排</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border max-h-[500px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
+                      <TableRow>
+                        <TableHead>日期</TableHead>
+                        <TableHead>交易中心</TableHead>
+                        <TableHead>交易类型</TableHead>
+                        <TableHead>交易内容</TableHead>
+                        <TableHead>交易时间</TableHead>
+                        <TableHead>执行时段</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[
+                        { date: "2025-12-02", center: "山东交易中心", type: "中长期", content: "月度集中竞价", time: "09:00-11:00", period: "2025-01" },
+                        { date: "2025-12-05", center: "国家交易中心", type: "省间现货", content: "省间电力交易", time: "10:00-12:00", period: "2025-12-06" },
+                        { date: "2025-12-08", center: "山西交易中心", type: "绿电交易", content: "绿电交易申报", time: "09:00-17:00", period: "2025-Q1" },
+                        { date: "2025-12-10", center: "浙江交易中心", type: "中长期", content: "月内滚动交易", time: "14:00-16:00", period: "2025-12" },
+                        { date: "2025-12-12", center: "山东交易中心", type: "现货交易", content: "日前现货申报", time: "08:00-10:00", period: "2025-12-13" },
+                        { date: "2025-12-15", center: "国家交易中心", type: "中长期", content: "年度双边协商", time: "全天", period: "2026年" },
+                        { date: "2025-12-18", center: "山西交易中心", type: "现货交易", content: "日内滚动交易", time: "每2小时", period: "2025-12-18" },
+                        { date: "2025-12-20", center: "浙江交易中心", type: "绿电交易", content: "绿证交易", time: "10:00-15:00", period: "2026-Q1" },
+                      ].map((item, i) => (
+                        <TableRow key={i} className="hover:bg-[#F8FBFA]">
+                          <TableCell className="font-mono">{item.date}</TableCell>
+                          <TableCell>{item.center}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              item.type === "中长期" ? "default" : 
+                              item.type === "现货交易" ? "secondary" : 
+                              "outline"
+                            }>
+                              {item.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{item.content}</TableCell>
+                          <TableCell className="font-mono text-muted-foreground">{item.time}</TableCell>
+                          <TableCell className="font-mono">{item.period}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
