@@ -10,8 +10,9 @@ import NotFound from "./pages/NotFound";
 
 
 // Market Fundamentals pages
-import MarketClearing from "./pages/market-fundamentals/MarketClearing";
-import MarketSupplyDemand from "./pages/market-fundamentals/MarketSupplyDemand";
+import UnitSettlement from "./pages/market-fundamentals/UnitSettlement";
+import SpotDisclosure from "./pages/market-fundamentals/SpotDisclosure";
+import MediumLongTermMarket from "./pages/market-fundamentals/MediumLongTerm";
 import WeatherData from "./pages/market-fundamentals/WeatherData";
 import GridSystem from "./pages/market-fundamentals/GridSystem";
 import EnergyQuotes from "./pages/market-fundamentals/EnergyQuotes";
@@ -71,8 +72,9 @@ const App = () => (
             
             
             {/* Market Fundamentals Routes */}
-            <Route path="/market-fundamentals/clearing" element={<MarketClearing />} />
-            <Route path="/market-fundamentals/supply-demand" element={<MarketSupplyDemand />} />
+            <Route path="/market-fundamentals/unit-settlement" element={<UnitSettlement />} />
+            <Route path="/market-fundamentals/spot-disclosure" element={<SpotDisclosure />} />
+            <Route path="/market-fundamentals/medium-long-term" element={<MediumLongTermMarket />} />
             <Route path="/market-fundamentals/weather" element={<WeatherData />} />
             <Route path="/market-fundamentals/grid" element={<GridSystem />} />
             <Route path="/market-fundamentals/energy" element={<EnergyQuotes />} />
