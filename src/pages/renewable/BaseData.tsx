@@ -135,13 +135,13 @@ const BaseData = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="generation-plan" className="space-y-6">
+      <Tabs defaultValue="trading-calendar" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="trading-calendar">交易日历</TabsTrigger>
           <TabsTrigger value="generation-plan">场站发电计划</TabsTrigger>
           <TabsTrigger value="power-prediction">短期功率预测</TabsTrigger>
           <TabsTrigger value="contract-management">合同管理</TabsTrigger>
           <TabsTrigger value="contract-analysis">合同分析</TabsTrigger>
-          <TabsTrigger value="trading-calendar">交易日历</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generation-plan" className="space-y-6">
