@@ -12,6 +12,7 @@ export interface ReportTemplate {
   config: PivotConfig;
   createdAt: string;
   isPreset?: boolean;
+  userId?: string | null;
 }
 
 interface ReportTemplateListProps {

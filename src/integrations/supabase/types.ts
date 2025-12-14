@@ -119,6 +119,42 @@ export type Database = {
         }
         Relationships: []
       }
+      report_templates: {
+        Row: {
+          config: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_preset: boolean
+          is_shared: boolean
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_preset?: boolean
+          is_shared?: boolean
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_preset?: boolean
+          is_shared?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_business_scope: {
         Row: {
           created_at: string
