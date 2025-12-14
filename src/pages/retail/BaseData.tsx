@@ -8,10 +8,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
-import { Plus, Search, TrendingUp, BarChart3, Eye } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { Plus, Search, TrendingUp, BarChart3, Eye, CalendarIcon } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, ComposedChart } from "recharts";
+import { cn } from "@/lib/utils";
 
 // 模拟数据生成
 const generatePowerPlanMetrics = () => {
@@ -51,14 +57,122 @@ const generatePositionAnalysisData = () => {
   }));
 };
 
+// 交易日历数据
+const tradingCalendarData = [{
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-18)",
+  time: "1000-1600",
+  period: "20240418-20240418"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-19)",
+  time: "1000-1600",
+  period: "20240419-20240419"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年04月16日曲线交易(2024-4-20)",
+  time: "1000-1600",
+  period: "20240420-20240420"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年4月21-30日『午后高峰调整交易』(现...",
+  time: "1300-1500",
+  period: "20240421-20240430"
+}, {
+  date: "20240416",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年4月21-30日『晚间高峰调整交易』(现...",
+  time: "1000-1100",
+  period: "20240421-20240430"
+}, {
+  date: "20240418",
+  center: "山东电力交易中心",
+  type: "交易序列",
+  content: "2024年5月挂牌1号曲线交易",
+  time: "0900-1100",
+  period: "20240501-20240531"
+}, {
+  date: "20240418",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "2024年5月挂牌1号1天临时组合交易补偿措施(组...",
+  time: "0900-1200",
+  period: "20240501-20240531"
+}, {
+  date: "20240424",
+  center: "浙江电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年5月5日晚间高峰组合交易(曲线交易)",
+  time: "1300-1500",
+  period: "20240501-20240531"
+}, {
+  date: "20240424",
+  center: "山西电力交易中心",
+  type: "交易序列",
+  content: "发电商2024年5月交易组合高峰时段交易",
+  time: "0900-1100",
+  period: "20240501-20240531"
+}, {
+  date: "20240425",
+  center: "山东电力交易中心",
+  type: "交易序列",
+  content: "2024年5月1-10日上午时段组合交易(曲线交易)",
+  time: "1000-1600",
+  period: "20240501-20240510"
+}];
+
 const BaseData = () => {
   const [contractFilter, setContractFilter] = useState({ tradingCenter: "all", tradingUnit: "all", keyword: "" });
   const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11" });
+  
+  // 交易日历状态
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date(2024, 3, 1));
+  const [calendarCenter, setCalendarCenter] = useState("all");
+  const [calendarKeyword, setCalendarKeyword] = useState("");
+  const [calendarFilterDate, setCalendarFilterDate] = useState<Date | undefined>();
+  const [calendarTab, setCalendarTab] = useState("sequence");
 
   const powerPlanMetrics = generatePowerPlanMetrics();
   const powerPlanData = generatePowerPlanData();
   const contractData = generateContractData();
   const positionData = generatePositionAnalysisData();
+
+  // 筛选交易日历数据
+  const filteredCalendarData = useMemo(() => {
+    return tradingCalendarData.filter(row => {
+      if (calendarCenter !== "all") {
+        const centerMap: Record<string, string> = {
+          shanxi: "山西电力交易中心",
+          shandong: "山东电力交易中心",
+          zhejiang: "浙江电力交易中心"
+        };
+        if (row.center !== centerMap[calendarCenter]) return false;
+      }
+      if (calendarKeyword && !row.content.toLowerCase().includes(calendarKeyword.toLowerCase())) {
+        return false;
+      }
+      if (calendarFilterDate) {
+        const filterDateStr = format(calendarFilterDate, "yyyyMMdd");
+        if (row.date !== filterDateStr) return false;
+      }
+      return true;
+    });
+  }, [calendarCenter, calendarKeyword, calendarFilterDate]);
+
+  const handleCalendarReset = () => {
+    setCalendarCenter("all");
+    setCalendarKeyword("");
+    setCalendarFilterDate(undefined);
+  };
 
   // 筛选合同数据
   const filteredContracts = contractData.filter(contract => {
@@ -80,16 +194,182 @@ const BaseData = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">基础数据管理</h1>
         <p className="text-muted-foreground mt-2">
-          电量计划、合同管理及仓位分析
+          交易日历、电量计划、合同管理及仓位分析
         </p>
       </div>
 
-      <Tabs defaultValue="power-plan" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="calendar" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="calendar">交易日历</TabsTrigger>
           <TabsTrigger value="power-plan">电量计划</TabsTrigger>
           <TabsTrigger value="contract">合同管理</TabsTrigger>
           <TabsTrigger value="analysis">合同分析</TabsTrigger>
         </TabsList>
+
+        {/* 交易日历 */}
+        <TabsContent value="calendar" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 日历选择 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">选择日期</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar 
+                  mode="single" 
+                  selected={calendarDate} 
+                  onSelect={setCalendarDate} 
+                  className="rounded-md border w-full" 
+                />
+              </CardContent>
+            </Card>
+
+            {/* 筛选条件 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">筛选条件</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      交易中心
+                    </label>
+                    <Select value={calendarCenter} onValueChange={setCalendarCenter}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部</SelectItem>
+                        <SelectItem value="shanxi">山西电力交易中心</SelectItem>
+                        <SelectItem value="shandong">山东电力交易中心</SelectItem>
+                        <SelectItem value="zhejiang">浙江电力交易中心</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      关键字
+                    </label>
+                    <Input 
+                      placeholder="请输入关键字" 
+                      value={calendarKeyword} 
+                      onChange={e => setCalendarKeyword(e.target.value)} 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      日期
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className={cn("w-full justify-start text-left font-normal", !calendarFilterDate && "text-muted-foreground")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {calendarFilterDate ? format(calendarFilterDate, "yyyy-MM-dd") : <span>选择日期</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar 
+                          mode="single" 
+                          selected={calendarFilterDate} 
+                          onSelect={setCalendarFilterDate} 
+                          initialFocus 
+                          className="pointer-events-auto" 
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <Button variant="outline" onClick={handleCalendarReset}>重置</Button>
+                    <Button>查询</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 交易记录 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <Tabs value={calendarTab} onValueChange={setCalendarTab} className="w-full">
+                  <div className="flex items-center justify-between">
+                    <TabsList>
+                      <TabsTrigger value="todo">待办</TabsTrigger>
+                      <TabsTrigger value="notice">公告</TabsTrigger>
+                      <TabsTrigger value="sequence">序列</TabsTrigger>
+                    </TabsList>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">批量操作</Button>
+                      <Button size="sm">+ 新建</Button>
+                    </div>
+                  </div>
+                  
+                  <TabsContent value="sequence" className="mt-4">
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox />
+                            </TableHead>
+                            <TableHead>日期</TableHead>
+                            <TableHead>交易中心</TableHead>
+                            <TableHead>类型</TableHead>
+                            <TableHead className="min-w-[300px]">内容</TableHead>
+                            <TableHead>交易时间</TableHead>
+                            <TableHead>执行起止时间</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredCalendarData.length > 0 ? filteredCalendarData.map((row, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                <Checkbox />
+                              </TableCell>
+                              <TableCell className="font-medium">{row.date}</TableCell>
+                              <TableCell>{row.center}</TableCell>
+                              <TableCell>{row.type}</TableCell>
+                              <TableCell className="text-primary hover:underline cursor-pointer">
+                                {row.content}
+                              </TableCell>
+                              <TableCell>{row.time}</TableCell>
+                              <TableCell>{row.period}</TableCell>
+                            </TableRow>
+                          )) : (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                暂无符合条件的交易记录
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="todo">
+                    <div className="text-center py-8 text-muted-foreground">
+                      暂无待办事项
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="notice">
+                    <div className="text-center py-8 text-muted-foreground">
+                      暂无公告信息
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </CardHeader>
+          </Card>
+        </TabsContent>
 
         {/* 电量计划 */}
         <TabsContent value="power-plan" className="space-y-4">
