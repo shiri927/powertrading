@@ -34,8 +34,7 @@ import RenewableReview from "./pages/renewable/Review";
 import RetailBaseData from "./pages/retail/BaseData";
 import RetailConsole from "./pages/retail/Console";
 import RetailTrading from "./pages/retail/Trading";
-import RetailClearing from "./pages/retail/Clearing";
-import RetailSettlement from "./pages/retail/Settlement";
+import RetailClearingSettlement from "./pages/retail/ClearingSettlement";
 import RetailReview from "./pages/retail/Review";
 
 // Retail Trading pages
@@ -99,8 +98,7 @@ const App = () => (
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
-            <Route path="/retail/clearing" element={<RetailClearing />} />
-            <Route path="/retail/settlement" element={<RetailSettlement />} />
+            <Route path="/retail/clearing-settlement" element={<RetailClearingSettlement />} />
             <Route path="/retail/review" element={<RetailReview />} />
             
             {/* Revenue Analysis Routes */}
