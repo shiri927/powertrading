@@ -87,11 +87,8 @@ const navigation = [{
     name: "用电负荷管理",
     href: "/retail/load-management"
   }, {
-    name: "出清管理",
-    href: "/retail/clearing"
-  }, {
-    name: "结算管理",
-    href: "/retail/settlement"
+    name: "出清与结算",
+    href: "/retail/clearing-settlement"
   }, {
     name: "复盘分析",
     href: "/retail/review"
