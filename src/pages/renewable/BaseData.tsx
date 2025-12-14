@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, ComposedChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle, Clock, Edit, Info, BarChart3 } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle, Clock, Edit, Info, BarChart3, Bell, RefreshCw, Eye, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -35,8 +37,26 @@ const generatePositionAnalysisData = () => {
     volume: 800 + Math.random() * 400,
     avgPrice: 350 + Math.random() * 100,
     contracts: Math.floor(2 + Math.random() * 3),
+    productionForecast: 750 + Math.random() * 450, // 产能预测
+    settlementVolume: 600 + Math.random() * 300, // 结算电量
   }));
 };
+
+// 待办事项数据
+const generateTodoData = () => [
+  { id: "T001", title: "月度集中竞价申报", center: "山东交易中心", deadline: "2025-12-02 11:00", priority: "high" as const, status: "pending" as const, countdown: "2天" },
+  { id: "T002", title: "省间现货交易确认", center: "国家交易中心", deadline: "2025-12-05 12:00", priority: "high" as const, status: "in-progress" as const, countdown: "5天" },
+  { id: "T003", title: "绿电交易方案编制", center: "山西交易中心", deadline: "2025-12-08 17:00", priority: "medium" as const, status: "pending" as const, countdown: "8天" },
+  { id: "T004", title: "月内滚动交易申报", center: "浙江交易中心", deadline: "2025-12-10 16:00", priority: "low" as const, status: "pending" as const, countdown: "10天" },
+];
+
+// 公告数据
+const generateAnnouncementData = () => [
+  { id: "A001", title: "关于2025年1月月度集中竞价交易的公告", source: "山东交易中心", time: "2025-11-28 14:30", isRead: false },
+  { id: "A002", title: "省间现货交易规则调整通知", source: "国家交易中心", time: "2025-11-27 10:00", isRead: true },
+  { id: "A003", title: "绿电交易系统升级公告", source: "山西交易中心", time: "2025-11-26 16:45", isRead: true },
+  { id: "A004", title: "2025年年度交易序列发布通知", source: "浙江交易中心", time: "2025-11-25 09:00", isRead: false },
+];
 
 const BaseData = () => {
   const [selectedYear, setSelectedYear] = useState<Date>(new Date(2024, 0, 1));
@@ -45,11 +65,18 @@ const BaseData = () => {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
-  const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11" });
+  const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11", settlementUnit: "all" });
+  
+  // 新增状态
+  const [newPlanDialogOpen, setNewPlanDialogOpen] = useState(false);
+  const [newContractDialogOpen, setNewContractDialogOpen] = useState(false);
+  const [newPlanType, setNewPlanType] = useState<"year" | "month">("year");
 
   // 合同分析数据
   const contractData = generateContractData();
   const positionData = generatePositionAnalysisData();
+  const todoData = generateTodoData();
+  const announcementData = generateAnnouncementData();
   
   const analysisChartConfig = {
     volume: { label: "持仓电量", color: "#00B04D" },
@@ -72,13 +99,13 @@ const BaseData = () => {
     "浙江省场站A", "浙江省场站B", "浙江省场站C", "浙江省场站D", "浙江省场站E"
   ];
 
-  // 图表数据
+  // 图表数据 - 优化图例名称
   const chartData = [
-    { name: "天津摇橹", "2024综合绩益预测": 120000, "2023年规则量": 95000, "2023国库日新规划": 85000, "2023金风绩益预测": 110000 },
-    { name: "电量竞价年", "2024综合绩益预测": 180000, "2023年规则量": 160000, "2023国库日新规划": 150000, "2023金风绩益预测": 170000 },
-    { name: "南城沟一期", "2024综合绩益预测": 280000, "2023年规则量": 250000, "2023国库日新规划": 240000, "2023金风绩益预测": 260000 },
-    { name: "攀长花5期", "2024综合绩益预测": 150000, "2023年规则量": 130000, "2023国库日新规划": 120000, "2023金风绩益预测": 140000 },
-    { name: "布尔津", "2024综合绩益预测": 220000, "2023年规则量": 200000, "2023国库日新规划": 190000, "2023金风绩益预测": 210000 },
+    { name: "天津摇橹", "2024年计划电量": 120000, "2023年同期计划": 95000, "2023年实际发电": 85000, "2023年预测电量": 110000 },
+    { name: "电量竞价年", "2024年计划电量": 180000, "2023年同期计划": 160000, "2023年实际发电": 150000, "2023年预测电量": 170000 },
+    { name: "南城沟一期", "2024年计划电量": 280000, "2023年同期计划": 250000, "2023年实际发电": 240000, "2023年预测电量": 260000 },
+    { name: "攀长花5期", "2024年计划电量": 150000, "2023年同期计划": 130000, "2023年实际发电": 120000, "2023年预测电量": 140000 },
+    { name: "布尔津", "2024年计划电量": 220000, "2023年同期计划": 200000, "2023年实际发电": 190000, "2023年预测电量": 210000 },
   ];
 
   // 表格数据
@@ -233,10 +260,10 @@ const BaseData = () => {
                       <YAxis className="text-xs" />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="2024综合绩益预测" stroke="hsl(var(--primary))" strokeWidth={2} />
-                      <Line type="monotone" dataKey="2023年规则量" stroke="hsl(var(--chart-2))" strokeWidth={2} strokeDasharray="5 5" />
-                      <Line type="monotone" dataKey="2023国库日新规划" stroke="hsl(var(--chart-3))" strokeWidth={2} />
-                      <Line type="monotone" dataKey="2023金风绩益预测" stroke="hsl(var(--destructive))" strokeWidth={2} />
+                      <Line type="monotone" dataKey="2024年计划电量" stroke="hsl(var(--primary))" strokeWidth={2} name="2024年计划电量" />
+                      <Line type="monotone" dataKey="2023年同期计划" stroke="hsl(var(--chart-2))" strokeWidth={2} strokeDasharray="5 5" name="2023年同期计划" />
+                      <Line type="monotone" dataKey="2023年实际发电" stroke="hsl(var(--chart-3))" strokeWidth={2} name="2023年实际发电" />
+                      <Line type="monotone" dataKey="2023年预测电量" stroke="hsl(var(--destructive))" strokeWidth={2} name="2023年预测电量" />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -246,7 +273,7 @@ const BaseData = () => {
             {/* 右侧：数据表格 */}
             <div className="space-y-4">
               <div className="flex justify-end gap-2">
-                <Button>
+                <Button onClick={() => setNewPlanDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   新建发电计划
                 </Button>
@@ -333,6 +360,10 @@ const BaseData = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">合约信息</h2>
             <div className="flex gap-2">
+              <Button onClick={() => setNewContractDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                新建合同
+              </Button>
               <Button variant="outline">合约分析</Button>
               <Button variant="outline">批量删除</Button>
             </div>
@@ -415,6 +446,7 @@ const BaseData = () => {
                     <TableHead>合约电量(MWh)</TableHead>
                     <TableHead>统计电量(MWh)</TableHead>
                     <TableHead>均价(元/MWh)</TableHead>
+                    <TableHead>仓位计算</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -552,7 +584,10 @@ const BaseData = () => {
                       <TableCell>{contract.period}</TableCell>
                       <TableCell>{contract.contract}</TableCell>
                       <TableCell>{contract.stats}</TableCell>
-                      <TableCell>{contract.price}</TableCell>
+                      <TableCell className="font-mono">{contract.price}</TableCell>
+                      <TableCell>
+                        <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button 
@@ -740,6 +775,21 @@ const BaseData = () => {
                   <Input type="month" value={analysisParams.dateRange} onChange={(e) => setAnalysisParams({ ...analysisParams, dateRange: e.target.value })} />
                 </div>
                 <div className="space-y-2">
+                  <Label>结算单元</Label>
+                  <Select value={analysisParams.settlementUnit} onValueChange={(value) => setAnalysisParams({ ...analysisParams, settlementUnit: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部结算单元</SelectItem>
+                      <SelectItem value="shandong-a">山东省场站A</SelectItem>
+                      <SelectItem value="shandong-b">山东省场站B</SelectItem>
+                      <SelectItem value="shanxi-a">山西省场站A</SelectItem>
+                      <SelectItem value="zhejiang-a">浙江省场站A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>&nbsp;</Label>
                   <Button className="w-full">
                     <TrendingUp className="h-4 w-4 mr-2" />
@@ -750,15 +800,15 @@ const BaseData = () => {
             </CardContent>
           </Card>
 
-          {/* 统计指标 */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 统计指标 - 扩展为6个 */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">合同总数</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-mono">{contractData.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">活跃合同数量</p>
+                <div className="text-2xl font-bold font-mono">{contractData.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">活跃合同</p>
               </CardContent>
             </Card>
             <Card>
@@ -766,16 +816,16 @@ const BaseData = () => {
                 <CardTitle className="text-sm font-medium text-muted-foreground">总持仓电量</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-mono">{contractData.reduce((sum, c) => sum + c.volume, 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold font-mono">{contractData.reduce((sum, c) => sum + c.volume, 0).toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground mt-1">MWh</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">加权平均电价</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">加权均价</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-mono">
+                <div className="text-2xl font-bold font-mono">
                   {(contractData.reduce((sum, c) => sum + c.avgPrice * c.volume, 0) / contractData.reduce((sum, c) => sum + c.volume, 0)).toFixed(2)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">元/MWh</p>
@@ -786,8 +836,28 @@ const BaseData = () => {
                 <CardTitle className="text-sm font-medium text-muted-foreground">覆盖交易单元</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-mono">{new Set(contractData.map(c => c.tradingUnit)).size}</div>
+                <div className="text-2xl font-bold font-mono">{new Set(contractData.map(c => c.tradingUnit)).size}</div>
                 <p className="text-xs text-muted-foreground mt-1">个</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">结算电量</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono text-primary">{Math.round(positionData.reduce((sum, p) => sum + p.settlementVolume, 0)).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground mt-1">MWh</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">剩余仓位</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono text-amber-600">
+                  {Math.round(positionData.reduce((sum, p) => sum + p.volume - p.settlementVolume, 0)).toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">MWh</p>
               </CardContent>
             </Card>
           </div>
@@ -810,7 +880,7 @@ const BaseData = () => {
                       <XAxis dataKey="hour" className="text-xs" />
                       <YAxis className="text-xs" label={{ value: '电量 (MWh)', angle: -90, position: 'insideLeft' }} />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="volume" fill="#00B04D" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="volume" fill="#00B04D" radius={[4, 4, 0, 0]} name="持仓电量" />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -821,20 +891,22 @@ const BaseData = () => {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  持仓均价趋势
+                  持仓均价与产能预测对比
                 </CardTitle>
-                <CardDescription>24小时分时段加权平均电价</CardDescription>
+                <CardDescription>24小时分时段加权均价及产能预测</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={analysisChartConfig} className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={positionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <ComposedChart data={positionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="hour" className="text-xs" />
-                      <YAxis className="text-xs" label={{ value: '电价 (元/MWh)', angle: -90, position: 'insideLeft' }} />
+                      <YAxis className="text-xs" label={{ value: '电价/电量', angle: -90, position: 'insideLeft' }} />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="avgPrice" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
+                      <Legend />
+                      <Line type="monotone" dataKey="avgPrice" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} name="加权均价(元/MWh)" />
+                      <Line type="monotone" dataKey="productionForecast" stroke="#8884d8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 2 }} name="产能预测(MWh)" />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
@@ -879,7 +951,7 @@ const BaseData = () => {
           <AIForecastTab />
         </TabsContent>
 
-        {/* 交易日历 Tab */}
+        {/* 交易日历 Tab - 优化布局 */}
         <TabsContent value="trading-calendar" className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -913,77 +985,162 @@ const BaseData = () => {
                     {format(new Date(), "yyyy-MM")}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={new Date()} />
+                <PopoverContent className="w-auto p-0 pointer-events-auto">
+                  <Calendar mode="single" selected={new Date()} className="pointer-events-auto" />
                 </PopoverContent>
               </Popover>
               <Button>查询</Button>
               <Button variant="outline">重置</Button>
             </div>
+            <Button variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              同步数据
+            </Button>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            {/* 日历视图 */}
-            <Card className="col-span-1">
-              <CardHeader>
-                <CardTitle className="text-base">交易日历</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar mode="single" className="rounded-md border" />
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 左侧：日历 + 待办事项 */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">交易日历</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Calendar mode="single" className="rounded-md border pointer-events-auto" />
+                </CardContent>
+              </Card>
 
-            {/* 交易记录列表 */}
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base">本月交易安排</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border max-h-[500px] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
-                      <TableRow>
-                        <TableHead>日期</TableHead>
-                        <TableHead>交易中心</TableHead>
-                        <TableHead>交易类型</TableHead>
-                        <TableHead>交易内容</TableHead>
-                        <TableHead>交易时间</TableHead>
-                        <TableHead>执行时段</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[
-                        { date: "2025-12-02", center: "山东交易中心", type: "中长期", content: "月度集中竞价", time: "09:00-11:00", period: "2025-01" },
-                        { date: "2025-12-05", center: "国家交易中心", type: "省间现货", content: "省间电力交易", time: "10:00-12:00", period: "2025-12-06" },
-                        { date: "2025-12-08", center: "山西交易中心", type: "绿电交易", content: "绿电交易申报", time: "09:00-17:00", period: "2025-Q1" },
-                        { date: "2025-12-10", center: "浙江交易中心", type: "中长期", content: "月内滚动交易", time: "14:00-16:00", period: "2025-12" },
-                        { date: "2025-12-12", center: "山东交易中心", type: "现货交易", content: "日前现货申报", time: "08:00-10:00", period: "2025-12-13" },
-                        { date: "2025-12-15", center: "国家交易中心", type: "中长期", content: "年度双边协商", time: "全天", period: "2026年" },
-                        { date: "2025-12-18", center: "山西交易中心", type: "现货交易", content: "日内滚动交易", time: "每2小时", period: "2025-12-18" },
-                        { date: "2025-12-20", center: "浙江交易中心", type: "绿电交易", content: "绿证交易", time: "10:00-15:00", period: "2026-Q1" },
-                      ].map((item, i) => (
-                        <TableRow key={i} className="hover:bg-[#F8FBFA]">
-                          <TableCell className="font-mono">{item.date}</TableCell>
-                          <TableCell>{item.center}</TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              item.type === "中长期" ? "default" : 
-                              item.type === "现货交易" ? "secondary" : 
-                              "outline"
-                            }>
-                              {item.type}
+              {/* 待办事项 */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Bell className="h-4 w-4" />
+                    待办事项
+                  </CardTitle>
+                  <Badge variant="secondary">{todoData.filter(t => t.status === 'pending').length} 待处理</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {todoData.map((todo) => (
+                      <div key={todo.id} className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border",
+                        todo.status === 'in-progress' && "bg-blue-50 border-blue-200",
+                        todo.status === 'pending' && todo.priority === 'high' && "bg-red-50 border-red-200"
+                      )}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{todo.title}</span>
+                            <Badge variant={todo.priority === 'high' ? 'destructive' : todo.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                              {todo.priority === 'high' ? '紧急' : todo.priority === 'medium' ? '中等' : '普通'}
                             </Badge>
-                          </TableCell>
-                          <TableCell>{item.content}</TableCell>
-                          <TableCell className="font-mono text-muted-foreground">{item.time}</TableCell>
-                          <TableCell className="font-mono">{item.period}</TableCell>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                            <span>{todo.center}</span>
+                            <span>截止：{todo.deadline}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "text-sm font-mono",
+                            todo.priority === 'high' ? "text-red-500" : "text-muted-foreground"
+                          )}>{todo.countdown}</span>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 右侧：交易安排 + 公告 */}
+            <div className="space-y-6">
+              {/* 最新公告 */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Megaphone className="h-4 w-4" />
+                    最新公告
+                  </CardTitle>
+                  <Badge variant="outline">{announcementData.filter(a => !a.isRead).length} 未读</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {announcementData.map((announcement) => (
+                      <div key={announcement.id} className={cn(
+                        "flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
+                        !announcement.isRead && "bg-blue-50/50 border-blue-200"
+                      )}>
+                        <div className={cn(
+                          "w-2 h-2 rounded-full mt-2",
+                          announcement.isRead ? "bg-muted" : "bg-primary"
+                        )} />
+                        <div className="flex-1">
+                          <p className={cn(
+                            "text-sm line-clamp-1",
+                            !announcement.isRead && "font-medium"
+                          )}>{announcement.title}</p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                            <span>{announcement.source}</span>
+                            <span>{announcement.time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 交易安排表 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">本月交易安排</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border max-h-[350px] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
+                        <TableRow>
+                          <TableHead>日期</TableHead>
+                          <TableHead>交易中心</TableHead>
+                          <TableHead>类型</TableHead>
+                          <TableHead>内容</TableHead>
+                          <TableHead>时间</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { date: "2025-12-02", center: "山东交易中心", type: "中长期", content: "月度集中竞价", time: "09:00-11:00" },
+                          { date: "2025-12-05", center: "国家交易中心", type: "省间现货", content: "省间电力交易", time: "10:00-12:00" },
+                          { date: "2025-12-08", center: "山西交易中心", type: "绿电交易", content: "绿电交易申报", time: "09:00-17:00" },
+                          { date: "2025-12-10", center: "浙江交易中心", type: "中长期", content: "月内滚动交易", time: "14:00-16:00" },
+                          { date: "2025-12-12", center: "山东交易中心", type: "现货交易", content: "日前现货申报", time: "08:00-10:00" },
+                          { date: "2025-12-15", center: "国家交易中心", type: "中长期", content: "年度双边协商", time: "全天" },
+                        ].map((item, i) => (
+                          <TableRow key={i} className="hover:bg-[#F8FBFA]">
+                            <TableCell className="font-mono text-sm">{item.date}</TableCell>
+                            <TableCell className="text-sm">{item.center}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                item.type === "中长期" ? "default" : 
+                                item.type === "现货交易" ? "secondary" : 
+                                "outline"
+                              } className="text-xs">
+                                {item.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{item.content}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{item.time}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
@@ -1212,6 +1369,149 @@ const BaseData = () => {
               保存
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新建发电计划对话框 */}
+      <Dialog open={newPlanDialogOpen} onOpenChange={setNewPlanDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新建发电计划</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>计划类型</Label>
+                <Select value={newPlanType} onValueChange={(value: "year" | "month") => setNewPlanType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="year">年度计划</SelectItem>
+                    <SelectItem value="month">月度计划</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>交易单元</Label>
+                <Select defaultValue="all">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tradingUnits.map((unit) => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{newPlanType === "year" ? "计划年份" : "计划月份"}</Label>
+                <Input type={newPlanType === "year" ? "number" : "month"} placeholder={newPlanType === "year" ? "2025" : "2025-01"} />
+              </div>
+              <div className="space-y-2">
+                <Label>计划电量 (MWh)</Label>
+                <Input type="number" placeholder="请输入计划电量" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>备注信息</Label>
+              <Textarea placeholder="请输入备注信息" rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewPlanDialogOpen(false)}>取消</Button>
+            <Button onClick={() => setNewPlanDialogOpen(false)}>保存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新建合同对话框 */}
+      <Dialog open={newContractDialogOpen} onOpenChange={setNewContractDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>新建合同</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>合同主体</Label>
+                <Input placeholder="请输入合同主体" />
+              </div>
+              <div className="space-y-2">
+                <Label>合同名称</Label>
+                <Input placeholder="请输入合同名称" />
+              </div>
+              <div className="space-y-2">
+                <Label>交易方向</Label>
+                <Select defaultValue="sell">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buy">买入</SelectItem>
+                    <SelectItem value="sell">卖出</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>合同类型</Label>
+                <Select defaultValue="year">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="year">年度合同</SelectItem>
+                    <SelectItem value="month">月度合同</SelectItem>
+                    <SelectItem value="daily">日滚动</SelectItem>
+                    <SelectItem value="spot">现货双边</SelectItem>
+                    <SelectItem value="green">绿证</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>执行开始时间</Label>
+                <Input type="date" />
+              </div>
+              <div className="space-y-2">
+                <Label>执行结束时间</Label>
+                <Input type="date" />
+              </div>
+              <div className="space-y-2">
+                <Label>合同电量 (MWh)</Label>
+                <Input type="number" placeholder="请输入合同电量" />
+              </div>
+              <div className="space-y-2">
+                <Label>均价 (元/MWh)</Label>
+                <Input type="number" placeholder="请输入均价" />
+              </div>
+              <div className="space-y-2">
+                <Label>关联场站</Label>
+                <Select defaultValue="none">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">无</SelectItem>
+                    {tradingUnits.map((unit) => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>仓位计算</Label>
+                <div className="flex items-center space-x-2 h-10">
+                  <Switch id="position-calc" defaultChecked />
+                  <Label htmlFor="position-calc" className="text-sm text-muted-foreground">参与仓位计算</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewContractDialogOpen(false)}>取消</Button>
+            <Button onClick={() => setNewContractDialogOpen(false)}>保存</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
