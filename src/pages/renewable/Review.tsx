@@ -538,8 +538,16 @@ const PositionDetailDialog = ({
 // ============= 中长期策略复盘主组件 =============
 
 const MediumLongTermReview = () => {
-  const [tradingUnitTree] = useState<TradingUnitNode[]>(generateTradingUnitTree());
-  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(['1-1', '2-1']);
+  const { 
+    fetchTradingUnitTree, 
+    fetchContracts, 
+    generateTimeSeriesFromContracts,
+    isLoading 
+  } = useReviewData();
+  
+  const [tradingUnitTree, setTradingUnitTree] = useState<TradingUnitNode[]>([]);
+  const [dbContracts, setDbContracts] = useState<any[]>([]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [contractType, setContractType] = useState<string>('all');
   const [granularity, setGranularity] = useState<string>('day');
   const [mergeDisplay, setMergeDisplay] = useState(true);
@@ -548,15 +556,79 @@ const MediumLongTermReview = () => {
     to: new Date(2025, 11, 31),
   });
 
+  // 加载交易单元树
+  useEffect(() => {
+    const loadData = async () => {
+      const tree = await fetchTradingUnitTree();
+      // 转换数据库数据为组件需要的格式
+      const formattedTree: TradingUnitNode[] = tree.map((unit: any) => ({
+        id: unit.id,
+        name: unit.unit_name,
+        type: 'unit' as const,
+        contracts: (unit.contracts || []).map((c: any) => ({
+          id: c.id,
+          tradingUnit: unit.unit_name,
+          contractType: c.contract_type === 'annual_bilateral' ? '年度双边' : '月度双边',
+          startDate: c.start_date,
+          endDate: c.end_date,
+          contractVolume: c.total_volume || 0,
+          contractPrice: c.unit_price || 0,
+          totalValue: c.total_amount || 0,
+        })),
+      }));
+      
+      // 按省份分组
+      const provinceGroups: Record<string, TradingUnitNode[]> = {};
+      formattedTree.forEach(unit => {
+        const province = unit.name.includes('山东') ? '山东省' : 
+                        unit.name.includes('山西') ? '山西省' : 
+                        unit.name.includes('浙江') ? '浙江省' : '其他';
+        if (!provinceGroups[province]) {
+          provinceGroups[province] = [];
+        }
+        provinceGroups[province].push(unit);
+      });
+      
+      const groupedTree: TradingUnitNode[] = Object.entries(provinceGroups).map(([province, units], idx) => ({
+        id: `group-${idx}`,
+        name: `${province}场站组`,
+        type: 'station' as const,
+        contracts: [],
+        children: units,
+      }));
+      
+      setTradingUnitTree(groupedTree);
+      
+      // 默认选中前两个单元
+      if (formattedTree.length > 0) {
+        setSelectedUnitIds(formattedTree.slice(0, 2).map(u => u.id));
+      }
+      
+      // 加载合同
+      const contracts = await fetchContracts();
+      setDbContracts(contracts);
+    };
+    loadData();
+  }, []);
+
   const selectedContracts = useMemo(() => {
     const contracts = getAllContracts(selectedUnitIds, tradingUnitTree);
     if (contractType === 'all') return contracts;
-    return contracts.filter(c => c.contractType === contractType);
+    const typeMapping: Record<string, string> = {
+      '月度交易': '月度双边',
+      '年度交易': '年度双边',
+    };
+    return contracts.filter(c => c.contractType === typeMapping[contractType] || c.contractType === contractType);
   }, [selectedUnitIds, contractType, tradingUnitTree]);
 
   const timeSeriesData = useMemo(() => {
-    return generateTimeSeriesData(selectedUnitIds, tradingUnitTree, granularity, dateRange);
-  }, [selectedUnitIds, granularity, dateRange, tradingUnitTree]);
+    // 使用数据库合同生成时序数据
+    const filteredContracts = dbContracts.filter(c => {
+      if (selectedUnitIds.length === 0) return true;
+      return selectedUnitIds.includes(c.trading_unit_id);
+    });
+    return generateTimeSeriesFromContracts(filteredContracts, granularity as '24point' | 'day' | 'hour' | 'month');
+  }, [selectedUnitIds, granularity, dbContracts, generateTimeSeriesFromContracts]);
 
   const stats = useMemo(() => {
     const totalValue = selectedContracts.reduce((sum, c) => sum + c.totalValue, 0);
@@ -570,6 +642,15 @@ const MediumLongTermReview = () => {
     };
   }, [selectedContracts]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载中...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-6">
       {/* 左侧持仓总览 */}
@@ -582,13 +663,19 @@ const MediumLongTermReview = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <TradingUnitTree
-                nodes={tradingUnitTree}
-                selectedIds={selectedUnitIds}
-                onSelectionChange={setSelectedUnitIds}
-              />
-            </ScrollArea>
+            {tradingUnitTree.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                暂无交易单元数据
+              </div>
+            ) : (
+              <ScrollArea className="h-[calc(100vh-280px)]">
+                <TradingUnitTree
+                  nodes={tradingUnitTree}
+                  selectedIds={selectedUnitIds}
+                  onSelectionChange={setSelectedUnitIds}
+                />
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
       </div>
