@@ -9,17 +9,21 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Users, Plus, Download, Upload, Search, TrendingUp, AlertCircle, CheckCircle, History } from "lucide-react";
-import { Customer, generateCustomers } from "@/lib/retail-data";
+import { Users, Plus, Download, Upload, Search, TrendingUp, AlertCircle, CheckCircle, History, Loader2 } from "lucide-react";
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, Customer, CustomerInsert, CustomerUpdate } from "@/hooks/useCustomers";
 import { useToast } from "@/hooks/use-toast";
 
 const CustomerManagement = () => {
   const { toast } = useToast();
-  const [customers, setCustomers] = useState<Customer[]>(() => generateCustomers(50));
+  const { data: customers = [], isLoading, error } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [packageFilter, setPackageFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<string>("all"); // 全部用户 / 已签约 / 历史用户
+  const [viewMode, setViewMode] = useState<string>("all");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -32,16 +36,15 @@ const CustomerManagement = () => {
   const filteredCustomers = useMemo(() => {
     return customers.filter(customer => {
       const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          customer.agentName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || customer.contractStatus === statusFilter;
-      const matchesPackage = packageFilter === "all" || customer.packageType === packageFilter;
+                          (customer.agent_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || customer.contract_status === statusFilter;
+      const matchesPackage = packageFilter === "all" || customer.package_type === packageFilter;
       
-      // 视图模式筛选
       let matchesView = true;
       if (viewMode === "signed") {
-        matchesView = customer.contractStatus === "active";
+        matchesView = customer.contract_status === "active";
       } else if (viewMode === "history") {
-        matchesView = customer.contractStatus === "expired";
+        matchesView = customer.contract_status === "expired";
       }
       
       return matchesSearch && matchesStatus && matchesPackage && matchesView;
@@ -59,14 +62,15 @@ const CustomerManagement = () => {
   // 统计数据
   const stats = useMemo(() => {
     const total = customers.length;
-    const active = customers.filter(c => c.contractStatus === 'active').length;
+    const active = customers.filter(c => c.contract_status === 'active').length;
     const thisMonth = customers.filter(c => {
-      const created = new Date(c.createdAt);
+      const created = new Date(c.created_at);
       const now = new Date();
       return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
     }).length;
     const expiringSoon = customers.filter(c => {
-      const endDate = new Date(c.contractEndDate);
+      if (!c.contract_end_date) return false;
+      const endDate = new Date(c.contract_end_date);
       const now = new Date();
       const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
@@ -78,18 +82,20 @@ const CustomerManagement = () => {
   const handleAddCustomer = () => {
     setEditingCustomer({
       name: '',
-      packageType: '固定价格',
-      agentName: '',
-      contractStartDate: new Date().toISOString().split('T')[0],
-      contractEndDate: '',
-      priceMode: '月度结算',
-      intermediaryCost: 0,
-      contractStatus: 'pending',
-      voltageLevel: '10kV',
-      totalCapacity: 0,
-      contactPerson: '',
-      contactPhone: '',
-      industryType: '制造业'
+      customer_code: `USER-${String(customers.length + 1).padStart(4, '0')}`,
+      package_type: '固定价格',
+      agent_name: '',
+      contract_start_date: new Date().toISOString().split('T')[0],
+      contract_end_date: '',
+      price_mode: '月度结算',
+      intermediary_cost: 0,
+      contract_status: 'pending',
+      voltage_level: '10kV',
+      total_capacity: 0,
+      contact_person: '',
+      contact_phone: '',
+      industry_type: '制造业',
+      is_active: true,
     });
     setIsEditOpen(true);
   };
@@ -99,8 +105,8 @@ const CustomerManagement = () => {
     setIsEditOpen(true);
   };
 
-  const handleSaveCustomer = () => {
-    if (!editingCustomer.name || !editingCustomer.agentName) {
+  const handleSaveCustomer = async () => {
+    if (!editingCustomer.name || !editingCustomer.agent_name) {
       toast({
         title: "错误",
         description: "请填写必填项",
@@ -111,51 +117,73 @@ const CustomerManagement = () => {
 
     if (editingCustomer.id) {
       // 编辑
-      setCustomers(prev => prev.map(c => 
-        c.id === editingCustomer.id ? { ...c, ...editingCustomer, updatedAt: new Date().toISOString() } as Customer : c
-      ));
-      toast({
-        title: "成功",
-        description: "用户信息已更新"
-      });
+      const updates: CustomerUpdate = {
+        name: editingCustomer.name,
+        package_type: editingCustomer.package_type,
+        agent_name: editingCustomer.agent_name,
+        contract_start_date: editingCustomer.contract_start_date,
+        contract_end_date: editingCustomer.contract_end_date,
+        price_mode: editingCustomer.price_mode,
+        intermediary_cost: editingCustomer.intermediary_cost,
+        contract_status: editingCustomer.contract_status,
+        voltage_level: editingCustomer.voltage_level,
+        total_capacity: editingCustomer.total_capacity,
+        contact_person: editingCustomer.contact_person,
+        contact_phone: editingCustomer.contact_phone,
+        industry_type: editingCustomer.industry_type,
+      };
+      updateCustomer.mutate({ id: editingCustomer.id, updates });
     } else {
       // 新增
-      const newCustomer: Customer = {
-        ...editingCustomer,
-        id: `USER-${String(customers.length + 1).padStart(4, '0')}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      } as Customer;
-      setCustomers(prev => [newCustomer, ...prev]);
-      toast({
-        title: "成功",
-        description: "用户已添加"
-      });
+      const newCustomer: CustomerInsert = {
+        name: editingCustomer.name!,
+        customer_code: editingCustomer.customer_code!,
+        package_type: editingCustomer.package_type || '固定价格',
+        voltage_level: editingCustomer.voltage_level || '10kV',
+        agent_name: editingCustomer.agent_name,
+        contract_start_date: editingCustomer.contract_start_date,
+        contract_end_date: editingCustomer.contract_end_date,
+        price_mode: editingCustomer.price_mode,
+        intermediary_cost: editingCustomer.intermediary_cost,
+        contract_status: editingCustomer.contract_status || 'pending',
+        total_capacity: editingCustomer.total_capacity,
+        contact_person: editingCustomer.contact_person,
+        contact_phone: editingCustomer.contact_phone,
+        industry_type: editingCustomer.industry_type,
+        is_active: true,
+        contact_email: null,
+        address: null,
+      };
+      createCustomer.mutate(newCustomer);
     }
     setIsEditOpen(false);
   };
 
-  const handleDeleteCustomer = () => {
+  const handleDeleteCustomer = async () => {
     if (selectedCustomer) {
-      setCustomers(prev => prev.filter(c => c.id !== selectedCustomer.id));
-      toast({
-        title: "成功",
-        description: "用户已删除"
-      });
+      deleteCustomer.mutate(selectedCustomer.id);
       setIsDeleteOpen(false);
       setSelectedCustomer(null);
     }
   };
 
-  const getStatusBadge = (status: Customer['contractStatus']) => {
-    const variants = {
-      active: { variant: "default" as const, label: "已签约", className: "bg-[#00B04D] hover:bg-[#009644]" },
-      expired: { variant: "secondary" as const, label: "已到期", className: "" },
-      pending: { variant: "outline" as const, label: "待签约", className: "border-orange-500 text-orange-500" }
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "outline"; label: string; className: string }> = {
+      active: { variant: "default", label: "已签约", className: "bg-[#00B04D] hover:bg-[#009644]" },
+      expired: { variant: "secondary", label: "已到期", className: "" },
+      pending: { variant: "outline", label: "待签约", className: "border-orange-500 text-orange-500" }
     };
-    const config = variants[status];
+    const config = variants[status] || variants.pending;
     return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-destructive">加载数据失败: {error.message}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -175,9 +203,7 @@ const CustomerManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              用户总数
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">用户总数</p>
           </CardContent>
         </Card>
 
@@ -189,7 +215,7 @@ const CustomerManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.active}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              占比 {((stats.active / stats.total) * 100).toFixed(1)}%
+              占比 {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
             </p>
           </CardContent>
         </Card>
@@ -201,9 +227,7 @@ const CustomerManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">{stats.thisMonth}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              本月新签用户
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">本月新签用户</p>
           </CardContent>
         </Card>
 
@@ -214,9 +238,7 @@ const CustomerManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono text-orange-500">{stats.expiringSoon}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              30天内到期
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">30天内到期</p>
           </CardContent>
         </Card>
       </div>
@@ -296,92 +318,110 @@ const CustomerManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
-                <tr className="border-b-2 border-[#00B04D]">
-                  <th className="text-left p-3 text-sm font-semibold">用户名称</th>
-                  <th className="text-left p-3 text-sm font-semibold">套餐类型</th>
-                  <th className="text-left p-3 text-sm font-semibold">代理名称</th>
-                  <th className="text-left p-3 text-sm font-semibold">签订起止时间</th>
-                  <th className="text-left p-3 text-sm font-semibold">价格模式</th>
-                  <th className="text-left p-3 text-sm font-semibold">签约状态</th>
-                  <th className="text-right p-3 text-sm font-semibold">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b hover:bg-[#F8FBFA] transition-colors">
-                    <td className="p-3">
-                      <button
-                        className="text-[#00B04D] hover:underline font-medium"
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setIsDetailOpen(true);
-                        }}
-                      >
-                        {customer.name}
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="outline">{customer.packageType}</Badge>
-                    </td>
-                    <td className="p-3">{customer.agentName}</td>
-                    <td className="p-3 text-sm font-mono">{customer.contractStartDate} ~ {customer.contractEndDate}</td>
-                    <td className="p-3">{customer.priceMode}</td>
-                    <td className="p-3">{getStatusBadge(customer.contractStatus)}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditCustomer(customer)}
-                        >
-                          编辑
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => {
-                            setSelectedCustomer(customer);
-                            setIsDeleteOpen(true);
-                          }}
-                        >
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+              <span className="ml-2 text-muted-foreground">加载中...</span>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 z-10 bg-[#F1F8F4]">
+                    <tr className="border-b-2 border-[#00B04D]">
+                      <th className="text-left p-3 text-sm font-semibold">用户名称</th>
+                      <th className="text-left p-3 text-sm font-semibold">套餐类型</th>
+                      <th className="text-left p-3 text-sm font-semibold">代理名称</th>
+                      <th className="text-left p-3 text-sm font-semibold">签订起止时间</th>
+                      <th className="text-left p-3 text-sm font-semibold">价格模式</th>
+                      <th className="text-left p-3 text-sm font-semibold">签约状态</th>
+                      <th className="text-right p-3 text-sm font-semibold">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedCustomers.map((customer) => (
+                      <tr key={customer.id} className="border-b hover:bg-[#F8FBFA] transition-colors">
+                        <td className="p-3">
+                          <button
+                            className="text-[#00B04D] hover:underline font-medium"
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setIsDetailOpen(true);
+                            }}
+                          >
+                            {customer.name}
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="outline">{customer.package_type}</Badge>
+                        </td>
+                        <td className="p-3">{customer.agent_name || '-'}</td>
+                        <td className="p-3 text-sm font-mono">
+                          {customer.contract_start_date || '-'} ~ {customer.contract_end_date || '-'}
+                        </td>
+                        <td className="p-3">{customer.price_mode || '-'}</td>
+                        <td className="p-3">{getStatusBadge(customer.contract_status)}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditCustomer(customer)}
+                            >
+                              编辑
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => {
+                                setSelectedCustomer(customer);
+                                setIsDeleteOpen(true);
+                              }}
+                            >
+                              删除
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {paginatedCustomers.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                          暂无数据
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-          {/* 分页 */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              共 {filteredCustomers.length} 条记录，第 {currentPage} / {totalPages} 页
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-              >
-                上一页
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => p + 1)}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+              {/* 分页 */}
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  共 {filteredCustomers.length} 条记录，第 {currentPage} / {Math.max(totalPages, 1)} 页
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                  >
+                    上一页
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >
+                    下一页
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -404,28 +444,32 @@ const CustomerManagement = () => {
                     <p className="font-medium mt-1">{selectedCustomer.name}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">用户ID</Label>
-                    <p className="font-medium font-mono mt-1">{selectedCustomer.id}</p>
+                    <Label className="text-muted-foreground">用户编号</Label>
+                    <p className="font-medium font-mono mt-1">{selectedCustomer.customer_code}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">联系人</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.contactPerson}</p>
+                    <p className="font-medium mt-1">{selectedCustomer.contact_person || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">联系电话</Label>
-                    <p className="font-medium font-mono mt-1">{selectedCustomer.contactPhone}</p>
+                    <p className="font-medium font-mono mt-1">{selectedCustomer.contact_phone || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">行业类型</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.industryType}</p>
+                    <p className="font-medium mt-1">{selectedCustomer.industry_type || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">电压等级</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.voltageLevel}</p>
+                    <p className="font-medium mt-1">{selectedCustomer.voltage_level}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">总用电容量</Label>
-                    <p className="font-medium font-mono mt-1">{selectedCustomer.totalCapacity.toFixed(2)} MWh</p>
+                    <Label className="text-muted-foreground">装机容量</Label>
+                    <p className="font-medium font-mono mt-1">{selectedCustomer.total_capacity || 0} kW</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">代理商</Label>
+                    <p className="font-medium mt-1">{selectedCustomer.agent_name || '-'}</p>
                   </div>
                 </div>
               </TabsContent>
@@ -433,31 +477,27 @@ const CustomerManagement = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">套餐类型</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.packageType}</p>
+                    <p className="font-medium mt-1">{selectedCustomer.package_type}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">价格模式</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.priceMode}</p>
+                    <p className="font-medium mt-1">{selectedCustomer.price_mode || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">居间成本</Label>
-                    <p className="font-medium font-mono mt-1">{selectedCustomer.intermediaryCost.toFixed(2)} 元/MWh</p>
+                    <Label className="text-muted-foreground">合同起始日期</Label>
+                    <p className="font-medium font-mono mt-1">{selectedCustomer.contract_start_date || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">代理名称</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.agentName}</p>
+                    <Label className="text-muted-foreground">合同结束日期</Label>
+                    <p className="font-medium font-mono mt-1">{selectedCustomer.contract_end_date || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">签约起始时间</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.contractStartDate}</p>
+                    <Label className="text-muted-foreground">签约状态</Label>
+                    <div className="mt-1">{getStatusBadge(selectedCustomer.contract_status)}</div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">签约终止时间</Label>
-                    <p className="font-medium mt-1">{selectedCustomer.contractEndDate}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">合同状态</Label>
-                    <div className="mt-1">{getStatusBadge(selectedCustomer.contractStatus)}</div>
+                    <Label className="text-muted-foreground">中介费用</Label>
+                    <p className="font-medium font-mono mt-1">¥ {selectedCustomer.intermediary_cost?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
               </TabsContent>
@@ -466,134 +506,162 @@ const CustomerManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 新增/编辑用户对话框 */}
+      {/* 编辑/新增对话框 */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingCustomer.id ? '编辑用户' : '新增用户'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>用户名称 *</Label>
-                <Input
-                  value={editingCustomer.name || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>代理名称 *</Label>
-                <Input
-                  value={editingCustomer.agentName || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, agentName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>套餐类型</Label>
-                <Select
-                  value={editingCustomer.packageType}
-                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, packageType: value as Customer['packageType'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="固定价格">固定价格</SelectItem>
-                    <SelectItem value="浮动价格">浮动价格</SelectItem>
-                    <SelectItem value="分时段价格">分时段价格</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>价格模式</Label>
-                <Select
-                  value={editingCustomer.priceMode}
-                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, priceMode: value as Customer['priceMode'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="月度结算">月度结算</SelectItem>
-                    <SelectItem value="年度结算">年度结算</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>签约起始时间</Label>
-                <Input
-                  type="date"
-                  value={editingCustomer.contractStartDate || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contractStartDate: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>签约终止时间</Label>
-                <Input
-                  type="date"
-                  value={editingCustomer.contractEndDate || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contractEndDate: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>居间成本 (元/MWh)</Label>
-                <Input
-                  type="number"
-                  value={editingCustomer.intermediaryCost || 0}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, intermediaryCost: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <Label>电压等级</Label>
-                <Select
-                  value={editingCustomer.voltageLevel}
-                  onValueChange={(value) => setEditingCustomer({ ...editingCustomer, voltageLevel: value as Customer['voltageLevel'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10kV">10kV</SelectItem>
-                    <SelectItem value="35kV">35kV</SelectItem>
-                    <SelectItem value="110kV">110kV</SelectItem>
-                    <SelectItem value="220kV">220kV</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>总用电容量 (MWh)</Label>
-                <Input
-                  type="number"
-                  value={editingCustomer.totalCapacity || 0}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, totalCapacity: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <Label>行业类型</Label>
-                <Input
-                  value={editingCustomer.industryType || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, industryType: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>联系人</Label>
-                <Input
-                  value={editingCustomer.contactPerson || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contactPerson: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>联系电话</Label>
-                <Input
-                  value={editingCustomer.contactPhone || ''}
-                  onChange={(e) => setEditingCustomer({ ...editingCustomer, contactPhone: e.target.value })}
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label>用户名称 *</Label>
+              <Input
+                value={editingCustomer.name || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="请输入用户名称"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>代理名称 *</Label>
+              <Input
+                value={editingCustomer.agent_name || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, agent_name: e.target.value }))}
+                placeholder="请输入代理名称"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>套餐类型</Label>
+              <Select 
+                value={editingCustomer.package_type || '固定价格'} 
+                onValueChange={(v) => setEditingCustomer(prev => ({ ...prev, package_type: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="固定价格">固定价格</SelectItem>
+                  <SelectItem value="浮动价格">浮动价格</SelectItem>
+                  <SelectItem value="分时段价格">分时段价格</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>电压等级</Label>
+              <Select 
+                value={editingCustomer.voltage_level || '10kV'} 
+                onValueChange={(v) => setEditingCustomer(prev => ({ ...prev, voltage_level: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10kV">10kV</SelectItem>
+                  <SelectItem value="35kV">35kV</SelectItem>
+                  <SelectItem value="110kV">110kV</SelectItem>
+                  <SelectItem value="220kV">220kV</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>合同开始日期</Label>
+              <Input
+                type="date"
+                value={editingCustomer.contract_start_date || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, contract_start_date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>合同结束日期</Label>
+              <Input
+                type="date"
+                value={editingCustomer.contract_end_date || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, contract_end_date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>价格模式</Label>
+              <Select 
+                value={editingCustomer.price_mode || '月度结算'} 
+                onValueChange={(v) => setEditingCustomer(prev => ({ ...prev, price_mode: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="月度结算">月度结算</SelectItem>
+                  <SelectItem value="日结算">日结算</SelectItem>
+                  <SelectItem value="年度结算">年度结算</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>签约状态</Label>
+              <Select 
+                value={editingCustomer.contract_status || 'pending'} 
+                onValueChange={(v) => setEditingCustomer(prev => ({ ...prev, contract_status: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">待签约</SelectItem>
+                  <SelectItem value="active">已签约</SelectItem>
+                  <SelectItem value="expired">已到期</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>联系人</Label>
+              <Input
+                value={editingCustomer.contact_person || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, contact_person: e.target.value }))}
+                placeholder="请输入联系人"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>联系电话</Label>
+              <Input
+                value={editingCustomer.contact_phone || ''}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, contact_phone: e.target.value }))}
+                placeholder="请输入联系电话"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>行业类型</Label>
+              <Select 
+                value={editingCustomer.industry_type || '制造业'} 
+                onValueChange={(v) => setEditingCustomer(prev => ({ ...prev, industry_type: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="制造业">制造业</SelectItem>
+                  <SelectItem value="服务业">服务业</SelectItem>
+                  <SelectItem value="商业">商业</SelectItem>
+                  <SelectItem value="其他">其他</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>装机容量 (kW)</Label>
+              <Input
+                type="number"
+                value={editingCustomer.total_capacity || 0}
+                onChange={(e) => setEditingCustomer(prev => ({ ...prev, total_capacity: Number(e.target.value) }))}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>取消</Button>
-            <Button onClick={handleSaveCustomer} className="bg-[#00B04D] hover:bg-[#009644]">保存</Button>
+            <Button 
+              onClick={handleSaveCustomer} 
+              className="bg-[#00B04D] hover:bg-[#009644]"
+              disabled={createCustomer.isPending || updateCustomer.isPending}
+            >
+              {(createCustomer.isPending || updateCustomer.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              保存
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -604,12 +672,16 @@ const CustomerManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除用户 "{selectedCustomer?.name}" 吗？此操作无法撤销。
+              确定要删除用户 "{selectedCustomer?.name}" 吗？此操作不可恢复。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCustomer} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction 
+              onClick={handleDeleteCustomer}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteCustomer.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
