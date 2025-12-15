@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { CalendarIcon, Search, RotateCcw, Download, BarChart3, Table as TableIcon } from "lucide-react";
+import { CalendarIcon, Search, RotateCcw, Download, BarChart3, Table as TableIcon, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { LineChart, Line, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart } from "recharts";
+import { LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useClearingRecordsByDate, useClearingStats, transformClearingDataForChart } from "@/hooks/useClearingRecords";
 
-// 分时段交易出清数据
+// 分时段交易出清数据 (保留Mock数据用于分时段交易)
 const generateSegmentClearingData = () => {
   const tradingTypes = ["集中竞价", "滚动撮合", "挂牌交易", "双边协商"];
   return Array.from({ length: 20 }, (_, i) => ({
@@ -28,19 +29,6 @@ const generateSegmentClearingData = () => {
     bidPrice: 280 + Math.random() * 160,
     status: Math.random() > 0.2 ? "已出清" : "未出清",
     clearTime: `2025-12-14 ${(9 + i % 8).toString().padStart(2, '0')}:${(Math.floor(Math.random() * 60)).toString().padStart(2, '0')}`,
-  }));
-};
-
-// 省内现货出清数据
-const generateSpotClearingData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    time: `${i.toString().padStart(2, '0')}:00`,
-    dayAheadClearPrice: 300 + Math.random() * 200,
-    realTimeClearPrice: 320 + Math.random() * 180,
-    dayAheadClearVolume: 80 + Math.random() * 60,
-    realTimeClearVolume: 75 + Math.random() * 65,
-    priceDeviation: (Math.random() - 0.5) * 40,
-    volumeDeviation: (Math.random() - 0.5) * 20,
   }));
 };
 
@@ -69,8 +57,29 @@ const Clearing = () => {
   const [spotDataType, setSpotDataType] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
 
+  // 使用数据库数据
+  const dateStr = spotDate ? format(spotDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+  const { data: clearingRecords = [], isLoading: isLoadingRecords } = useClearingRecordsByDate(dateStr);
+  const { data: clearingStats, isLoading: isLoadingStats } = useClearingStats(dateStr);
+
+  // 转换为图表数据
+  const spotData = useMemo(() => {
+    if (clearingRecords.length > 0) {
+      return transformClearingDataForChart(clearingRecords);
+    }
+    // 如果数据库无数据，使用生成的数据
+    return Array.from({ length: 24 }, (_, i) => ({
+      time: `${i.toString().padStart(2, '0')}:00`,
+      dayAheadClearPrice: 300 + Math.random() * 200,
+      realTimeClearPrice: 320 + Math.random() * 180,
+      dayAheadClearVolume: 80 + Math.random() * 60,
+      realTimeClearVolume: 75 + Math.random() * 65,
+      priceDeviation: (Math.random() - 0.5) * 40,
+      volumeDeviation: (Math.random() - 0.5) * 20,
+    }));
+  }, [clearingRecords]);
+
   const segmentData = generateSegmentClearingData();
-  const spotData = generateSpotClearingData();
 
   // 根据筛选条件过滤分时段数据
   const filteredSegmentData = segmentData.filter(item => {
@@ -88,15 +97,17 @@ const Clearing = () => {
     totalCount: filteredSegmentData.length,
   };
 
-  const spotStats = {
+  const spotStats = clearingStats || {
     avgDayAheadPrice: spotData.reduce((sum, item) => sum + item.dayAheadClearPrice, 0) / spotData.length,
-    avgRealTimePrice: spotData.reduce((sum, item) => sum + item.realTimeClearPrice, 0) / spotData.length,
+    avgRealtimePrice: spotData.reduce((sum, item) => sum + item.realTimeClearPrice, 0) / spotData.length,
     totalDayAheadVolume: spotData.reduce((sum, item) => sum + item.dayAheadClearVolume, 0),
-    totalRealTimeVolume: spotData.reduce((sum, item) => sum + item.realTimeClearVolume, 0),
+    totalRealtimeVolume: spotData.reduce((sum, item) => sum + item.realTimeClearVolume, 0),
   };
 
   const showDayAhead = spotDataType === "all" || spotDataType === "dayAhead";
   const showRealTime = spotDataType === "all" || spotDataType === "realTime";
+
+  const isLoading = isLoadingRecords || isLoadingStats;
 
   return (
     <div className="p-8 space-y-6">
@@ -377,30 +388,51 @@ const Clearing = () => {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">日前均价</p>
-                <p className="text-2xl font-bold text-primary font-mono">¥ {spotStats.avgDayAheadPrice.toFixed(2)}</p>
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-primary font-mono">¥ {spotStats.avgDayAheadPrice.toFixed(2)}</p>
+                )}
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">实时均价</p>
-                <p className="text-2xl font-bold text-warning font-mono">¥ {spotStats.avgRealTimePrice.toFixed(2)}</p>
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-warning mt-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-warning font-mono">¥ {spotStats.avgRealtimePrice.toFixed(2)}</p>
+                )}
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">日前总电量</p>
-                <p className="text-2xl font-bold text-primary font-mono">{spotStats.totalDayAheadVolume.toFixed(1)} MWh</p>
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-primary font-mono">{spotStats.totalDayAheadVolume.toFixed(1)} MWh</p>
+                )}
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">实时总电量</p>
-                <p className="text-2xl font-bold text-warning font-mono">{spotStats.totalRealTimeVolume.toFixed(1)} MWh</p>
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-warning mt-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-warning font-mono">{spotStats.totalRealtimeVolume.toFixed(1)} MWh</p>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {viewMode === "chart" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+              <span className="ml-2 text-muted-foreground">加载出清数据中...</span>
+            </div>
+          ) : viewMode === "chart" ? (
             <>
               {/* 价格图表 */}
               <Card>
