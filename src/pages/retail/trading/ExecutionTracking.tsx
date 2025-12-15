@@ -6,77 +6,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, TrendingUp, AlertCircle, Download, RefreshCw, Search } from "lucide-react";
-import { Customer, ExecutionRecord, CustomerSummary, generateCustomers, generateExecutionRecords, generateCustomerSummary } from "@/lib/retail-data";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Activity, TrendingUp, AlertCircle, Download, RefreshCw, Search, Loader2 } from "lucide-react";
+import { useExecutionRecords, ExecutionRecordData } from "@/hooks/useExecutionRecords";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const ExecutionTracking = () => {
-  const [customers] = useState<Customer[]>(() => generateCustomers(50));
-  const [executionRecords] = useState<ExecutionRecord[]>(() => generateExecutionRecords(customers, 30));
-  const [customerSummary] = useState<CustomerSummary[]>(() => generateCustomerSummary(customers, executionRecords));
+  const { data: executionRecords, loading, stats, customerSummaries, trendData, refetch } = useExecutionRecords();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // 统计数据
-  const stats = useMemo(() => {
-    const totalVolume = executionRecords.reduce((sum, r) => sum + r.executedVolume, 0);
-    const totalRevenue = executionRecords.reduce((sum, r) => sum + r.executedRevenue, 0);
-    const avgDeviation = executionRecords.length > 0 
-      ? Math.abs(executionRecords.reduce((sum, r) => sum + r.volumeDeviationRate, 0) / executionRecords.length)
-      : 0;
-    const completedRecords = executionRecords.filter(r => r.status === 'completed').length;
-    const executionRate = executionRecords.length > 0 ? (completedRecords / executionRecords.length * 100) : 0;
-    const anomalyCount = executionRecords.filter(r => r.status === 'anomaly').length;
-
-    return {
-      totalVolume: Math.round(totalVolume * 100) / 100,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      avgDeviation: Math.round(avgDeviation * 100) / 100,
-      executionRate: Math.round(executionRate * 100) / 100,
-      anomalyCount
-    };
-  }, [executionRecords]);
-
   const filteredRecords = useMemo(() => {
     return executionRecords.filter(record => {
-      const matchesSearch = record.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      const customerName = record.customer?.name || '';
+      const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || record.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [executionRecords, searchTerm, statusFilter]);
 
-  const getStatusBadge = (status: ExecutionRecord['status']) => {
-    const configs = {
+  const getStatusBadge = (status: string) => {
+    const configs: Record<string, { label: string; className: string }> = {
       executing: { label: "执行中", className: "bg-blue-500 hover:bg-blue-600 text-white" },
       completed: { label: "已完成", className: "bg-[#00B04D] hover:bg-[#009644] text-white" },
       anomaly: { label: "异常", className: "bg-red-500 hover:bg-red-600 text-white" }
     };
-    const config = configs[status];
+    const config = configs[status] || { label: status, className: "bg-gray-500 text-white" };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
-
-  // 执行趋势数据
-  const trendData = useMemo(() => {
-    const dataByDate = new Map<string, { volume: number, revenue: number }>();
-    
-    executionRecords.forEach(r => {
-      const existing = dataByDate.get(r.executionDate) || { volume: 0, revenue: 0 };
-      dataByDate.set(r.executionDate, {
-        volume: existing.volume + r.executedVolume,
-        revenue: existing.revenue + r.executedRevenue
-      });
-    });
-
-    return Array.from(dataByDate.entries())
-      .map(([date, values]) => ({
-        date: new Date(date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
-        执行电量: Math.round(values.volume),
-        执行收益: Math.round(values.revenue / 1000)
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-10);
-  }, [executionRecords]);
 
   return (
     <div className="p-8 space-y-8">
@@ -173,9 +130,9 @@ const ExecutionTracking = () => {
               <Button className="bg-[#00B04D] hover:bg-[#009644]">查询</Button>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                同步数据
+              <Button variant="outline" onClick={() => refetch()} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                {loading ? '同步中...' : '同步数据'}
               </Button>
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
@@ -216,17 +173,24 @@ const ExecutionTracking = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRecords.slice(0, 50).map((record) => (
-                      <tr key={record.id} className={`border-b hover:bg-[#F8FBFA] ${record.status === 'anomaly' ? 'border-l-4 border-l-red-500' : ''}`}>
-                        <td className="p-3 text-sm">{record.executionDate}</td>
-                        <td className="p-3">{record.customerName}</td>
-                        <td className="p-3 text-sm">{record.executionPeriod}</td>
-                        <td className="p-3 text-right font-mono">{record.executedVolume.toFixed(2)}</td>
-                        <td className="p-3 text-right font-mono">{record.predictedVolume.toFixed(2)}</td>
-                        <td className={`p-3 text-right font-mono font-bold ${Math.abs(record.volumeDeviationRate) < 5 ? 'text-[#00B04D]' : Math.abs(record.volumeDeviationRate) < 10 ? 'text-orange-500' : 'text-red-500'}`}>
-                          {record.volumeDeviationRate.toFixed(2)}%
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                          <p className="mt-2 text-muted-foreground">加载中...</p>
                         </td>
-                        <td className="p-3 text-right font-mono text-[#00B04D]">¥{record.actualRevenue.toFixed(2)}</td>
+                      </tr>
+                    ) : filteredRecords.slice(0, 50).map((record) => (
+                      <tr key={record.id} className={`border-b hover:bg-[#F8FBFA] ${record.status === 'anomaly' ? 'border-l-4 border-l-red-500' : ''}`}>
+                        <td className="p-3 text-sm">{record.execution_date}</td>
+                        <td className="p-3">{record.customer?.name || '-'}</td>
+                        <td className="p-3 text-sm">{record.execution_period || '-'}</td>
+                        <td className="p-3 text-right font-mono">{record.executed_volume.toFixed(2)}</td>
+                        <td className="p-3 text-right font-mono">{(record.predicted_volume || 0).toFixed(2)}</td>
+                        <td className={`p-3 text-right font-mono font-bold ${Math.abs(record.volume_deviation_rate || 0) < 5 ? 'text-[#00B04D]' : Math.abs(record.volume_deviation_rate || 0) < 10 ? 'text-orange-500' : 'text-red-500'}`}>
+                          {(record.volume_deviation_rate || 0).toFixed(2)}%
+                        </td>
+                        <td className="p-3 text-right font-mono text-[#00B04D]">¥{(record.executed_revenue || 0).toFixed(2)}</td>
                         <td className="p-3">{getStatusBadge(record.status)}</td>
                       </tr>
                     ))}
@@ -300,7 +264,13 @@ const ExecutionTracking = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {customerSummary.map((summary) => (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                        </td>
+                      </tr>
+                    ) : customerSummaries.map((summary) => (
                       <tr key={summary.customerId} className="border-b hover:bg-[#F8FBFA]">
                         <td className="p-3">{summary.customerName}</td>
                         <td className="p-3">
@@ -384,13 +354,13 @@ const ExecutionTracking = () => {
                   <tbody>
                     {executionRecords.filter(r => r.status === 'anomaly').slice(0, 20).map((record) => (
                       <tr key={record.id} className="border-b hover:bg-[#F8FBFA] bg-red-50">
-                        <td className="p-3 text-sm">{record.executionDate} {record.executionPeriod}</td>
-                        <td className="p-3">{record.customerName}</td>
+                        <td className="p-3 text-sm">{record.execution_date} {record.execution_period || ''}</td>
+                        <td className="p-3">{record.customer?.name || '-'}</td>
                         <td className="p-3">
                           <Badge variant="outline" className="border-red-500 text-red-500">电量偏差大</Badge>
                         </td>
                         <td className="p-3 text-right font-mono font-bold text-red-500">
-                          {record.volumeDeviationRate.toFixed(2)}%
+                          {(record.volume_deviation_rate || 0).toFixed(2)}%
                         </td>
                         <td className="p-3">
                           <Badge className="bg-red-500 hover:bg-red-600 text-white">高</Badge>
