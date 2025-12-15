@@ -7,19 +7,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, Save, Download, RotateCcw, TrendingUp, TrendingDown, DollarSign, Percent, AlertTriangle, CheckCircle, XCircle, Users } from "lucide-react";
-import { PackageSimulation as PackageSimulationType, generateCustomers, Customer } from "@/lib/retail-data";
+import { Calculator, Save, Download, RotateCcw, TrendingUp, TrendingDown, DollarSign, Percent, AlertTriangle, CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
+import { usePackageSimulations, CreateSimulationInput } from "@/hooks/usePackageSimulations";
+import { useCustomers } from "@/hooks/useCustomers";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
+// 本地计算结果类型
+interface LocalCalculationResult {
+  id: string;
+  customerName: string;
+  schemeName: string;
+  packageType: 'fixed' | 'floating';
+  estimatedMonthlyUsage: number;
+  peakRatio: number;
+  flatRatio: number;
+  valleyRatio: number;
+  fixedPrice?: number;
+  floatingBasePrice?: number;
+  floatingPriceType?: string;
+  floatingAdjustment?: number;
+  purchaseCost: number;
+  intermediaryCost: number;
+  transmissionCost: number;
+  otherCosts: number;
+  totalRevenue: number;
+  totalCost: number;
+  grossProfit: number;
+  profitMargin: number;
+  breakEvenPrice: number;
+  createdAt: string;
+}
+
 const PackageSimulation = () => {
   const { toast } = useToast();
-  const [calculationType, setCalculationType] = useState<'fixed' | 'floating'>('fixed');
-  const [savedSchemes, setSavedSchemes] = useState<PackageSimulationType[]>([]);
+  const { data: savedSchemes = [], loading: schemesLoading, createSimulation, deleteSimulation } = usePackageSimulations();
+  const { data: allCustomers = [], isLoading: customersLoading } = useCustomers();
   
-  // 待签约用户列表
-  const [pendingCustomers] = useState<Customer[]>(() => 
-    generateCustomers(20).filter(c => c.contractStatus === 'pending')
+  const [calculationType, setCalculationType] = useState<'fixed' | 'floating'>('fixed');
+  
+  // 待签约用户列表 - 从数据库获取
+  const pendingCustomers = useMemo(() => 
+    allCustomers.filter(c => c.contract_status === 'pending'),
+    [allCustomers]
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('manual');
   
@@ -46,7 +76,7 @@ const PackageSimulation = () => {
   const [otherCosts, setOtherCosts] = useState(10);
   
   // 计算结果
-  const [calculationResult, setCalculationResult] = useState<PackageSimulationType | null>(null);
+  const [calculationResult, setCalculationResult] = useState<LocalCalculationResult | null>(null);
 
   // 当选择待签约用户时，自动填充数据
   useEffect(() => {
@@ -54,8 +84,8 @@ const PackageSimulation = () => {
       const customer = pendingCustomers.find(c => c.id === selectedCustomerId);
       if (customer) {
         setCustomerName(customer.name);
-        setEstimatedUsage(customer.totalCapacity || 10000);
-        setIntermediaryCost(customer.intermediaryCost || 15);
+        setEstimatedUsage(customer.total_capacity || 10000);
+        setIntermediaryCost(customer.intermediary_cost || 15);
         // 模拟历史用电结构
         setPeakRatio(25 + Math.floor(Math.random() * 15));
         setFlatRatio(45 + Math.floor(Math.random() * 15));
@@ -116,7 +146,7 @@ const PackageSimulation = () => {
     const profitMargin = (grossProfit / totalRevenue) * 100;
     const breakEvenPrice = totalCostValue;
 
-    const result: PackageSimulationType = {
+    const result: LocalCalculationResult = {
       id: `SCHEME-${Date.now()}`,
       customerName,
       schemeName: schemeName || `${calculationType === 'fixed' ? '固定' : '浮动'}价格方案-${new Date().toLocaleDateString()}`,
@@ -148,7 +178,7 @@ const PackageSimulation = () => {
     });
   };
 
-  const handleSaveScheme = () => {
+  const handleSaveScheme = async () => {
     if (!calculationResult) {
       toast({
         title: "错误",
@@ -158,11 +188,30 @@ const PackageSimulation = () => {
       return;
     }
 
-    setSavedSchemes(prev => [calculationResult, ...prev]);
-    toast({
-      title: "保存成功",
-      description: "方案已保存到历史记录"
-    });
+    // 保存到数据库
+    const input: CreateSimulationInput = {
+      scheme_name: calculationResult.schemeName,
+      package_type: calculationResult.packageType,
+      estimated_monthly_usage: calculationResult.estimatedMonthlyUsage,
+      peak_ratio: calculationResult.peakRatio,
+      flat_ratio: calculationResult.flatRatio,
+      valley_ratio: calculationResult.valleyRatio,
+      fixed_price: calculationResult.fixedPrice,
+      floating_base_price: calculationResult.floatingBasePrice,
+      floating_price_type: calculationResult.floatingPriceType,
+      floating_adjustment: calculationResult.floatingAdjustment,
+      purchase_cost: calculationResult.purchaseCost,
+      intermediary_cost: calculationResult.intermediaryCost,
+      transmission_cost: calculationResult.transmissionCost,
+      other_costs: calculationResult.otherCosts,
+      total_revenue: calculationResult.totalRevenue,
+      total_cost: calculationResult.totalCost,
+      gross_profit: calculationResult.grossProfit,
+      profit_margin: calculationResult.profitMargin,
+      break_even_price: calculationResult.breakEvenPrice
+    };
+    
+    await createSimulation(input);
   };
 
   const handleReset = () => {
@@ -183,23 +232,39 @@ const PackageSimulation = () => {
     setCalculationResult(null);
   };
 
-  const loadScheme = (scheme: PackageSimulationType) => {
-    setCalculationType(scheme.packageType);
-    setCustomerName(scheme.customerName);
-    setSchemeName(scheme.schemeName);
-    setEstimatedUsage(scheme.estimatedMonthlyUsage);
-    setPeakRatio(scheme.peakRatio);
-    setFlatRatio(scheme.flatRatio);
-    setValleyRatio(scheme.valleyRatio);
-    if (scheme.fixedPrice) setFixedPrice(scheme.fixedPrice);
-    if (scheme.floatingBasePrice) setFloatingBasePrice(scheme.floatingBasePrice);
-    if (scheme.floatingPriceType) setFloatingPriceType(scheme.floatingPriceType);
-    if (scheme.floatingAdjustment !== undefined) setFloatingAdjustment(scheme.floatingAdjustment);
-    setPurchaseCost(scheme.purchaseCost);
-    setIntermediaryCost(scheme.intermediaryCost);
-    setTransmissionCost(scheme.transmissionCost);
-    setOtherCosts(scheme.otherCosts);
-    setCalculationResult(scheme);
+  const loadScheme = (scheme: { 
+    package_type: string; 
+    scheme_name: string;
+    estimated_monthly_usage: number | null;
+    peak_ratio: number | null;
+    flat_ratio: number | null;
+    valley_ratio: number | null;
+    fixed_price: number | null;
+    floating_base_price: number | null;
+    floating_price_type: string | null;
+    floating_adjustment: number | null;
+    purchase_cost: number | null;
+    intermediary_cost: number | null;
+    transmission_cost: number | null;
+    other_costs: number | null;
+    customer?: { name: string } | null;
+  }) => {
+    setCalculationType(scheme.package_type as 'fixed' | 'floating');
+    setCustomerName(scheme.customer?.name || '');
+    setSchemeName(scheme.scheme_name);
+    setEstimatedUsage(scheme.estimated_monthly_usage || 10000);
+    setPeakRatio(scheme.peak_ratio || 30);
+    setFlatRatio(scheme.flat_ratio || 50);
+    setValleyRatio(scheme.valley_ratio || 20);
+    if (scheme.fixed_price) setFixedPrice(scheme.fixed_price);
+    if (scheme.floating_base_price) setFloatingBasePrice(scheme.floating_base_price);
+    if (scheme.floating_price_type) setFloatingPriceType(scheme.floating_price_type);
+    if (scheme.floating_adjustment !== undefined && scheme.floating_adjustment !== null) setFloatingAdjustment(scheme.floating_adjustment);
+    setPurchaseCost(scheme.purchase_cost || 320);
+    setIntermediaryCost(scheme.intermediary_cost || 15);
+    setTransmissionCost(scheme.transmission_cost || 80);
+    setOtherCosts(scheme.other_costs || 10);
+    // 不自动设置计算结果，需要用户点击计算按钮
   };
 
   const pieChartData = useMemo(() => [
@@ -330,7 +395,7 @@ const PackageSimulation = () => {
                     <SelectItem value="manual">手动输入</SelectItem>
                     {pendingCustomers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.packageType}
+                        {customer.name} - {customer.package_type}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -814,18 +879,18 @@ const PackageSimulation = () => {
                 <tbody>
                   {savedSchemes.slice(0, 10).map((scheme) => (
                     <tr key={scheme.id} className="border-b hover:bg-[#F8FBFA]">
-                      <td className="p-3 text-sm">{new Date(scheme.createdAt).toLocaleString()}</td>
-                      <td className="p-3">{scheme.customerName}</td>
-                      <td className="p-3 text-sm">{scheme.schemeName}</td>
+                      <td className="p-3 text-sm">{new Date(scheme.created_at).toLocaleString()}</td>
+                      <td className="p-3">{scheme.customer?.name || '-'}</td>
+                      <td className="p-3 text-sm">{scheme.scheme_name}</td>
                       <td className="p-3">
-                        <Badge variant="outline">{scheme.packageType === 'fixed' ? '固定价格' : '浮动价格'}</Badge>
+                        <Badge variant="outline">{scheme.package_type === 'fixed' ? '固定价格' : '浮动价格'}</Badge>
                       </td>
-                      <td className="p-3 text-right font-mono">{scheme.estimatedMonthlyUsage}</td>
-                      <td className={`p-3 text-right font-mono ${scheme.grossProfit >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
-                        ¥{(scheme.grossProfit / 10000).toFixed(2)}万
+                      <td className="p-3 text-right font-mono">{scheme.estimated_monthly_usage || 0}</td>
+                      <td className={`p-3 text-right font-mono ${(scheme.gross_profit || 0) >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                        ¥{((scheme.gross_profit || 0) / 10000).toFixed(2)}万
                       </td>
-                      <td className={`p-3 text-right font-mono ${scheme.profitMargin >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
-                        {scheme.profitMargin.toFixed(2)}%
+                      <td className={`p-3 text-right font-mono ${(scheme.profit_margin || 0) >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                        {(scheme.profit_margin || 0).toFixed(2)}%
                       </td>
                       <td className="p-3">
                         <div className="flex gap-2 justify-end">
@@ -836,7 +901,7 @@ const PackageSimulation = () => {
                             size="sm"
                             variant="ghost"
                             className="text-red-600"
-                            onClick={() => setSavedSchemes(prev => prev.filter(s => s.id !== scheme.id))}
+                            onClick={() => deleteSimulation(scheme.id)}
                           >
                             删除
                           </Button>
