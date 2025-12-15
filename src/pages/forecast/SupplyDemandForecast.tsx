@@ -7,102 +7,40 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area, BarChart, Bar, ComposedChart
 } from "recharts";
-import { Wind, Sun, Zap, TrendingUp, Activity } from "lucide-react";
-
-// 生成15天新能源出力预测数据
-const generateRenewableData = () => {
-  const data = [];
-  const baseDate = new Date();
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() + i);
-    const windBase = 3000 + Math.random() * 2000;
-    const solarBase = 2000 + Math.random() * 1500;
-    data.push({
-      date: `${date.getMonth() + 1}/${date.getDate()}`,
-      windP10: Math.round(windBase * 0.7),
-      windP50: Math.round(windBase),
-      windP90: Math.round(windBase * 1.3),
-      solarP10: Math.round(solarBase * 0.75),
-      solarP50: Math.round(solarBase),
-      solarP90: Math.round(solarBase * 1.25),
-    });
-  }
-  return data;
-};
-
-// 生成15天负荷预测数据
-const generateLoadData = () => {
-  const data = [];
-  const baseDate = new Date();
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() + i);
-    const loadBase = 35000 + Math.random() * 10000;
-    data.push({
-      date: `${date.getMonth() + 1}/${date.getDate()}`,
-      predicted: Math.round(loadBase),
-      historical: Math.round(loadBase * (0.95 + Math.random() * 0.1)),
-      upperBound: Math.round(loadBase * 1.05),
-      lowerBound: Math.round(loadBase * 0.95),
-    });
-  }
-  return data;
-};
-
-// 生成15天联络线预测数据
-const generateTieLineData = () => {
-  const data = [];
-  const baseDate = new Date();
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() + i);
-    const inflow = 2000 + Math.random() * 1500;
-    const outflow = 1500 + Math.random() * 1000;
-    data.push({
-      date: `${date.getMonth() + 1}/${date.getDate()}`,
-      inflow: Math.round(inflow),
-      outflow: Math.round(outflow),
-      netPosition: Math.round(inflow - outflow),
-    });
-  }
-  return data;
-};
-
-// 生成7天火电竞价空间预测
-const generateThermalBiddingData = () => {
-  const data = [];
-  const baseDate = new Date();
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() + i);
-    const space = 8000 + Math.random() * 4000;
-    data.push({
-      date: `${date.getMonth() + 1}/${date.getDate()}`,
-      biddingSpace: Math.round(space),
-      historicalAvg: Math.round(space * (0.9 + Math.random() * 0.2)),
-      predicted: Math.round(space),
-    });
-  }
-  return data;
-};
-
-// 历史竞价行为分析数据
-const biddingBehaviorData = [
-  { range: "0-200", count: 45, rate: 78 },
-  { range: "200-300", count: 120, rate: 85 },
-  { range: "300-400", count: 280, rate: 92 },
-  { range: "400-500", count: 180, rate: 88 },
-  { range: "500-600", count: 95, rate: 72 },
-  { range: "600+", count: 40, rate: 55 },
-];
+import { Wind, Sun, Zap, Activity, Loader2 } from "lucide-react";
+import {
+  useRenewableOutputForecast,
+  useLoadForecast,
+  useTieLineForecast,
+  useThermalBiddingForecast,
+  useBiddingBehaviorAnalysis,
+  useSupplyDemandStats,
+  transformRenewableData,
+  transformLoadData,
+  transformTieLineData,
+  transformThermalData,
+  transformBiddingBehaviorData,
+} from "@/hooks/useSupplyDemandData";
 
 const SupplyDemandForecast = () => {
   const [province, setProvince] = useState("shandong");
-  const renewableData = generateRenewableData();
-  const loadData = generateLoadData();
-  const tieLineData = generateTieLineData();
-  const thermalData = generateThermalBiddingData();
+
+  // 数据库hooks
+  const { data: renewableRawData, isLoading: renewableLoading } = useRenewableOutputForecast(province);
+  const { data: loadRawData, isLoading: loadLoading } = useLoadForecast(province);
+  const { data: tieLineRawData, isLoading: tieLineLoading } = useTieLineForecast(province);
+  const { data: thermalRawData, isLoading: thermalLoading } = useThermalBiddingForecast(province);
+  const { data: behaviorRawData, isLoading: behaviorLoading } = useBiddingBehaviorAnalysis(province);
+  const stats = useSupplyDemandStats(province);
+
+  // 转换数据
+  const renewableData = transformRenewableData(renewableRawData);
+  const loadData = transformLoadData(loadRawData);
+  const tieLineData = transformTieLineData(tieLineRawData);
+  const thermalData = transformThermalData(thermalRawData);
+  const biddingBehaviorData = transformBiddingBehaviorData(behaviorRawData);
+
+  const isLoading = renewableLoading || loadLoading || tieLineLoading || thermalLoading;
 
   return (
     <div className="space-y-6">
@@ -121,6 +59,12 @@ const SupplyDemandForecast = () => {
         <Badge variant="outline" className="bg-[#F1F8F4] text-[#00B04D]">
           预测周期: 15天
         </Badge>
+        {isLoading && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">加载中...</span>
+          </div>
+        )}
       </div>
 
       {/* 指标卡片 */}
@@ -133,7 +77,7 @@ const SupplyDemandForecast = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">风电出力预测</p>
-                <p className="text-xl font-bold font-mono">3,850 MW</p>
+                <p className="text-xl font-bold font-mono">{stats.windP50Avg.toLocaleString()} MW</p>
                 <p className="text-xs text-muted-foreground">P50 均值</p>
               </div>
             </div>
@@ -147,7 +91,7 @@ const SupplyDemandForecast = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">光伏出力预测</p>
-                <p className="text-xl font-bold font-mono">2,680 MW</p>
+                <p className="text-xl font-bold font-mono">{stats.solarP50Avg.toLocaleString()} MW</p>
                 <p className="text-xs text-muted-foreground">P50 均值</p>
               </div>
             </div>
@@ -161,7 +105,7 @@ const SupplyDemandForecast = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">统调负荷预测</p>
-                <p className="text-xl font-bold font-mono">42,500 MW</p>
+                <p className="text-xl font-bold font-mono">{stats.loadPeak.toLocaleString()} MW</p>
                 <p className="text-xs text-muted-foreground">峰值预测</p>
               </div>
             </div>
@@ -175,7 +119,7 @@ const SupplyDemandForecast = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">竞价空间预测</p>
-                <p className="text-xl font-bold font-mono">10,200 MW</p>
+                <p className="text-xl font-bold font-mono">{stats.biddingSpaceAvg.toLocaleString()} MW</p>
                 <p className="text-xs text-muted-foreground">7日均值</p>
               </div>
             </div>

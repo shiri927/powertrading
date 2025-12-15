@@ -76,6 +76,36 @@ export type Database = {
           },
         ]
       }
+      bidding_behavior_analysis: {
+        Row: {
+          analysis_month: string | null
+          bid_count: number | null
+          created_at: string
+          id: string
+          price_range: string
+          province: string
+          win_rate: number | null
+        }
+        Insert: {
+          analysis_month?: string | null
+          bid_count?: number | null
+          created_at?: string
+          id?: string
+          price_range: string
+          province?: string
+          win_rate?: number | null
+        }
+        Update: {
+          analysis_month?: string | null
+          bid_count?: number | null
+          created_at?: string
+          id?: string
+          price_range?: string
+          province?: string
+          win_rate?: number | null
+        }
+        Relationships: []
+      }
       clearing_records: {
         Row: {
           bid_id: string | null
@@ -677,6 +707,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      load_forecast: {
+        Row: {
+          created_at: string
+          forecast_date: string
+          historical: number | null
+          id: string
+          lower_bound: number | null
+          predicted: number | null
+          province: string
+          upper_bound: number | null
+        }
+        Insert: {
+          created_at?: string
+          forecast_date: string
+          historical?: number | null
+          id?: string
+          lower_bound?: number | null
+          predicted?: number | null
+          province?: string
+          upper_bound?: number | null
+        }
+        Update: {
+          created_at?: string
+          forecast_date?: string
+          historical?: number | null
+          id?: string
+          lower_bound?: number | null
+          predicted?: number | null
+          province?: string
+          upper_bound?: number | null
+        }
+        Relationships: []
       }
       load_predictions: {
         Row: {
@@ -1283,6 +1346,39 @@ export type Database = {
         }
         Relationships: []
       }
+      renewable_output_forecast: {
+        Row: {
+          created_at: string
+          energy_type: string
+          forecast_date: string
+          id: string
+          p10: number | null
+          p50: number | null
+          p90: number | null
+          province: string
+        }
+        Insert: {
+          created_at?: string
+          energy_type: string
+          forecast_date: string
+          id?: string
+          p10?: number | null
+          p50?: number | null
+          p90?: number | null
+          province?: string
+        }
+        Update: {
+          created_at?: string
+          energy_type?: string
+          forecast_date?: string
+          id?: string
+          p10?: number | null
+          p50?: number | null
+          p90?: number | null
+          province?: string
+        }
+        Relationships: []
+      }
       report_templates: {
         Row: {
           config: Json
@@ -1505,6 +1601,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      thermal_bidding_forecast: {
+        Row: {
+          bidding_space: number | null
+          created_at: string
+          forecast_date: string
+          historical_avg: number | null
+          id: string
+          predicted: number | null
+          province: string
+        }
+        Insert: {
+          bidding_space?: number | null
+          created_at?: string
+          forecast_date: string
+          historical_avg?: number | null
+          id?: string
+          predicted?: number | null
+          province?: string
+        }
+        Update: {
+          bidding_space?: number | null
+          created_at?: string
+          forecast_date?: string
+          historical_avg?: number | null
+          id?: string
+          predicted?: number | null
+          province?: string
+        }
+        Relationships: []
+      }
+      tie_line_forecast: {
+        Row: {
+          created_at: string
+          forecast_date: string
+          id: string
+          inflow: number | null
+          net_position: number | null
+          outflow: number | null
+          province: string
+        }
+        Insert: {
+          created_at?: string
+          forecast_date: string
+          id?: string
+          inflow?: number | null
+          net_position?: number | null
+          outflow?: number | null
+          province?: string
+        }
+        Update: {
+          created_at?: string
+          forecast_date?: string
+          id?: string
+          inflow?: number | null
+          net_position?: number | null
+          outflow?: number | null
+          province?: string
+        }
+        Relationships: []
       }
       trading_bids: {
         Row: {
