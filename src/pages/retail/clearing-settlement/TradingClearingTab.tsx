@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { CalendarIcon, Search, RotateCcw } from "lucide-react";
+import { CalendarIcon, Search, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { LineChart, Line, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
@@ -10,38 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-// 生成价格数据
-const generatePriceData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    time: `${i.toString().padStart(2, '0')}:00`,
-    dayAheadClearPrice: 300 + Math.random() * 200,
-    realTimeClearPrice: 320 + Math.random() * 180,
-    dayAheadPrice: 280 + Math.random() * 220,
-    realTimePrice: 300 + Math.random() * 200,
-  }));
-};
-
-// 生成电量数据
-const generateVolumeData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    time: `${i.toString().padStart(2, '0')}:00`,
-    dayAheadClearVolume: 1000 + Math.random() * 500,
-    realTimeClearVolume: 1100 + Math.random() * 600,
-    dayAheadVolume: 950 + Math.random() * 550,
-    realTimeVolume: 1050 + Math.random() * 650,
-  }));
-};
-
-// 生成表格数据
-const generateTableData = () => {
-  const priceData = generatePriceData();
-  const volumeData = generateVolumeData();
-  return priceData.map((price, i) => ({
-    ...price,
-    ...volumeData[i],
-  }));
-};
+import { useClearingRecordsByDate } from "@/hooks/useClearingRecords";
 
 const priceChartConfig = {
   dayAheadClearPrice: { label: "日前出清电价", color: "#3b82f6" },
@@ -66,9 +35,66 @@ const TradingClearingTab = () => {
   const [tradingSequence, setTradingSequence] = useState<string>("all");
   const [dataType, setDataType] = useState<string>("all");
   
-  const priceData = generatePriceData();
-  const volumeData = generateVolumeData();
-  const tableData = generateTableData();
+  // 使用数据库数据
+  const clearingDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(2025, 10, 5), 'yyyy-MM-dd');
+  const { data: clearingRecords, isLoading } = useClearingRecordsByDate(clearingDate);
+
+  // 转换数据库数据为图表格式
+  const { priceData, volumeData, tableData } = useMemo(() => {
+    if (!clearingRecords || clearingRecords.length === 0) {
+      // 返回空数据结构
+      return { 
+        priceData: Array.from({ length: 24 }, (_, i) => ({
+          time: `${i.toString().padStart(2, '0')}:00`,
+          dayAheadClearPrice: 0,
+          realTimeClearPrice: 0,
+        })),
+        volumeData: Array.from({ length: 24 }, (_, i) => ({
+          time: `${i.toString().padStart(2, '0')}:00`,
+          dayAheadClearVolume: 0,
+          realTimeClearVolume: 0,
+        })),
+        tableData: []
+      };
+    }
+
+    const priceByHour: Record<number, { dayAhead: number[], realTime: number[] }> = {};
+    const volumeByHour: Record<number, { dayAhead: number[], realTime: number[] }> = {};
+
+    clearingRecords.forEach(record => {
+      if (!priceByHour[record.hour]) {
+        priceByHour[record.hour] = { dayAhead: [], realTime: [] };
+        volumeByHour[record.hour] = { dayAhead: [], realTime: [] };
+      }
+      if (record.day_ahead_clear_price) priceByHour[record.hour].dayAhead.push(record.day_ahead_clear_price);
+      if (record.realtime_clear_price) priceByHour[record.hour].realTime.push(record.realtime_clear_price);
+      if (record.day_ahead_clear_volume) volumeByHour[record.hour].dayAhead.push(record.day_ahead_clear_volume);
+      if (record.realtime_clear_volume) volumeByHour[record.hour].realTime.push(record.realtime_clear_volume);
+    });
+
+    const priceData = Array.from({ length: 24 }, (_, i) => ({
+      time: `${i.toString().padStart(2, '0')}:00`,
+      dayAheadClearPrice: priceByHour[i]?.dayAhead.length ? 
+        priceByHour[i].dayAhead.reduce((a, b) => a + b, 0) / priceByHour[i].dayAhead.length : 0,
+      realTimeClearPrice: priceByHour[i]?.realTime.length ? 
+        priceByHour[i].realTime.reduce((a, b) => a + b, 0) / priceByHour[i].realTime.length : 0,
+    }));
+
+    const volumeData = Array.from({ length: 24 }, (_, i) => ({
+      time: `${i.toString().padStart(2, '0')}:00`,
+      dayAheadClearVolume: volumeByHour[i]?.dayAhead.length ? 
+        volumeByHour[i].dayAhead.reduce((a, b) => a + b, 0) : 0,
+      realTimeClearVolume: volumeByHour[i]?.realTime.length ? 
+        volumeByHour[i].realTime.reduce((a, b) => a + b, 0) : 0,
+    }));
+
+    const tableData = priceData.map((p, i) => ({
+      ...p,
+      ...volumeData[i],
+    }));
+
+    return { priceData, volumeData, tableData };
+  }, [clearingRecords]);
 
   const showDayAhead = dataType === "all" || dataType === "dayAhead";
   const showRealTime = dataType === "all" || dataType === "realTime";
@@ -82,6 +108,15 @@ const TradingClearingTab = () => {
     setTradingSequence("all");
     setDataType("all");
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载出清数据...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

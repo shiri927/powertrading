@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Plus, Upload, Download, History, ChevronRight, ChevronDown, 
-  Calendar as CalendarIcon, Pencil, Trash2, CheckCircle, Clock, AlertCircle 
+  Calendar as CalendarIcon, Pencil, Trash2, CheckCircle, Clock, AlertCircle, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSettlementRecordsByMonth, SettlementRecord } from "@/hooks/useSettlementRecords";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface SettlementRecord {
+interface DisplayRecord {
   id: string;
   category: string;
   subCategory: string;
@@ -29,7 +32,7 @@ interface SettlementRecord {
   status: "settled" | "pending" | "processing";
   side: "purchase" | "sale";
   remark: string;
-  children?: SettlementRecord[];
+  children?: DisplayRecord[];
   isGroup?: boolean;
 }
 
@@ -41,90 +44,6 @@ interface OperationLog {
   detail: string;
 }
 
-// 生成模拟数据
-const generateMockData = (): SettlementRecord[] => {
-  const purchaseCategories = [
-    { category: "中长期交易结算", subCategories: ["年度双边交易", "月度双边交易", "月度竞价交易"] },
-    { category: "省内现货结算", subCategories: ["日前市场结算", "实时市场结算"] },
-    { category: "省间现货结算", subCategories: ["省间日前", "省间实时"] },
-    { category: "其他费用结算", subCategories: ["辅助服务费", "输配电费"] },
-  ];
-
-  const saleCategories = [
-    { category: "中长期交易结算", subCategories: ["年度售电", "月度售电", "月度竞价售电"] },
-    { category: "省内现货结算", subCategories: ["日前售电", "实时售电"] },
-    { category: "偏差考核结算", subCategories: ["正偏差考核", "负偏差考核"] },
-    { category: "其他费用结算", subCategories: ["服务费", "代理费"] },
-  ];
-
-  const tradingUnits = ["交易单元001", "交易单元002", "交易单元003"];
-  const statuses: ("settled" | "pending" | "processing")[] = ["settled", "pending", "processing"];
-
-  const createRecords = (categories: typeof purchaseCategories, side: "purchase" | "sale") => {
-    return categories.map((cat, catIndex) => {
-      const children = cat.subCategories.map((subCat, subIndex) => {
-        const records: SettlementRecord[] = [];
-        const count = 2 + Math.floor(Math.random() * 3);
-        
-        for (let i = 0; i < count; i++) {
-          const volume = 1000 + Math.random() * 5000;
-          const price = 300 + Math.random() * 200;
-          records.push({
-            id: `${side}-${catIndex}-${subIndex}-${i}`,
-            category: cat.category,
-            subCategory: subCat,
-            tradingUnit: tradingUnits[Math.floor(Math.random() * tradingUnits.length)],
-            settlementNo: `JS2024${String(catIndex + 1).padStart(2, '0')}${String(subIndex + 1).padStart(2, '0')}${String(i + 1).padStart(3, '0')}`,
-            settlementMonth: "202411",
-            volume,
-            price,
-            amount: volume * price,
-            status: statuses[Math.floor(Math.random() * statuses.length)],
-            side,
-            remark: "",
-          });
-        }
-
-        return {
-          id: `${side}-${catIndex}-${subIndex}`,
-          category: cat.category,
-          subCategory: subCat,
-          tradingUnit: "-",
-          settlementNo: "-",
-          settlementMonth: "202411",
-          volume: records.reduce((sum, r) => sum + r.volume, 0),
-          price: records.reduce((sum, r) => sum + r.price, 0) / records.length,
-          amount: records.reduce((sum, r) => sum + r.amount, 0),
-          status: "settled" as const,
-          side,
-          remark: `${records.length}条记录`,
-          isGroup: true,
-          children: records,
-        };
-      });
-
-      return {
-        id: `${side}-${catIndex}`,
-        category: cat.category,
-        subCategory: "-",
-        tradingUnit: "-",
-        settlementNo: "-",
-        settlementMonth: "202411",
-        volume: children.reduce((sum, c) => sum + c.volume, 0),
-        price: children.reduce((sum, c) => sum + c.price * c.volume, 0) / children.reduce((sum, c) => sum + c.volume, 0),
-        amount: children.reduce((sum, c) => sum + c.amount, 0),
-        status: "settled" as const,
-        side,
-        remark: `${cat.subCategories.length}个子类`,
-        isGroup: true,
-        children,
-      };
-    });
-  };
-
-  return [...createRecords(purchaseCategories, "purchase"), ...createRecords(saleCategories, "sale")];
-};
-
 const generateOperationLogs = (): OperationLog[] => {
   return [
     { id: "1", time: "2024-11-15 14:32:00", operator: "张三", action: "导入", detail: "导入202411月结算数据" },
@@ -134,15 +53,128 @@ const generateOperationLogs = (): OperationLog[] => {
   ];
 };
 
+// 获取交易单元列表
+const useTradingUnits = () => {
+  return useQuery({
+    queryKey: ['trading_units'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trading_units')
+        .select('id, unit_name, unit_code')
+        .eq('is_active', true);
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
+// 将数据库记录转换为树形结构
+const transformToTreeData = (records: SettlementRecord[]): DisplayRecord[] => {
+  const groupedByCategory: Record<string, Record<string, SettlementRecord[]>> = {};
+
+  records.forEach(record => {
+    const side = record.side as 'purchase' | 'sale';
+    const key = `${side}-${record.category}`;
+    if (!groupedByCategory[key]) {
+      groupedByCategory[key] = {};
+    }
+    const subKey = record.sub_category || '其他';
+    if (!groupedByCategory[key][subKey]) {
+      groupedByCategory[key][subKey] = [];
+    }
+    groupedByCategory[key][subKey].push(record);
+  });
+
+  const result: DisplayRecord[] = [];
+
+  Object.entries(groupedByCategory).forEach(([key, subCategories]) => {
+    const [side, category] = key.split('-');
+    const subCategoryRecords: DisplayRecord[] = [];
+    
+    Object.entries(subCategories).forEach(([subCategory, items]) => {
+      const totalVolume = items.reduce((sum, r) => sum + r.volume, 0);
+      const totalAmount = items.reduce((sum, r) => sum + r.amount, 0);
+      const avgPrice = totalVolume > 0 ? totalAmount / totalVolume : 0;
+      
+      const children: DisplayRecord[] = items.map(item => ({
+        id: item.id,
+        category: item.category,
+        subCategory: item.sub_category || '',
+        tradingUnit: item.trading_unit_id || '-',
+        settlementNo: item.settlement_no,
+        settlementMonth: item.settlement_month,
+        volume: item.volume,
+        price: item.price || 0,
+        amount: item.amount,
+        status: (item.status === 'confirmed' ? 'settled' : item.status) as 'settled' | 'pending' | 'processing',
+        side: item.side as 'purchase' | 'sale',
+        remark: item.remark || '',
+        isGroup: false,
+      }));
+
+      subCategoryRecords.push({
+        id: `sub-${key}-${subCategory}`,
+        category: category,
+        subCategory: subCategory,
+        tradingUnit: '-',
+        settlementNo: '-',
+        settlementMonth: items[0]?.settlement_month || '',
+        volume: totalVolume,
+        price: avgPrice,
+        amount: totalAmount,
+        status: 'settled',
+        side: side as 'purchase' | 'sale',
+        remark: `${items.length}条记录`,
+        isGroup: true,
+        children,
+      });
+    });
+
+    const categoryTotalVolume = subCategoryRecords.reduce((sum, r) => sum + r.volume, 0);
+    const categoryTotalAmount = subCategoryRecords.reduce((sum, r) => sum + r.amount, 0);
+    
+    result.push({
+      id: `cat-${key}`,
+      category: category,
+      subCategory: '-',
+      tradingUnit: '-',
+      settlementNo: '-',
+      settlementMonth: subCategoryRecords[0]?.settlementMonth || '',
+      volume: categoryTotalVolume,
+      price: categoryTotalVolume > 0 ? categoryTotalAmount / categoryTotalVolume : 0,
+      amount: categoryTotalAmount,
+      status: 'settled',
+      side: side as 'purchase' | 'sale',
+      remark: `${subCategoryRecords.length}个子类`,
+      isGroup: true,
+      children: subCategoryRecords,
+    });
+  });
+
+  return result;
+};
+
 const SettlementDetailsTab = () => {
-  const [data] = useState<SettlementRecord[]>(generateMockData());
   const [settlementType, setSettlementType] = useState<"all" | "purchase" | "sale">("all");
   const [tradingUnit, setTradingUnit] = useState<string>("all");
-  const [settlementMonth, setSettlementMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
+  const [settlementMonth, setSettlementMonth] = useState<Date | undefined>(new Date(2025, 10, 1));
   const [settlementCategory, setSettlementCategory] = useState<string>("all");
   const [keyword, setKeyword] = useState<string>("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [fileCaptureStatus] = useState<"success" | "pending" | "error">("success");
+
+  // 获取交易单元列表
+  const { data: tradingUnits } = useTradingUnits();
+
+  // 获取数据库结算数据
+  const monthString = settlementMonth ? format(settlementMonth, 'yyyy-MM') : '2025-11';
+  const { data: settlementRecords, isLoading } = useSettlementRecordsByMonth(monthString);
+
+  // 转换数据为树形结构
+  const treeData = useMemo(() => {
+    if (!settlementRecords) return [];
+    return transformToTreeData(settlementRecords);
+  }, [settlementRecords]);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -154,17 +186,17 @@ const SettlementDetailsTab = () => {
   };
 
   const filteredData = useMemo(() => {
-    let result = data;
+    let result = treeData;
     if (settlementType !== "all") {
       result = result.filter(r => r.side === settlementType);
     }
     return result;
-  }, [data, settlementType]);
+  }, [treeData, settlementType]);
 
   const handleReset = () => {
     setSettlementType("all");
     setTradingUnit("all");
-    setSettlementMonth(new Date(2024, 10, 1));
+    setSettlementMonth(new Date(2025, 10, 1));
     setSettlementCategory("all");
     setKeyword("");
   };
@@ -184,7 +216,7 @@ const SettlementDetailsTab = () => {
     );
   };
 
-  const renderRow = (record: SettlementRecord, level: number = 0): JSX.Element[] => {
+  const renderRow = (record: DisplayRecord, level: number = 0): JSX.Element[] => {
     const isExpanded = expandedRows.has(record.id);
     const hasChildren = record.children && record.children.length > 0;
     const bgColor = level === 0 ? "bg-[#E8F0EC]" : level === 1 ? "bg-[#F1F8F4]" : "";
@@ -226,6 +258,15 @@ const SettlementDetailsTab = () => {
     return rows;
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载结算明细...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 文件抓取状态 */}
@@ -242,7 +283,7 @@ const SettlementDetailsTab = () => {
                  fileCaptureStatus === "pending" ? <Clock className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
                 {fileCaptureStatus === "success" ? "同步成功" : fileCaptureStatus === "pending" ? "同步中" : "同步失败"}
               </span>
-              <span className="text-xs text-muted-foreground">最后更新: 2024-11-15 14:30</span>
+              <span className="text-xs text-muted-foreground">最后更新: 2025-11-15 14:30</span>
             </div>
             <Button variant="outline" size="sm" onClick={() => toast.success("开始同步结算文件...")}>
               刷新同步
@@ -271,9 +312,9 @@ const SettlementDetailsTab = () => {
                 <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部交易单元</SelectItem>
-                  <SelectItem value="unit001">交易单元001</SelectItem>
-                  <SelectItem value="unit002">交易单元002</SelectItem>
-                  <SelectItem value="unit003">交易单元003</SelectItem>
+                  {tradingUnits?.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id}>{unit.unit_name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -381,6 +422,13 @@ const SettlementDetailsTab = () => {
               </thead>
               <tbody>
                 {filteredData.map(record => renderRow(record))}
+                {filteredData.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                      暂无结算数据
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
