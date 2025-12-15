@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, subMonths } from 'date-fns';
+import { format, subMonths, parseISO } from 'date-fns';
 
 export interface MediumLongTermPrice {
   id: string;
@@ -37,12 +37,43 @@ export interface PriceDistribution {
   count: number;
 }
 
+// 获取数据库中最新日期
+const getLatestDataDate = async (province: string): Promise<Date> => {
+  const { data } = await supabase
+    .from('medium_long_term_prices')
+    .select('trade_date')
+    .eq('province', province)
+    .order('trade_date', { ascending: false })
+    .limit(1);
+  
+  if (data && data.length > 0) {
+    return parseISO(data[0].trade_date);
+  }
+  return new Date(); // 如果没有数据，使用当前日期
+};
+
+// 获取价格分布最新月份
+const getLatestDistributionMonth = async (province: string): Promise<string> => {
+  const { data } = await supabase
+    .from('price_distribution')
+    .select('trade_month')
+    .eq('province', province)
+    .order('trade_month', { ascending: false })
+    .limit(1);
+  
+  if (data && data.length > 0) {
+    return data[0].trade_month;
+  }
+  return format(new Date(), 'yyyy-MM');
+};
+
 // 历史序列价格数据 - 按月聚合各交易类型价格
 export const useHistoricalPriceData = (months: number = 12, province: string = '山东') => {
   return useQuery({
     queryKey: ['medium_long_term', 'historical', months, province],
     queryFn: async () => {
-      const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
+      const latestDate = await getLatestDataDate(province);
+      const startDate = format(subMonths(latestDate, months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('medium_long_term_prices')
@@ -106,7 +137,8 @@ export const useCentralizedBiddingData = (months: number = 12, province: string 
   return useQuery({
     queryKey: ['medium_long_term', 'centralized', months, province],
     queryFn: async () => {
-      const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
+      const latestDate = await getLatestDataDate(province);
+      const startDate = format(subMonths(latestDate, months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('medium_long_term_prices')
@@ -145,12 +177,13 @@ export const useCentralizedBiddingData = (months: number = 12, province: string 
   });
 };
 
-// 滚动撮合分析数据
-export const useRollingMatchData = (days: number = 30, province: string = '山东') => {
+// 滚动撮合分析数据 - 使用月数而非天数
+export const useRollingMatchData = (months: number = 12, province: string = '山东') => {
   return useQuery({
-    queryKey: ['medium_long_term', 'rolling', days, province],
+    queryKey: ['medium_long_term', 'rolling', months, province],
     queryFn: async () => {
-      const startDate = format(new Date(Date.now() - days * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+      const latestDate = await getLatestDataDate(province);
+      const startDate = format(subMonths(latestDate, months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('medium_long_term_prices')
@@ -163,7 +196,7 @@ export const useRollingMatchData = (days: number = 30, province: string = '山�
       if (error) throw error;
 
       return (data || []).map((item) => ({
-        date: format(new Date(item.trade_date), 'MM-dd'),
+        date: item.trade_month,
         successRate: Number(item.success_rate) || 0,
         avgPrice: Number(item.avg_price) || 0,
         buyVolume: Number(item.buy_volume) || 0,
@@ -179,7 +212,8 @@ export const useMarketSummaryData = (months: number = 12, province: string = '�
   return useQuery({
     queryKey: ['medium_long_term', 'summary', months, province],
     queryFn: async () => {
-      const startDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
+      const latestDate = await getLatestDataDate(province);
+      const startDate = format(subMonths(latestDate, months), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('medium_long_term_prices')
@@ -244,12 +278,13 @@ export const useMarketSummaryData = (months: number = 12, province: string = '�
   });
 };
 
-// 价格分布数据
+// 价格分布数据 - 自动获取最新月份
 export const usePriceDistributionData = (month?: string, province: string = '山东') => {
   return useQuery({
     queryKey: ['price_distribution', month, province],
     queryFn: async () => {
-      const targetMonth = month || format(new Date(), 'yyyy-MM');
+      // 如果没有指定月份，自动获取数据库中最新月份
+      const targetMonth = month || await getLatestDistributionMonth(province);
       
       const { data, error } = await supabase
         .from('price_distribution')
