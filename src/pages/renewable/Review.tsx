@@ -48,7 +48,7 @@ import {
   ComposedChart 
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { useReviewData } from "@/hooks/useReviewData";
+import { useReviewData, InterSpotReviewData } from "@/hooks/useReviewData";
 
 // 导入新的优化组件
 import IntraProvincialReviewTab from "./review/IntraProvincialReviewTab";
@@ -1126,21 +1126,7 @@ const aggregateIntraData = (
 
 // ============= 省间现货复盘数据 =============
 
-// ============= 省间现货复盘数据结构 =============
-
-interface InterSpotReviewData {
-  date: string;
-  timePoint: string;
-  tradingUnit: string;
-  dayAheadVolume: number;
-  dayAheadPrice: number;
-  dayAheadRevenue: number;
-  intraDayVolume: number;
-  intraDayPrice: number;
-  intraDayRevenue: number;
-  intraProvincialRealTimePrice: number;
-  profitLossDiff: number;
-}
+// InterSpotReviewData 现在从 useReviewData hook 导入
 
 interface InterTreeNode {
   key: string;
@@ -1157,52 +1143,7 @@ interface InterTreeNode {
 
 type InterAggregationDimension = 'tradingUnit' | 'date' | 'timePoint';
 
-// ============= 省间现货复盘数据生成 =============
-
-const generateInterSpotReviewData = (
-  startDate: string,
-  endDate: string,
-  tradingUnits: string[],
-  granularity: '24' | '96'
-): InterSpotReviewData[] => {
-  const data: InterSpotReviewData[] = [];
-  const dates = ['20240506', '20240516', '20240520'];
-  const sampleTimePoints = ['1015', '1030', '1045', '1100', '1115', '1130', '1145', '1200'];
-  
-  dates.forEach(date => {
-    tradingUnits.forEach(unit => {
-      sampleTimePoints.forEach(timePoint => {
-        const dayAheadVolume = 0.1 + Math.random() * 0.4;
-        const intraDayVolume = 0.05 + Math.random() * 0.25;
-        const dayAheadPrice = 180 + Math.random() * 80;
-        const intraDayPrice = 200 + Math.random() * 60;
-        const intraProvincialPrice = 190 + Math.random() * 70;
-        
-        const dayAheadRevenue = dayAheadVolume * dayAheadPrice;
-        const intraDayRevenue = intraDayVolume * intraDayPrice;
-        const interRevenue = dayAheadRevenue + intraDayRevenue;
-        const assumedIntraRevenue = (dayAheadVolume + intraDayVolume) * intraProvincialPrice;
-        const profitLossDiff = interRevenue - assumedIntraRevenue;
-        
-        data.push({
-          date,
-          timePoint,
-          tradingUnit: unit,
-          dayAheadVolume,
-          dayAheadPrice,
-          dayAheadRevenue,
-          intraDayVolume,
-          intraDayPrice,
-          intraDayRevenue,
-          intraProvincialRealTimePrice: intraProvincialPrice,
-          profitLossDiff,
-        });
-      });
-    });
-  });
-  
-  return data;
-};
+// generateInterSpotReviewData 已迁移至 useReviewData hook
 
 const buildInterTreeData = (
   rawData: InterSpotReviewData[],
@@ -1468,17 +1409,33 @@ const InterTreeRow = ({ node, isExpanded, onToggle, level = 0 }: {
 };
 
 const InterProvincialReview = () => {
+  const { fetchInterProvincialReviewData, isLoading } = useReviewData();
+  
   const [tradingCenter, setTradingCenter] = useState('all');
   const [selectedUnits, setSelectedUnits] = useState(['全部交易单元']);
   const [granularity, setGranularity] = useState<'24' | '96'>('96');
   const [dimension, setDimension] = useState<InterAggregationDimension>('date');
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['total']));
-  const [selectedChartKey, setSelectedChartKey] = useState('20240506');
+  const [selectedChartKey, setSelectedChartKey] = useState('');
+  const [rawData, setRawData] = useState<InterSpotReviewData[]>([]);
+  const [dateRange, setDateRange] = useState({
+    start: '2025-12-01',
+    end: '2025-12-15',
+  });
   
-  const rawData = useMemo(() => 
-    generateInterSpotReviewData('20240501', '20240520', ['山东省场站A', '山东省场站B'], granularity),
-    [granularity]
-  );
+  // 从数据库加载数据
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await fetchInterProvincialReviewData(dateRange.start, dateRange.end);
+      setRawData(data);
+      // 设置默认选中的图表键
+      if (data.length > 0) {
+        const firstDate = data[0].date;
+        setSelectedChartKey(firstDate);
+      }
+    };
+    loadData();
+  }, [dateRange.start, dateRange.end, fetchInterProvincialReviewData]);
   
   const treeData = useMemo(() => 
     buildInterTreeData(rawData, dimension),
@@ -1511,6 +1468,15 @@ const InterProvincialReview = () => {
     return [];
   }, [rawData, dimension]);
   
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载省间现货数据...</span>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-4">
       <Card>
@@ -1529,17 +1495,17 @@ const InterProvincialReview = () => {
             
             <div className="flex items-center gap-2 text-sm">
               <input 
-                type="text" 
-                value="20240501" 
-                className="border border-border rounded px-2 py-1 w-24 text-xs"
-                readOnly
+                type="date" 
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="border border-border rounded px-2 py-1 w-32 text-xs"
               />
               <span>-</span>
               <input 
-                type="text" 
-                value="20240520" 
-                className="border border-border rounded px-2 py-1 w-24 text-xs"
-                readOnly
+                type="date" 
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="border border-border rounded px-2 py-1 w-32 text-xs"
               />
             </div>
             
@@ -1548,7 +1514,10 @@ const InterProvincialReview = () => {
               <span className="text-sm font-bold text-[#00B04D]">96</span>
             </div>
             
-            <Button size="sm">查询</Button>
+            <Button size="sm" onClick={() => fetchInterProvincialReviewData(dateRange.start, dateRange.end)}>
+              <RefreshCw className="w-3 h-3 mr-1" />
+              查询
+            </Button>
             <Button size="sm" variant="outline">置宽</Button>
             
             <Button variant="outline" size="sm" className="ml-auto">
