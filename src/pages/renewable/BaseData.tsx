@@ -496,7 +496,7 @@ const BaseData = () => {
               <span className="ml-2 text-muted-foreground">加载中...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">合同总数</CardTitle>
@@ -541,17 +541,6 @@ const BaseData = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold font-mono text-primary">{Math.round(metrics.settlementVolume).toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground mt-1">MWh</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">剩余仓位</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold font-mono text-amber-600">
-                    {Math.round(metrics.remainingPosition).toLocaleString()}
-                  </div>
                   <p className="text-xs text-muted-foreground mt-1">MWh</p>
                 </CardContent>
               </Card>
