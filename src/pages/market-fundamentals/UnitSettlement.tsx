@@ -224,7 +224,7 @@ const UnitSettlement = () => {
             <p className="text-sm font-medium">数据自动同步自山东电力交易中心</p>
             <p className="text-xs text-muted-foreground">最后更新时间：{format(new Date(), "yyyy-MM-dd HH:mm:ss")}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading}>
+          <Button variant="outline" size="sm" onClick={() => refresh()} disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             刷新数据
           </Button>
