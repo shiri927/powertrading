@@ -5,11 +5,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Receipt, ChevronRight, ChevronDown, Download, Upload, FileSpreadsheet, Calendar as CalendarIcon, Eye, FileText, TrendingUp, PieChart, BarChart3, Table, Search, RefreshCw } from "lucide-react";
+import { Receipt, ChevronRight, ChevronDown, Download, Upload, FileSpreadsheet, Calendar as CalendarIcon, Eye, FileText, TrendingUp, PieChart, BarChart3, Table, Search, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PieChart as RechartsPie, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+import { useSettlementRecordsByMonth, useSettlementStats, SettlementRecord } from "@/hooks/useSettlementRecords";
 
 // ============= 现货结算汇总 Tab =============
 interface SpotSettlementItem {
@@ -21,6 +22,21 @@ interface SpotSettlementItem {
   unitCost: number;
 }
 
+// 将数据库记录转换为UI数据格式
+const transformSettlementRecords = (records: SettlementRecord[]): SpotSettlementItem[] => {
+  const total = records.reduce((sum, r) => sum + r.amount, 0);
+  
+  return records.map((record, i) => ({
+    id: record.id,
+    category: record.category,
+    subCategory: record.sub_category || record.category,
+    amount: record.amount,
+    percentage: total > 0 ? (record.amount / total) * 100 : 0,
+    unitCost: record.volume > 0 ? record.amount / record.volume : 0,
+  }));
+};
+
+// Mock数据生成（作为fallback）
 const generateSpotSettlementData = (): SpotSettlementItem[] => {
   const categories = [
     { category: "电能量费用", subCategory: "日前电能量费用", base: 5000000 },
@@ -55,7 +71,18 @@ const SpotSettlementSummaryTab = () => {
   const [month, setMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
   
-  const data = useMemo(() => generateSpotSettlementData(), []);
+  // 使用数据库数据
+  const monthStr = month ? format(month, "yyyy-MM") : "2024-11";
+  const { data: dbRecords = [], isLoading } = useSettlementRecordsByMonth(monthStr);
+  const { data: stats } = useSettlementStats(monthStr);
+  
+  // 优先使用数据库数据，无数据时使用Mock
+  const data = useMemo(() => {
+    if (dbRecords.length > 0) {
+      return transformSettlementRecords(dbRecords);
+    }
+    return generateSpotSettlementData();
+  }, [dbRecords]);
   
   const categoryData = useMemo(() => {
     const grouped: Record<string, number> = {};
@@ -65,8 +92,10 @@ const SpotSettlementSummaryTab = () => {
     return Object.entries(grouped).map(([name, value]) => ({ name, value }));
   }, [data]);
   
-  const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
-  const avgUnitCost = data.reduce((sum, item) => sum + item.unitCost, 0) / data.length;
+  const totalAmount = stats?.totalAmount || data.reduce((sum, item) => sum + item.amount, 0);
+  const avgUnitCost = stats?.totalVolume && stats.totalVolume > 0 
+    ? stats.totalAmount / stats.totalVolume 
+    : data.reduce((sum, item) => sum + item.unitCost, 0) / data.length;
   
   const COLORS = ["#00B04D", "#0088FE", "#FFBB28", "#FF8042", "#8884d8"];
   
