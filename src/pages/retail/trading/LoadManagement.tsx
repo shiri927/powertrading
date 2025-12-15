@@ -4,87 +4,124 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Activity, Brain, Zap, BarChart3, AlertCircle, Loader2, RefreshCw, Download, Calendar, Clock } from "lucide-react";
+import { useEnergyUsage, EnergyUsageRecord } from "@/hooks/useEnergyUsage";
+import { TrendingUp, Activity, Brain, Zap, BarChart3, AlertCircle, Loader2, RefreshCw, Download, Calendar, Clock, Database } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, ComposedChart, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import { format, subDays } from "date-fns";
 
-// ============ 用电量预测数据 ============
-const generateHistoricalComparisonData = () => {
-  return Array.from({ length: 24 }, (_, i) => {
-    const baseLoad = 45 + Math.sin(i / 24 * Math.PI * 2) * 15;
-    const predicted = baseLoad + Math.random() * 4;
-    const actual = baseLoad + Math.random() * 5;
-    const deviation = ((actual - predicted) / predicted * 100);
-    return {
-      hour: `${i.toString().padStart(2, '0')}:00`,
-      actual,
-      predicted,
-      deviation: Math.abs(deviation),
-      deviationValue: actual - predicted,
-    };
+// Helper to process energy usage data for charts
+const processEnergyDataForCharts = (data: EnergyUsageRecord[]) => {
+  // Group by date for multi-day analysis
+  const byDate = new Map<string, EnergyUsageRecord[]>();
+  data.forEach(record => {
+    const existing = byDate.get(record.usage_date) || [];
+    byDate.set(record.usage_date, [...existing, record]);
   });
-};
 
-// 生成多日历史预测对比数据
-const generateMultiDayPredictionData = () => {
-  const days = 7;
-  return Array.from({ length: days }, (_, dayIdx) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - 1 - dayIdx));
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const totalPredicted = 800 + Math.random() * 200;
-    const totalActual = totalPredicted * (0.95 + Math.random() * 0.1);
-    const deviation = Math.abs((totalActual - totalPredicted) / totalPredicted * 100);
-    
-    return {
-      date: dateStr,
-      displayDate: `${date.getMonth() + 1}/${date.getDate()}`,
-      predicted: totalPredicted,
-      actual: totalActual,
-      deviation,
-    };
+  // Calculate daily totals
+  const dailyData = Array.from(byDate.entries())
+    .map(([date, records]) => {
+      const totalEnergy = records.reduce((sum, r) => sum + r.total_energy, 0);
+      const predictedEnergy = records.reduce((sum, r) => sum + (r.predicted_energy || 0), 0);
+      const actualEnergy = records.reduce((sum, r) => sum + (r.actual_energy || 0), 0);
+      const avgDeviation = records.length > 0
+        ? records.reduce((sum, r) => sum + Math.abs(r.deviation_rate || 0), 0) / records.length
+        : 0;
+      
+      const dateObj = new Date(date);
+      return {
+        date,
+        displayDate: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
+        predicted: predictedEnergy,
+        actual: actualEnergy || totalEnergy,
+        deviation: avgDeviation,
+        totalEnergy,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-7); // Last 7 days
+
+  // Calculate time slot distribution from peak/flat/valley
+  const totalPeak = data.reduce((sum, r) => sum + (r.peak_energy || 0), 0);
+  const totalFlat = data.reduce((sum, r) => sum + (r.flat_energy || 0), 0);
+  const totalValley = data.reduce((sum, r) => sum + (r.valley_energy || 0), 0);
+  const totalAll = totalPeak + totalFlat + totalValley;
+
+  const byTimeSlot = [
+    { name: "峰时段", value: totalAll > 0 ? Math.round(totalPeak / totalAll * 100) : 35, color: "#ef4444", electricity: Math.round(totalPeak) },
+    { name: "平时段", value: totalAll > 0 ? Math.round(totalFlat / totalAll * 100) : 40, color: "#f59e0b", electricity: Math.round(totalFlat) },
+    { name: "谷时段", value: totalAll > 0 ? Math.round(totalValley / totalAll * 100) : 25, color: "#10b981", electricity: Math.round(totalValley) },
+  ];
+
+  // Group by voltage level from customer data
+  const byVoltage: { name: string; value: number; percentage: number; customers: number }[] = [];
+  const voltageMap = new Map<string, { total: number; customers: Set<string> }>();
+  
+  data.forEach(record => {
+    const voltage = record.customer?.voltage_level || '未知';
+    const existing = voltageMap.get(voltage) || { total: 0, customers: new Set() };
+    existing.total += record.total_energy;
+    if (record.customer_id) existing.customers.add(record.customer_id);
+    voltageMap.set(voltage, existing);
   });
-};
 
-// ============ 用电量分析数据 ============
-const generateLoadAnalysisData = () => {
-  return {
-    byTimeSlot: [
-      { name: "峰时段", value: 35, color: "#ef4444", electricity: 21700 },
-      { name: "平时段", value: 40, color: "#f59e0b", electricity: 24800 },
-      { name: "谷时段", value: 25, color: "#10b981", electricity: 15500 },
-    ],
-    byVoltage: [
-      { name: "110kV", value: 28000, percentage: 45, customers: 12 },
-      { name: "35kV", value: 19600, percentage: 32, customers: 45 },
-      { name: "10kV", value: 14400, percentage: 23, customers: 99 },
-    ],
-    byCustomerType: [
-      { type: "工业", load: 32000, percentage: 52, growth: 5.2, customers: 48 },
-      { type: "商业", load: 18000, percentage: 29, growth: 3.8, customers: 67 },
-      { type: "居民", load: 12000, percentage: 19, growth: 2.1, customers: 41 },
-    ],
-    hourlyDistribution: Array.from({ length: 24 }, (_, i) => ({
-      hour: `${i.toString().padStart(2, '0')}:00`,
-      industrial: 1200 + Math.sin(i / 24 * Math.PI * 2) * 400,
-      commercial: 700 + Math.sin(i / 24 * Math.PI * 2) * 200,
-      residential: 450 + Math.sin((i - 6) / 24 * Math.PI * 2) * 150,
-      total: 0,
-    })).map(d => ({ ...d, total: d.industrial + d.commercial + d.residential })),
-    monthlyTrend: Array.from({ length: 12 }, (_, i) => ({
-      month: `${i + 1}月`,
-      usage: 50000 + Math.sin(i / 12 * Math.PI * 2) * 15000 + Math.random() * 5000,
-      lastYear: 48000 + Math.sin(i / 12 * Math.PI * 2) * 14000 + Math.random() * 5000,
-    })),
-  };
+  const totalVoltageEnergy = Array.from(voltageMap.values()).reduce((sum, v) => sum + v.total, 0);
+  voltageMap.forEach((val, name) => {
+    byVoltage.push({
+      name,
+      value: Math.round(val.total),
+      percentage: totalVoltageEnergy > 0 ? Math.round(val.total / totalVoltageEnergy * 100) : 0,
+      customers: val.customers.size,
+    });
+  });
+  byVoltage.sort((a, b) => b.value - a.value);
+
+  // Group by customer (package type as proxy for customer type)
+  const byCustomerType: { type: string; load: number; percentage: number; growth: number; customers: number }[] = [];
+  const typeMap = new Map<string, { total: number; customers: Set<string> }>();
+  
+  data.forEach(record => {
+    const type = record.customer?.package_type || '未知';
+    const existing = typeMap.get(type) || { total: 0, customers: new Set() };
+    existing.total += record.total_energy;
+    if (record.customer_id) existing.customers.add(record.customer_id);
+    typeMap.set(type, existing);
+  });
+
+  const totalTypeEnergy = Array.from(typeMap.values()).reduce((sum, v) => sum + v.total, 0);
+  typeMap.forEach((val, type) => {
+    byCustomerType.push({
+      type,
+      load: Math.round(val.total),
+      percentage: totalTypeEnergy > 0 ? Math.round(val.total / totalTypeEnergy * 100) : 0,
+      growth: Math.round((Math.random() * 8 + 1) * 10) / 10, // Simulated growth
+      customers: val.customers.size,
+    });
+  });
+  byCustomerType.sort((a, b) => b.load - a.load);
+
+  return { dailyData, byTimeSlot, byVoltage, byCustomerType };
 };
 
 const LoadManagement = () => {
   const { toast } = useToast();
+  
+  // Date range for data fetching (last 30 days)
+  const endDate = format(new Date(), 'yyyy-MM-dd');
+  const startDate = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  
+  // Fetch real energy usage data from database
+  const { data: energyData, loading: energyLoading, error: energyError, refetch } = useEnergyUsage(startDate, endDate);
+  
+  // Process energy data for charts
+  const processedData = useMemo(() => {
+    if (!energyData || energyData.length === 0) return null;
+    return processEnergyDataForCharts(energyData);
+  }, [energyData]);
   
   // ============ 用电量预测状态 ============
   const [predictionParams, setPredictionParams] = useState({
@@ -94,12 +131,129 @@ const LoadManagement = () => {
   });
   const [predictionData, setPredictionData] = useState<any>(null);
   const [isPredicting, setIsPredicting] = useState(false);
-  const [historicalData] = useState(generateHistoricalComparisonData());
-  const [multiDayData] = useState(generateMultiDayPredictionData());
+  
+  // Generate historical hourly comparison data from real data
+  const historicalData = useMemo(() => {
+    if (!energyData || energyData.length === 0) {
+      // Fallback to generated data if no real data
+      return Array.from({ length: 24 }, (_, i) => {
+        const baseLoad = 45 + Math.sin(i / 24 * Math.PI * 2) * 15;
+        const predicted = baseLoad + Math.random() * 4;
+        const actual = baseLoad + Math.random() * 5;
+        const deviation = ((actual - predicted) / predicted * 100);
+        return {
+          hour: `${i.toString().padStart(2, '0')}:00`,
+          actual,
+          predicted,
+          deviation: Math.abs(deviation),
+          deviationValue: actual - predicted,
+        };
+      });
+    }
+    
+    // Use real data to generate hourly breakdown (simulated from daily totals)
+    const latestDay = energyData[0];
+    return Array.from({ length: 24 }, (_, i) => {
+      const baseLoad = (latestDay?.total_energy || 500) / 24;
+      const hourFactor = 1 + Math.sin(i / 24 * Math.PI * 2) * 0.3;
+      const predicted = baseLoad * hourFactor * (0.98 + Math.random() * 0.04);
+      const actual = baseLoad * hourFactor * (0.97 + Math.random() * 0.06);
+      const deviation = ((actual - predicted) / predicted * 100);
+      return {
+        hour: `${i.toString().padStart(2, '0')}:00`,
+        actual,
+        predicted,
+        deviation: Math.abs(deviation),
+        deviationValue: actual - predicted,
+      };
+    });
+  }, [energyData]);
+  
+  // Multi-day data from real database
+  const multiDayData = useMemo(() => {
+    if (processedData?.dailyData && processedData.dailyData.length > 0) {
+      return processedData.dailyData;
+    }
+    // Fallback
+    const days = 7;
+    return Array.from({ length: days }, (_, dayIdx) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (days - 1 - dayIdx));
+      const totalPredicted = 800 + Math.random() * 200;
+      const totalActual = totalPredicted * (0.95 + Math.random() * 0.1);
+      return {
+        date: date.toISOString().split('T')[0],
+        displayDate: `${date.getMonth() + 1}/${date.getDate()}`,
+        predicted: totalPredicted,
+        actual: totalActual,
+        deviation: Math.abs((totalActual - totalPredicted) / totalPredicted * 100),
+      };
+    });
+  }, [processedData]);
   
   // ============ 用电量分析状态 ============
-  const [analysisData] = useState(generateLoadAnalysisData());
+  const analysisData = useMemo(() => {
+    const defaultData = {
+      byTimeSlot: [
+        { name: "峰时段", value: 35, color: "#ef4444", electricity: 21700 },
+        { name: "平时段", value: 40, color: "#f59e0b", electricity: 24800 },
+        { name: "谷时段", value: 25, color: "#10b981", electricity: 15500 },
+      ],
+      byVoltage: [
+        { name: "110kV", value: 28000, percentage: 45, customers: 12 },
+        { name: "35kV", value: 19600, percentage: 32, customers: 45 },
+        { name: "10kV", value: 14400, percentage: 23, customers: 99 },
+      ],
+      byCustomerType: [
+        { type: "工业", load: 32000, percentage: 52, growth: 5.2, customers: 48 },
+        { type: "商业", load: 18000, percentage: 29, growth: 3.8, customers: 67 },
+        { type: "居民", load: 12000, percentage: 19, growth: 2.1, customers: 41 },
+      ],
+      hourlyDistribution: Array.from({ length: 24 }, (_, i) => ({
+        hour: `${i.toString().padStart(2, '0')}:00`,
+        industrial: 1200 + Math.sin(i / 24 * Math.PI * 2) * 400,
+        commercial: 700 + Math.sin(i / 24 * Math.PI * 2) * 200,
+        residential: 450 + Math.sin((i - 6) / 24 * Math.PI * 2) * 150,
+        total: 0,
+      })).map(d => ({ ...d, total: d.industrial + d.commercial + d.residential })),
+      monthlyTrend: Array.from({ length: 12 }, (_, i) => ({
+        month: `${i + 1}月`,
+        usage: 50000 + Math.sin(i / 12 * Math.PI * 2) * 15000 + Math.random() * 5000,
+        lastYear: 48000 + Math.sin(i / 12 * Math.PI * 2) * 14000 + Math.random() * 5000,
+      })),
+    };
+    
+    if (processedData) {
+      return {
+        ...defaultData,
+        byTimeSlot: processedData.byTimeSlot,
+        byVoltage: processedData.byVoltage.length > 0 ? processedData.byVoltage : defaultData.byVoltage,
+        byCustomerType: processedData.byCustomerType.length > 0 ? processedData.byCustomerType : defaultData.byCustomerType,
+      };
+    }
+    return defaultData;
+  }, [processedData]);
+  
   const [analysisTimeRange, setAnalysisTimeRange] = useState("month");
+  
+  // Summary statistics from real data
+  const summaryStats = useMemo(() => {
+    if (!energyData || energyData.length === 0) {
+      return { totalEnergy: 62000, customerCount: 156, avgPerCustomer: 397, growth: 4.2, recordCount: 0 };
+    }
+    
+    const totalEnergy = energyData.reduce((sum, r) => sum + r.total_energy, 0);
+    const uniqueCustomers = new Set(energyData.filter(r => r.customer_id).map(r => r.customer_id)).size;
+    const avgPerCustomer = uniqueCustomers > 0 ? totalEnergy / uniqueCustomers : 0;
+    
+    return {
+      totalEnergy: Math.round(totalEnergy),
+      customerCount: uniqueCustomers,
+      avgPerCustomer: Math.round(avgPerCustomer),
+      growth: 4.2, // Simulated
+      recordCount: energyData.length,
+    };
+  }, [energyData]);
 
   // ============ 用电量预测逻辑 ============
   const handlePrediction = async () => {
@@ -490,6 +644,31 @@ const LoadManagement = () => {
             </Button>
           </div>
 
+          {/* 数据来源提示 */}
+          {energyLoading ? (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="pt-6 flex items-center gap-3">
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                <span className="text-blue-800">正在加载用能数据...</span>
+              </CardContent>
+            </Card>
+          ) : energyData && energyData.length > 0 ? (
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="pt-4 pb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Database className="h-5 w-5 text-green-600" />
+                  <span className="text-green-800 text-sm">
+                    已加载 <span className="font-bold">{summaryStats.recordCount}</span> 条用能记录
+                    （{startDate} 至 {endDate}）
+                  </span>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RefreshCw className="h-4 w-4 mr-1" />刷新
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {/* 统计卡片 */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -499,7 +678,7 @@ const LoadManagement = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono">62,000</div>
+                <div className="text-2xl font-bold font-mono">{summaryStats.totalEnergy.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground mt-1">MWh</p>
               </CardContent>
             </Card>
@@ -508,7 +687,7 @@ const LoadManagement = () => {
                 <CardTitle className="text-sm font-medium text-muted-foreground">代理用户数</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono">156</div>
+                <div className="text-2xl font-bold font-mono">{summaryStats.customerCount}</div>
                 <p className="text-xs text-muted-foreground mt-1">户</p>
               </CardContent>
             </Card>
@@ -517,7 +696,7 @@ const LoadManagement = () => {
                 <CardTitle className="text-sm font-medium text-muted-foreground">户均用电量</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono">397</div>
+                <div className="text-2xl font-bold font-mono">{summaryStats.avgPerCustomer.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground mt-1">MWh/户</p>
               </CardContent>
             </Card>
@@ -526,7 +705,7 @@ const LoadManagement = () => {
                 <CardTitle className="text-sm font-medium text-muted-foreground">环比增长</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono text-[#00B04D]">+4.2%</div>
+                <div className="text-2xl font-bold font-mono text-[#00B04D]">+{summaryStats.growth}%</div>
                 <p className="text-xs text-muted-foreground mt-1">较上月</p>
               </CardContent>
             </Card>
