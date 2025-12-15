@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,40 +9,60 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from "recharts";
-import { CloudRain, Wind, Sun, Thermometer, AlertTriangle, Settings, Download, Play, Pause, MapPin } from "lucide-react";
+import { CloudRain, Wind, Sun, Thermometer, AlertTriangle, Settings, Download, Play, Pause, MapPin, Loader2 } from "lucide-react";
 import { WeatherMapStatic } from "@/components/weather/WeatherMapStatic";
-
-// Sample data for hourly weather
-const hourlyData = [
-  { hour: "01-20", temp: -6.8, wind: 2.2, humidity: 68.5, radiation: 117.3 },
-  { hour: "01-21", temp: -7.0, wind: 0.9, humidity: 57.4, radiation: 89.2 },
-  { hour: "01-22", temp: -6.8, wind: 1.1, humidity: 60.5, radiation: 93.9 },
-  { hour: "01-23", temp: -7.1, wind: 2.1, humidity: 62.4, radiation: 93.0 },
-];
-
-// Sample data for daily averages
-const dailyData = [
-  { date: "01-20", max: -6.8, min: -14.1, avg: -9.5, wind: 2.2 },
-  { date: "01-21", max: -7.0, min: -14.1, avg: -9.5, wind: 0.9 },
-  { date: "01-22", max: -6.8, min: -14.1, avg: -9.5, wind: 1.3 },
-];
-
-// Chart data for statistics
-const chartData = [
-  { time: "01-20", temp: -6.8, wind: 2.2, humidity: 68.5, radiation: 117.3 },
-  { time: "01-22", temp: -7.0, wind: 1.0, humidity: 60.0, radiation: 89.2 },
-  { time: "01-24", temp: -6.5, wind: 1.5, humidity: 55.0, radiation: 95.0 },
-  { time: "01-26", temp: -7.1, wind: 2.1, humidity: 62.4, radiation: 93.0 },
-];
+import { format, subDays } from "date-fns";
+import {
+  useHourlyWeatherData,
+  useDailyWeatherData,
+  useChartWeatherData,
+  useWeatherAlerts,
+  alertLevelColors,
+  alertLevelText,
+} from "@/hooks/useWeatherData";
 
 const WeatherData = () => {
-  const [selectedProvince, setSelectedProvince] = useState("新疆维吾尔自治区");
+  const [selectedProvince, setSelectedProvince] = useState("山东省");
   const [selectedDataSource, setSelectedDataSource] = useState("数据版本1");
   const [isPlaying, setIsPlaying] = useState(false);
   const [showStations, setShowStations] = useState(true);
   const [showWarnings, setShowWarnings] = useState(true);
   const [colorMode, setColorMode] = useState("gradient");
   const [expandedChart, setExpandedChart] = useState(false);
+
+  // 使用数据库hooks
+  const startDate = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+  const endDate = format(new Date(), 'yyyy-MM-dd');
+
+  const { data: hourlyData = [], isLoading: loadingHourly } = useHourlyWeatherData({
+    province: selectedProvince,
+    startDate,
+    endDate,
+    dataSource: selectedDataSource,
+  });
+
+  const { data: dailyData = [], isLoading: loadingDaily } = useDailyWeatherData({
+    province: selectedProvince,
+    startDate,
+    endDate,
+  });
+
+  const { data: chartData = [], isLoading: loadingChart } = useChartWeatherData({
+    province: selectedProvince,
+    days: 7,
+  });
+
+  const { data: weatherAlerts = [], isLoading: loadingAlerts } = useWeatherAlerts({
+    province: selectedProvince,
+    activeOnly: true,
+  });
+
+  const isLoading = loadingHourly || loadingDaily || loadingChart;
+
+  // 限制显示的数据条数
+  const displayHourlyData = useMemo(() => hourlyData.slice(-24), [hourlyData]);
+  const displayDailyData = useMemo(() => dailyData.slice(-7), [dailyData]);
+  const displayChartData = useMemo(() => chartData.slice(-7), [chartData]);
 
   return (
     <div className="p-8 space-y-6">
@@ -221,7 +241,7 @@ const WeatherData = () => {
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">温度-地面-2m (°C)</p>
                   <ResponsiveContainer width="100%" height={80}>
-                    <LineChart data={chartData}>
+                    <LineChart data={displayChartData}>
                       <Line type="monotone" dataKey="temp" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
                       <XAxis dataKey="time" hide />
                       <YAxis hide />
@@ -232,7 +252,7 @@ const WeatherData = () => {
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">风速-地面-10m (m/s)</p>
                   <ResponsiveContainer width="100%" height={80}>
-                    <LineChart data={chartData}>
+                    <LineChart data={displayChartData}>
                       <Line type="monotone" dataKey="wind" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
                       <XAxis dataKey="time" hide />
                       <YAxis hide />
@@ -243,7 +263,7 @@ const WeatherData = () => {
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">总云量 (%)</p>
                   <ResponsiveContainer width="100%" height={80}>
-                    <LineChart data={chartData}>
+                    <LineChart data={displayChartData}>
                       <Line type="monotone" dataKey="humidity" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={false} />
                       <XAxis dataKey="time" hide />
                       <YAxis hide />
@@ -254,7 +274,7 @@ const WeatherData = () => {
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">辐照度 (W/m^2)</p>
                   <ResponsiveContainer width="100%" height={80}>
-                    <LineChart data={chartData}>
+                    <LineChart data={displayChartData}>
                       <Line type="monotone" dataKey="radiation" stroke="hsl(var(--chart-4))" strokeWidth={2} dot={false} />
                       <XAxis dataKey="time" hide />
                       <YAxis hide />
@@ -298,7 +318,7 @@ const WeatherData = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dailyData.map((row, idx) => (
+                        {displayDailyData.map((row, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{row.date}</TableCell>
                             <TableCell>{row.max}</TableCell>
@@ -324,7 +344,7 @@ const WeatherData = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {hourlyData.map((row, idx) => (
+                        {displayHourlyData.map((row, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="font-medium">{row.hour}</TableCell>
                             <TableCell>{row.temp}</TableCell>

@@ -1499,6 +1499,129 @@ export type Database = {
         }
         Relationships: []
       }
+      weather_alerts: {
+        Row: {
+          alert_level: string
+          alert_type: string
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          is_active: boolean | null
+          province: string
+          region: string | null
+          start_time: string
+          title: string
+        }
+        Insert: {
+          alert_level: string
+          alert_type: string
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          province?: string
+          region?: string | null
+          start_time: string
+          title: string
+        }
+        Update: {
+          alert_level?: string
+          alert_type?: string
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          province?: string
+          region?: string | null
+          start_time?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      weather_data: {
+        Row: {
+          cloud_cover: number | null
+          created_at: string
+          data_source: string | null
+          data_type: string | null
+          forecast_radiation: number | null
+          forecast_temperature: number | null
+          forecast_wind_speed: number | null
+          humidity: number | null
+          id: string
+          pressure: number | null
+          province: string
+          radiation: number | null
+          rainfall: number | null
+          record_date: string
+          record_hour: number | null
+          region: string | null
+          snow_depth: number | null
+          snowfall: number | null
+          station_name: string | null
+          temperature: number | null
+          temperature_max: number | null
+          temperature_min: number | null
+          wind_direction: number | null
+          wind_speed: number | null
+        }
+        Insert: {
+          cloud_cover?: number | null
+          created_at?: string
+          data_source?: string | null
+          data_type?: string | null
+          forecast_radiation?: number | null
+          forecast_temperature?: number | null
+          forecast_wind_speed?: number | null
+          humidity?: number | null
+          id?: string
+          pressure?: number | null
+          province?: string
+          radiation?: number | null
+          rainfall?: number | null
+          record_date: string
+          record_hour?: number | null
+          region?: string | null
+          snow_depth?: number | null
+          snowfall?: number | null
+          station_name?: string | null
+          temperature?: number | null
+          temperature_max?: number | null
+          temperature_min?: number | null
+          wind_direction?: number | null
+          wind_speed?: number | null
+        }
+        Update: {
+          cloud_cover?: number | null
+          created_at?: string
+          data_source?: string | null
+          data_type?: string | null
+          forecast_radiation?: number | null
+          forecast_temperature?: number | null
+          forecast_wind_speed?: number | null
+          humidity?: number | null
+          id?: string
+          pressure?: number | null
+          province?: string
+          radiation?: number | null
+          rainfall?: number | null
+          record_date?: string
+          record_hour?: number | null
+          region?: string | null
+          snow_depth?: number | null
+          snowfall?: number | null
+          station_name?: string | null
+          temperature?: number | null
+          temperature_max?: number | null
+          temperature_min?: number | null
+          wind_direction?: number | null
+          wind_speed?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
