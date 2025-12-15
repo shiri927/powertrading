@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Search, Settings } from "lucide-react";
+import { CalendarIcon, Search, Settings, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,36 +12,85 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EmbeddedRecommendation } from "./EmbeddedRecommendation";
 import { StrategyRecommendation } from "@/lib/trading/recommendation-engine";
+import { usePredictionData, PowerPrediction96Point } from "@/hooks/usePredictionData";
+import { supabase } from "@/integrations/supabase/client";
 
-// 生成96点功率预测数据
-const generatePowerPredictionData = () => {
-  return Array.from({
-    length: 96
-  }, (_, i) => {
-    const hour = Math.floor(i / 4);
-    const minute = i % 4 * 15;
-    const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    const basePower = 20 + Math.sin(i / 10) * 8 + Math.random() * 5;
-    return {
-      id: i + 1,
-      time: timeStr,
-      originalPower: parseFloat(basePower.toFixed(3)),
-      pendingPower: parseFloat(basePower.toFixed(3)),
-      expectedRevenue: null as number | null
-    };
-  });
-};
+interface TradingUnit {
+  id: string;
+  unit_code: string;
+  unit_name: string;
+}
+
 interface IntraProvincialSpotBiddingProps {
   showRecommendationAlert?: boolean;
 }
+
 const IntraProvincialSpotBidding = ({
   showRecommendationAlert
 }: IntraProvincialSpotBiddingProps) => {
   const [activeTab, setActiveTab] = useState("bidding");
-  const [tradingUnit, setTradingUnit] = useState("shanxi-demo");
+  const [tradingUnit, setTradingUnit] = useState<string>("");
+  const [tradingUnits, setTradingUnits] = useState<TradingUnit[]>([]);
   const [executionDate, setExecutionDate] = useState<Date>(new Date(2025, 10, 7));
-  const [powerData, setPowerData] = useState(generatePowerPredictionData);
+  const [powerData, setPowerData] = useState<PowerPrediction96Point[]>([]);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(false);
+
+  const { powerPredictions96, isLoading, fetch96PointPredictions } = usePredictionData();
+
+  // 加载交易单元列表
+  useEffect(() => {
+    const loadTradingUnits = async () => {
+      setIsLoadingUnits(true);
+      try {
+        const { data, error } = await supabase
+          .from('trading_units')
+          .select('id, unit_code, unit_name')
+          .eq('is_active', true)
+          .order('unit_name');
+
+        if (error) throw error;
+        
+        setTradingUnits(data || []);
+        if (data && data.length > 0 && !tradingUnit) {
+          setTradingUnit(data[0].id);
+        }
+      } catch (err) {
+        console.error('加载交易单元失败:', err);
+        toast.error('加载交易单元列表失败');
+      } finally {
+        setIsLoadingUnits(false);
+      }
+    };
+
+    loadTradingUnits();
+  }, []);
+
+  // 当交易单元或日期变化时加载96点预测数据
+  useEffect(() => {
+    if (tradingUnit) {
+      const dateStr = format(executionDate, 'yyyy-MM-dd');
+      fetch96PointPredictions(tradingUnit, dateStr);
+    }
+  }, [tradingUnit, executionDate, fetch96PointPredictions]);
+
+  // 同步预测数据到本地状态
+  useEffect(() => {
+    if (powerPredictions96.length > 0) {
+      setPowerData(powerPredictions96);
+    }
+  }, [powerPredictions96]);
+
+  // 查询按钮处理
+  const handleQuery = () => {
+    if (!tradingUnit) {
+      toast.error('请先选择交易单元');
+      return;
+    }
+    const dateStr = format(executionDate, 'yyyy-MM-dd');
+    fetch96PointPredictions(tradingUnit, dateStr);
+    toast.success('数据已刷新');
+  };
 
   // 策略收入预测
   const strategyPredictions = useMemo(() => ({
@@ -53,52 +101,53 @@ const IntraProvincialSpotBidding = ({
 
   // 应用推荐策略到申报
   const handleApplyRecommendation = (recommendation: StrategyRecommendation) => {
-    // 根据推荐的操作调整功率数据
     const actions = recommendation.suggestedActions;
 
-    // 简化处理：根据推荐策略调整功率预测
     const adjustedData = powerData.map((item, index) => {
-      // 根据时间段应用不同的调整
       const hour = Math.floor(index / 4);
       let adjustmentFactor = 1.0;
 
-      // 根据推荐操作类型调整
       actions.forEach(action => {
         const actionHour = parseInt(action.time.split(':')[0]);
         if (Math.abs(hour - actionHour) <= 2) {
           if (action.action === 'buy') {
-            adjustmentFactor *= 0.95; // 买入时降低申报功率
+            adjustmentFactor *= 0.95;
           } else if (action.action === 'sell') {
-            adjustmentFactor *= 1.05; // 卖出时提高申报功率
+            adjustmentFactor *= 1.05;
           }
         }
       });
+      
       return {
         ...item,
         pendingPower: parseFloat((item.originalPower * adjustmentFactor).toFixed(3)),
         expectedRevenue: parseFloat((item.originalPower * adjustmentFactor * (300 + Math.random() * 100)).toFixed(2))
       };
     });
+    
     setPowerData(adjustedData);
     setActiveTab("bidding");
     toast.success("策略已应用", {
       description: "推荐策略已预填到申报数据中，请检查并提交"
     });
   };
-  return <div className="space-y-4">
+
+  return (
+    <div className="space-y-4">
       {/* 顶部筛选栏 */}
       <div className="flex items-center gap-4 p-4 bg-background rounded-lg border">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">交易单元</span>
-          <Select value={tradingUnit} onValueChange={setTradingUnit}>
+          <Select value={tradingUnit} onValueChange={setTradingUnit} disabled={isLoadingUnits}>
             <SelectTrigger className="w-48">
-              <SelectValue />
+              <SelectValue placeholder={isLoadingUnits ? "加载中..." : "选择交易单元"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="shanxi-demo">山西演示交易单元</SelectItem>
-              <SelectItem value="shandong-a">山东省场站A</SelectItem>
-              <SelectItem value="shandong-b">山东省场站B</SelectItem>
-              <SelectItem value="zhejiang-a">浙江省场站A</SelectItem>
+              {tradingUnits.map((unit) => (
+                <SelectItem key={unit.id} value={unit.id}>
+                  {unit.unit_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -113,13 +162,19 @@ const IntraProvincialSpotBidding = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={executionDate} onSelect={date => date && setExecutionDate(date)} initialFocus className="pointer-events-auto" />
+              <Calendar 
+                mode="single" 
+                selected={executionDate} 
+                onSelect={date => date && setExecutionDate(date)} 
+                initialFocus 
+                className="pointer-events-auto" 
+              />
             </PopoverContent>
           </Popover>
         </div>
 
-        <Button className="bg-primary hover:bg-primary/90">
-          <Search className="h-4 w-4 mr-1" />
+        <Button className="bg-primary hover:bg-primary/90" onClick={handleQuery} disabled={isLoading}>
+          {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Search className="h-4 w-4 mr-1" />}
           查询
         </Button>
         <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
@@ -180,28 +235,44 @@ const IntraProvincialSpotBidding = ({
               {/* 功率预测数据表格 */}
               <div className="rounded-lg border overflow-hidden">
                 <div className="max-h-[500px] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10">
-                      <TableRow className="bg-[#E8F0EC] border-b-2 border-primary">
-                        <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
-                        <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
-                        <TableHead className="text-center font-semibold text-foreground">预计用电量(MW)</TableHead>
-                        <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {powerData.map(row => <TableRow key={row.id} className={cn("transition-colors cursor-pointer", selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]")} onClick={() => setSelectedRow(row.id)}>
-                          <TableCell className="text-center font-mono text-sm">{row.id}</TableCell>
-                          <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-sm text-muted-foreground">
-                            {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
-                          </TableCell>
-                        </TableRow>)}
-                    </TableBody>
-                  </Table>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center h-64">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="ml-2 text-muted-foreground">加载数据中...</span>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader className="sticky top-0 z-10">
+                        <TableRow className="bg-[#E8F0EC] border-b-2 border-primary">
+                          <TableHead className="w-16 text-center font-semibold text-foreground">序号</TableHead>
+                          <TableHead className="w-24 text-center font-semibold text-foreground">时间</TableHead>
+                          <TableHead className="text-center font-semibold text-foreground">预计用电量(MW)</TableHead>
+                          <TableHead className="text-center font-semibold text-foreground">预期机会收益(元)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {powerData.map(row => (
+                          <TableRow 
+                            key={row.id} 
+                            className={cn(
+                              "transition-colors cursor-pointer", 
+                              selectedRow === row.id ? "bg-primary/10" : "hover:bg-[#F8FBFA]"
+                            )} 
+                            onClick={() => setSelectedRow(row.id)}
+                          >
+                            <TableCell className="text-center font-mono text-sm">{row.id}</TableCell>
+                            <TableCell className="text-center font-mono text-sm">{row.time}</TableCell>
+                            <TableCell className="text-center">
+                              <span className="font-mono text-sm">{row.originalPower.toFixed(3)}</span>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-sm text-muted-foreground">
+                              {row.expectedRevenue !== null ? row.expectedRevenue.toFixed(2) : '--'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -213,6 +284,8 @@ const IntraProvincialSpotBidding = ({
           <EmbeddedRecommendation onApplyRecommendation={handleApplyRecommendation} />
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
+
 export default IntraProvincialSpotBidding;
