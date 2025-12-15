@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { Plus, TrendingUp, TrendingDown, ChevronDown, Download, Upload, Loader2, RefreshCw } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, ChevronDown, Download, Upload, Loader2, RefreshCw, Clock } from "lucide-react";
 import { usePowerPlanData } from "@/hooks/usePowerPlanData";
+import { usePowerPlanTimeSeries } from "@/hooks/usePowerPlanTimeSeries";
 
 const chartConfig = {
   planned: { label: "计划电量", color: "#3b82f6" },
@@ -24,11 +25,14 @@ const chartConfig = {
   workday: { label: "工作日曲线", color: "#00B04D" },
   weekend: { label: "周末曲线", color: "#3b82f6" },
   holiday: { label: "节假日曲线", color: "#f59e0b" },
+  predicted: { label: "预测功率", color: "#8b5cf6" },
+  deviation: { label: "偏差率", color: "#ef4444" },
 };
 
 const PowerPlanTab = () => {
   const [curveTab, setCurveTab] = useState("overview");
   const [curveOpen, setCurveOpen] = useState(false);
+  const [timeSeriesMonth, setTimeSeriesMonth] = useState("1");
   
   const { 
     metrics: powerPlanMetrics, 
@@ -38,6 +42,17 @@ const PowerPlanTab = () => {
     isLoading,
     refetch 
   } = usePowerPlanData();
+
+  const {
+    timeSeriesData,
+    isLoading: isTimeSeriesLoading,
+    fetchAggregatedTimeSeries,
+  } = usePowerPlanTimeSeries();
+
+  // 加载时序数据
+  useEffect(() => {
+    fetchAggregatedTimeSeries(2025, parseInt(timeSeriesMonth));
+  }, [timeSeriesMonth, fetchAggregatedTimeSeries]);
 
   return (
     <div className="space-y-4">
@@ -251,7 +266,93 @@ const PowerPlanTab = () => {
         </CardContent>
       </Card>
 
-      {/* 典型曲线维护 */}
+      {/* 发电计划时序分析 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                发电计划时序分析
+              </CardTitle>
+              <CardDescription>24小时计划/预测/实际功率对比</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground">选择月份:</Label>
+              <Select value={timeSeriesMonth} onValueChange={setTimeSeriesMonth}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}月</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isTimeSeriesLoading ? (
+            <div className="h-[300px] flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : timeSeriesData.length > 0 ? (
+            <div className="space-y-4">
+              {/* 时序图表 */}
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={timeSeriesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="hour" className="text-xs" />
+                    <YAxis yAxisId="left" className="text-xs" label={{ value: '功率 (MW)', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" className="text-xs" domain={[-20, 20]} label={{ value: '偏差率 (%)', angle: 90, position: 'insideRight' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Area yAxisId="left" type="monotone" dataKey="planned" fill="#3b82f6" fillOpacity={0.2} stroke="#3b82f6" strokeWidth={2} name="计划功率" />
+                    <Line yAxisId="left" type="monotone" dataKey="predicted" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} name="预测功率" />
+                    <Line yAxisId="left" type="monotone" dataKey="actual" stroke="#00B04D" strokeWidth={2} dot={{ r: 3 }} name="实际功率" />
+                    <Line yAxisId="right" type="monotone" dataKey="deviation" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="偏差率" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+
+              {/* 时序数据统计 */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg border bg-[#F8FBFA]">
+                  <p className="text-xs text-muted-foreground">计划功率峰值</p>
+                  <p className="text-lg font-bold font-mono">
+                    {Math.max(...timeSeriesData.map(d => d.planned)).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">MW</span>
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border bg-[#F8FBFA]">
+                  <p className="text-xs text-muted-foreground">实际功率峰值</p>
+                  <p className="text-lg font-bold font-mono">
+                    {Math.max(...timeSeriesData.filter(d => d.actual != null).map(d => d.actual!)).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">MW</span>
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border bg-[#F8FBFA]">
+                  <p className="text-xs text-muted-foreground">平均偏差率</p>
+                  <p className="text-lg font-bold font-mono">
+                    {(timeSeriesData.reduce((sum, d) => sum + Math.abs(d.deviation), 0) / timeSeriesData.length).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">%</span>
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border bg-[#F8FBFA]">
+                  <p className="text-xs text-muted-foreground">最大偏差时段</p>
+                  <p className="text-lg font-bold font-mono">
+                    {timeSeriesData.reduce((max, d) => Math.abs(d.deviation) > Math.abs(max.deviation) ? d : max, timeSeriesData[0])?.hour || '--'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              暂无时序数据
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Collapsible open={curveOpen} onOpenChange={setCurveOpen}>
         <Card>
           <CardHeader>
