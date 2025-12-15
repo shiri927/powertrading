@@ -11,8 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Terminal, Plus, Upload, Download, Copy, Clock, Send, Minus, X, Pencil, Trash2, HelpCircle, ChevronDown, Calendar as CalendarIcon, Sparkles } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Terminal, Plus, Upload, Download, Copy, Clock, Send, Minus, X, Pencil, Trash2, HelpCircle, ChevronDown, Calendar as CalendarIcon, Sparkles, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -20,153 +20,17 @@ import { useTradingStore } from "@/store/tradingStore";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import IntraProvincialSpotBidding from "@/components/console/IntraProvincialSpotBidding";
-
-// 省间现货申报相关类型定义
-interface TimeSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  powerRatio: number | null;
-  powerFixed: number | null;
-  price: number | null;
-}
-
-interface BidScheme {
-  id: string;
-  name: string;
-  targetDate: Date | null;
-  tradingUnits: string[];
-  selectedUnitsCount: number;
-  totalUnitsCount: number;
-  limitCondition: string;
-  powerStrategy: string;
-  priceStrategy: string;
-  timeSlots: TimeSlot[];
-}
-
-// 日滚动交易申报相关类型定义
-interface RollingTimePoint {
-  id: string;
-  timePoint: number;
-  checked: boolean;
-  tradingDirection: 'sell' | 'no-trade' | 'buy' | 'unlimited';
-  maxLimitPrice: number;
-  minLimitPrice: number;
-  buyLimitVolume: number;
-  sellLimitVolume: number;
-  referenceValue: string;
-  ratio: number;
-  fixedValue: number;
-  declarationPrice: number;
-}
-
-interface RollingScheme {
-  id: string;
-  schemeNumber: string;
-  schemeName: string;
-  tradingDate: string;
-  tradingUnit: string;
-  timePoints: RollingTimePoint[];
-}
-
-// 模拟24小时申报数据
-const generateBidData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    hour: i + 1,
-    buyDirection: i >= 6 && i <= 22,
-    priceUp: (300 + Math.random() * 500).toFixed(2),
-    priceDown: (200 + Math.random() * 300).toFixed(2),
-    buyEnergy: (95 + Math.random() * 10).toFixed(3),
-    sellEnergy: (850 + Math.random() * 100).toFixed(3),
-    participation: i % 3 === 0 ? "撤单后盖" : i % 5 === 0 ? "交易撤盖" : "撤单后盖",
-    limit1Energy: [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22].includes(i) ? (10 + Math.random() * 50).toFixed(0) : "0",
-    limit1Price: [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22].includes(i) ? (250 + Math.random() * 350).toFixed(2) : "0.00",
-    bidStatus: i % 4 === 0 ? "success" : i % 3 === 0 ? "pending" : "none",
-    winRate: [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22].includes(i) ? `${(30 + Math.random() * 70).toFixed(0)}%` : `${(0).toFixed(0)}%`,
-  }));
-};
-
-// 生成日滚动交易24个时点数据
-const generateRollingTimePoints = (): RollingTimePoint[] => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    id: `point-${i + 1}`,
-    timePoint: i + 1,
-    checked: false,
-    tradingDirection: 'no-trade' as const,
-    maxLimitPrice: 1500.00,
-    minLimitPrice: 0.00,
-    buyLimitVolume: 0.000,
-    sellLimitVolume: 0.000,
-    referenceValue: '策略首选',
-    ratio: 0,
-    fixedValue: 0.000,
-    declarationPrice: 0.00
-  }));
-};
-
-// 生成模拟日滚动交易申报方案数据
-const generateMockRollingSchemes = (): RollingScheme[] => {
-  return [
-    {
-      id: 'rolling-scheme-1',
-      schemeNumber: '20250217',
-      schemeName: '绿略应计1',
-      tradingDate: '2025年02月17日滚动交易(2025-2-19)',
-      tradingUnit: '交易单元',
-      timePoints: generateRollingTimePoints()
-    }
-  ];
-};
-
-// 生成模拟省间现货申报方案数据
-const generateMockInterProvincialSchemes = (): BidScheme[] => {
-  return [
-    {
-      id: 'scheme-1',
-      name: '单一价格，按时段申报电力方-1',
-      targetDate: new Date(),
-      tradingUnits: ['单元1', '单元2'],
-      selectedUnitsCount: 2,
-      totalUnitsCount: 5,
-      limitCondition: '日前限额 1000MWh',
-      powerStrategy: '按照最大预测申报',
-      priceStrategy: '按照最大预测申报',
-      timeSlots: [
-        {
-          id: 'slot-1-1',
-          startTime: '0015',
-          endTime: '0800',
-          powerRatio: 80,
-          powerFixed: 50,
-          price: 320.50
-        },
-        {
-          id: 'slot-1-2',
-          startTime: '0800',
-          endTime: '1200',
-          powerRatio: 100,
-          powerFixed: 75,
-          price: 450.00
-        },
-        {
-          id: 'slot-1-3',
-          startTime: '1200',
-          endTime: '2400',
-          powerRatio: 90,
-          powerFixed: 60,
-          price: 380.75
-        }
-      ]
-    }
-  ];
-};
+import { useConsoleBidData, generateRollingTimePointsFromPrices, type RollingScheme, type BidScheme, type TimeSlot, type RollingTimePoint, type BidDataRow } from "@/hooks/useTradingBids";
 
 const Console = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { pendingBid, setPendingBid } = useTradingStore();
   
-  const [bidData, setBidData] = useState(generateBidData());
+  // 从数据库获取数据
+  const { isLoading, bidData: dbBidData, rollingSchemes: dbRollingSchemes, bidSchemes: dbBidSchemes, tradingUnits } = useConsoleBidData('renewable', '山东');
+
+  const [bidData, setBidData] = useState<BidDataRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentScheme, setCurrentScheme] = useState("scheme1");
   const [tradeDirections, setTradeDirections] = useState<Record<number, number>>({});
@@ -181,7 +45,7 @@ const Console = () => {
     to: new Date(Date.now() + 86400000)
   });
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [interProvSchemes, setInterProvSchemes] = useState<BidScheme[]>(generateMockInterProvincialSchemes());
+  const [interProvSchemes, setInterProvSchemes] = useState<BidScheme[]>([]);
   const [viewMode, setViewMode] = useState<'ratio' | 'fixed' | 'price'>('ratio');
   
   // 省内现货申报状态
@@ -191,13 +55,35 @@ const Console = () => {
     from: new Date(),
     to: new Date(Date.now() + 86400000)
   });
-  const [intraProvSchemes, setIntraProvSchemes] = useState<BidScheme[]>(generateMockInterProvincialSchemes());
+  const [intraProvSchemes, setIntraProvSchemes] = useState<BidScheme[]>([]);
   const [intraProvViewMode, setIntraProvViewMode] = useState<'ratio' | 'fixed' | 'price'>('ratio');
   
   // 日滚动交易申报状态
-  const [rollingSchemeNumber, setRollingSchemeNumber] = useState('20250217');
-  const [rollingTradingDate, setRollingTradingDate] = useState('2025年02月17日滚动交易(2025-2-19)');
-  const [rollingSchemes, setRollingSchemes] = useState<RollingScheme[]>(generateMockRollingSchemes());
+  const [rollingSchemeNumber, setRollingSchemeNumber] = useState('');
+  const [rollingTradingDate, setRollingTradingDate] = useState('');
+  const [rollingSchemes, setRollingSchemes] = useState<RollingScheme[]>([]);
+
+  // 当数据库数据加载完成后更新状态
+  useEffect(() => {
+    if (dbBidData.length > 0) {
+      setBidData(dbBidData);
+    }
+  }, [dbBidData]);
+
+  useEffect(() => {
+    if (dbRollingSchemes.length > 0) {
+      setRollingSchemes(dbRollingSchemes);
+      setRollingSchemeNumber(dbRollingSchemes[0]?.schemeNumber || '');
+      setRollingTradingDate(dbRollingSchemes[0]?.tradingDate || '');
+    }
+  }, [dbRollingSchemes]);
+
+  useEffect(() => {
+    if (dbBidSchemes.length > 0) {
+      setInterProvSchemes(dbBidSchemes);
+      setIntraProvSchemes(dbBidSchemes);
+    }
+  }, [dbBidSchemes]);
   const [activeRollingSchemeId, setActiveRollingSchemeId] = useState('rolling-scheme-1');
   const [rollingTradingUnit, setRollingTradingUnit] = useState('交易单元');
   const [strategyMode, setStrategyMode] = useState<'ratio' | 'fixed'>('ratio');
@@ -496,7 +382,7 @@ const Console = () => {
       schemeName: `方案${rollingSchemes.length + 1}`,
       tradingDate: format(new Date(), 'yyyy年MM月dd日滚动交易'),
       tradingUnit: '交易单元',
-      timePoints: generateRollingTimePoints()
+      timePoints: generateRollingTimePointsFromPrices([])
     };
     setRollingSchemes(prev => [...prev, newScheme]);
     setActiveRollingSchemeId(newScheme.id);
