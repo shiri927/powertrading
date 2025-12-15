@@ -23,9 +23,27 @@ export interface ContractAnalysisData {
   hour: string;
   volume: number;
   avgPrice: number;
+  marketPrice: number;
   contracts: number;
   productionForecast: number;
   settlementVolume: number;
+}
+
+export interface YearlyPositionData {
+  month: string;
+  volume: number;
+  avgPrice: number;
+  marketPrice: number;
+  settled: number;
+  remaining: number;
+}
+
+export interface MultiDayPositionData {
+  date: string;
+  volume: number;
+  avgPrice: number;
+  marketPrice: number;
+  settled: number;
 }
 
 export const useContracts = (filters?: {
@@ -90,31 +108,56 @@ export const useContractAnalysis = () => {
   const weightedPriceSum = analysisData.reduce((sum, c) => sum + (c.unit_price || 0) * (c.total_volume || 0), 0);
   const weightedAvgPrice = totalVolume > 0 ? weightedPriceSum / totalVolume : 0;
   const uniqueUnits = new Set(analysisData.map(c => c.trading_unit_id).filter(Boolean)).size;
+  const settlementVolume = Math.round(totalVolume * 0.72);
+  const remainingPosition = totalVolume - settlementVolume;
 
   // Generate 24-hour position data for analysis charts
   const positionData: ContractAnalysisData[] = Array.from({ length: 24 }, (_, i) => {
     const hourVolume = totalVolume / 24;
-    const settlementRatio = 0.7 + Math.random() * 0.2; // 70-90% settlement rate
+    const settlementRatio = 0.7 + Math.random() * 0.2;
+    const marketPriceBase = weightedAvgPrice * (0.95 + Math.random() * 0.1);
     return {
       hour: `${i.toString().padStart(2, '0')}:00`,
-      volume: hourVolume * (0.8 + Math.random() * 0.4), // Variation around average
-      avgPrice: weightedAvgPrice * (0.9 + Math.random() * 0.2), // Price variation
+      volume: hourVolume * (0.8 + Math.random() * 0.4),
+      avgPrice: weightedAvgPrice * (0.9 + Math.random() * 0.2),
+      marketPrice: marketPriceBase,
       contracts: Math.ceil(totalContracts / 24 * (0.5 + Math.random())),
       productionForecast: hourVolume * (0.85 + Math.random() * 0.3),
       settlementVolume: hourVolume * settlementRatio,
     };
   });
 
+  // Generate yearly position data (12 months)
+  const yearlyData: YearlyPositionData[] = Array.from({ length: 12 }, (_, i) => ({
+    month: `${i + 1}月`,
+    volume: (totalVolume / 12) * (0.8 + Math.random() * 0.4),
+    avgPrice: weightedAvgPrice * (0.9 + Math.random() * 0.2),
+    marketPrice: weightedAvgPrice * (0.95 + Math.random() * 0.1),
+    settled: (totalVolume / 12) * (0.6 + Math.random() * 0.3),
+    remaining: (totalVolume / 12) * (0.1 + Math.random() * 0.2),
+  }));
+
+  // Generate multi-day position data (14 days)
+  const multiDayData: MultiDayPositionData[] = Array.from({ length: 14 }, (_, i) => ({
+    date: `12/${(i + 1).toString().padStart(2, '0')}`,
+    volume: (totalVolume / 30) * (0.8 + Math.random() * 0.4),
+    avgPrice: weightedAvgPrice * (0.9 + Math.random() * 0.2),
+    marketPrice: weightedAvgPrice * (0.95 + Math.random() * 0.1),
+    settled: (totalVolume / 30) * (0.7 + Math.random() * 0.2),
+  }));
+
   return {
     contracts: analysisData,
     positionData,
+    yearlyData,
+    multiDayData,
     metrics: {
       totalContracts,
       totalVolume,
       weightedAvgPrice,
       uniqueUnits,
-      settlementVolume: positionData.reduce((sum, p) => sum + p.settlementVolume, 0),
-      remainingPosition: totalVolume - positionData.reduce((sum, p) => sum + p.settlementVolume, 0),
+      settlementVolume,
+      remainingPosition,
     },
     isLoading,
     error,

@@ -7,47 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ComposedChart, ReferenceLine } from "recharts";
-import { TrendingUp, BarChart3, FileText, Layers } from "lucide-react";
-
-// 合同数据
-const contractData = [
-  { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "山东省场站A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中" },
-  { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "山东省场站B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中" },
-  { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "山西省场站A", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成" },
-  { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "浙江省场站A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中" },
-  { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "山西省场站B", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中" },
-];
-
-// 仓位分析数据
-const generatePositionData = () => 
-  Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i.toString().padStart(2, '0')}:00`,
-    volume: 800 + Math.random() * 400,
-    avgPrice: 350 + Math.random() * 100,
-    marketPrice: 360 + Math.random() * 90,
-    contracts: Math.floor(2 + Math.random() * 3),
-  }));
-
-// 年度仓位数据
-const generateYearlyPositionData = () => 
-  Array.from({ length: 12 }, (_, i) => ({
-    month: `${i + 1}月`,
-    volume: 8000 + Math.random() * 4000,
-    avgPrice: 380 + Math.random() * 50,
-    marketPrice: 390 + Math.random() * 45,
-    settled: 7500 + Math.random() * 3500,
-    remaining: 500 + Math.random() * 500,
-  }));
-
-// 多日仓位数据
-const generateMultiDayPositionData = () => 
-  Array.from({ length: 14 }, (_, i) => ({
-    date: `12/${(i + 1).toString().padStart(2, '0')}`,
-    volume: 300 + Math.random() * 200,
-    avgPrice: 370 + Math.random() * 60,
-    marketPrice: 375 + Math.random() * 55,
-    settled: 280 + Math.random() * 180,
-  }));
+import { TrendingUp, BarChart3, FileText, Layers, Loader2 } from "lucide-react";
+import { useContractAnalysis } from "@/hooks/useContracts";
 
 const chartConfig = {
   volume: { label: "持仓电量", color: "#00B04D" },
@@ -62,16 +23,25 @@ const ContractAnalysisTab = () => {
   const [periodTab, setPeriodTab] = useState("monthly");
   const [aggregationDimension, setAggregationDimension] = useState("unit");
 
-  const positionData = useMemo(() => generatePositionData(), []);
-  const yearlyData = useMemo(() => generateYearlyPositionData(), []);
-  const multiDayData = useMemo(() => generateMultiDayPositionData(), []);
+  // 使用数据库hook获取合同分析数据
+  const { contracts, positionData, yearlyData, multiDayData, metrics, isLoading, error } = useContractAnalysis();
 
-  // 计算统计指标
-  const totalVolume = contractData.reduce((sum, c) => sum + c.volume, 0);
-  const weightedAvgPrice = contractData.reduce((sum, c) => sum + c.avgPrice * c.volume, 0) / totalVolume;
-  const settledVolume = Math.round(totalVolume * 0.72);
-  const remainingVolume = totalVolume - settledVolume;
-  const uniqueUnits = new Set(contractData.map(c => c.tradingUnit)).size;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">加载合同数据中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-destructive py-8">
+        加载合同数据失败: {error.message}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -103,7 +73,7 @@ const ContractAnalysisTab = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{contractData.length}</div>
+            <div className="text-2xl font-bold font-mono">{metrics.totalContracts}</div>
             <p className="text-xs text-muted-foreground mt-1">活跃合同</p>
           </CardContent>
         </Card>
@@ -114,7 +84,7 @@ const ContractAnalysisTab = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{totalVolume.toLocaleString()}</div>
+            <div className="text-2xl font-bold font-mono">{metrics.totalVolume.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">MWh</p>
           </CardContent>
         </Card>
@@ -125,7 +95,7 @@ const ContractAnalysisTab = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{weightedAvgPrice.toFixed(2)}</div>
+            <div className="text-2xl font-bold font-mono">{metrics.weightedAvgPrice.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">元/MWh</p>
           </CardContent>
         </Card>
@@ -136,7 +106,7 @@ const ContractAnalysisTab = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{uniqueUnits}</div>
+            <div className="text-2xl font-bold font-mono">{metrics.uniqueUnits}</div>
             <p className="text-xs text-muted-foreground mt-1">个</p>
           </CardContent>
         </Card>
@@ -145,7 +115,7 @@ const ContractAnalysisTab = () => {
             <CardTitle className="text-sm font-medium text-blue-700">结算电量</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono text-blue-700">{settledVolume.toLocaleString()}</div>
+            <div className="text-2xl font-bold font-mono text-blue-700">{metrics.settlementVolume.toLocaleString()}</div>
             <p className="text-xs text-blue-600 mt-1">MWh (72%)</p>
           </CardContent>
         </Card>
@@ -154,7 +124,7 @@ const ContractAnalysisTab = () => {
             <CardTitle className="text-sm font-medium text-green-700">剩余仓位</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono text-green-700">{remainingVolume.toLocaleString()}</div>
+            <div className="text-2xl font-bold font-mono text-green-700">{metrics.remainingPosition.toLocaleString()}</div>
             <p className="text-xs text-green-600 mt-1">MWh (28%)</p>
           </CardContent>
         </Card>
@@ -295,7 +265,7 @@ const ContractAnalysisTab = () => {
                       <ChartLegend content={<ChartLegendContent />} />
                       <Line type="monotone" dataKey="avgPrice" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} name="持仓均价" />
                       <Line type="monotone" dataKey="marketPrice" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="市场均价" />
-                      <ReferenceLine y={weightedAvgPrice} stroke="#00B04D" strokeDasharray="3 3" label={{ value: '加权均价', fill: '#00B04D', fontSize: 10 }} />
+                      <ReferenceLine y={metrics.weightedAvgPrice} stroke="#00B04D" strokeDasharray="3 3" label={{ value: '加权均价', fill: '#00B04D', fontSize: 10 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </ChartContainer>
