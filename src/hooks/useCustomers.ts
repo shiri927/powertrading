@@ -1,51 +1,37 @@
 /**
  * 客户管理数据钩子
- * 实现客户CRUD操作与数据库联动
+ * 使用服务层实现客户CRUD操作与数据库联动，支持缓存和实时订阅
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
+import { customerService, Customer, customerCreateSchema, customerUpdateSchema } from '@/lib/services/customer-service';
 import { useToast } from '@/hooks/use-toast';
+import { z } from 'zod';
 
-export interface Customer {
-  id: string;
-  customer_code: string;
-  name: string;
-  package_type: string;
-  voltage_level: string;
-  industry_type: string | null;
-  total_capacity: number | null;
-  contract_start_date: string | null;
-  contract_end_date: string | null;
-  contract_status: string;
-  price_mode: string | null;
-  agent_name: string | null;
-  intermediary_cost: number | null;
-  contact_person: string | null;
-  contact_phone: string | null;
-  contact_email: string | null;
-  address: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export type CustomerInsert = Omit<Customer, 'id' | 'created_at' | 'updated_at'>;
-export type CustomerUpdate = Partial<CustomerInsert>;
+export type { Customer } from '@/lib/services/customer-service';
+export type CustomerInsert = z.infer<typeof customerCreateSchema>;
+export type CustomerUpdate = z.infer<typeof customerUpdateSchema>;
 
 // 获取所有客户
 export const useCustomers = () => {
+  const queryClient = useQueryClient();
+
+  // 实时订阅
+  useEffect(() => {
+    const unsubscribe = customerService.subscribe(({ eventType }) => {
+      if (eventType) {
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['customers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('name', { ascending: true });
-      
-      if (error) throw error;
-      return data as Customer[];
-    },
+    queryFn: () => customerService.getAll(),
+    staleTime: 1000 * 60 * 5, // 5分钟缓存
   });
 };
 
@@ -53,17 +39,8 @@ export const useCustomers = () => {
 export const useActiveCustomers = () => {
   return useQuery({
     queryKey: ['customers', 'active'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('contract_status', 'active')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      
-      if (error) throw error;
-      return data as Customer[];
-    },
+    queryFn: () => customerService.getActive(),
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -71,17 +48,28 @@ export const useActiveCustomers = () => {
 export const useCustomer = (id: string) => {
   return useQuery({
     queryKey: ['customers', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as Customer | null;
-    },
+    queryFn: () => customerService.getById(id),
     enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+// 获取客户统计
+export const useCustomerStats = () => {
+  return useQuery({
+    queryKey: ['customers', 'statistics'],
+    queryFn: () => customerService.getStatistics(),
+    staleTime: 1000 * 60 * 2, // 2分钟缓存
+  });
+};
+
+// 搜索客户
+export const useSearchCustomers = (keyword: string) => {
+  return useQuery({
+    queryKey: ['customers', 'search', keyword],
+    queryFn: () => customerService.search(keyword),
+    enabled: keyword.length > 0,
+    staleTime: 1000 * 30, // 30秒缓存
   });
 };
 
@@ -91,16 +79,7 @@ export const useCreateCustomer = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (customer: CustomerInsert) => {
-      const { data, error } = await supabase
-        .from('customers')
-        .insert(customer)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Customer;
-    },
+    mutationFn: (customer: CustomerInsert) => customerService.create(customer),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast({ title: '成功', description: '客户已添加' });
@@ -117,17 +96,8 @@ export const useUpdateCustomer = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: CustomerUpdate }) => {
-      const { data, error } = await supabase
-        .from('customers')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Customer;
-    },
+    mutationFn: ({ id, updates }: { id: string; updates: CustomerUpdate }) => 
+      customerService.update(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast({ title: '成功', description: '客户信息已更新' });
@@ -144,14 +114,7 @@ export const useDeleteCustomer = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => customerService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast({ title: '成功', description: '客户已删除' });
