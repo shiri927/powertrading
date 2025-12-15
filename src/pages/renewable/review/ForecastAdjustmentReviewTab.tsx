@@ -119,9 +119,10 @@ const ForecastAdjustmentReviewTab = () => {
   const [localLoading, setLocalLoading] = useState(true);
   const [powerCurveData, setPowerCurveData] = useState<ForecastAdjustmentData[]>([]);
   const [tradingUnits, setTradingUnits] = useState<TradingUnit[]>([]);
+  // 使用数据库中实际存在的日期范围（load_predictions: 2025-11-01 to 2025-11-07）
   const [dateRange, setDateRange] = useState({
-    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    end: format(new Date(), 'yyyy-MM-dd'),
+    start: '2025-11-01',
+    end: '2025-11-07',
   });
 
   const { fetchForecastAdjustmentData, calculateForecastEffectiveness } = useReviewData();
