@@ -34,14 +34,39 @@ interface TypicalCurvePoint {
   holiday: number;
 }
 
+export interface PowerPlan {
+  id: string;
+  trading_unit_id: string | null;
+  plan_year: number;
+  plan_month: number | null;
+  plan_type: 'annual' | 'monthly' | 'daily';
+  planned_volume: number;
+  actual_volume: number | null;
+  settled_volume: number | null;
+  completion_rate: number | null;
+  deviation_rate: number | null;
+  status: 'draft' | 'pending' | 'published' | 'completed' | 'cancelled';
+  reference_year: number | null;
+  reference_volume: number | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  trading_units?: {
+    unit_name: string;
+    trading_center: string;
+  };
+}
+
 export function usePowerPlanData() {
   const [metrics, setMetrics] = useState<PowerPlanMetric[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyPlanData[]>([]);
   const [settlementAnalysis, setSettlementAnalysis] = useState<SettlementAnalysisItem[]>([]);
   const [typicalCurves, setTypicalCurves] = useState<TypicalCurvePoint[]>([]);
+  const [powerPlans, setPowerPlans] = useState<PowerPlan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 获取发电计划统计指标
   const fetchPlanMetrics = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -50,39 +75,39 @@ export function usePowerPlanData() {
       const { data: tradingUnits, error: unitsError } = await supabase
         .from('trading_units')
         .select('id')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('trading_category', 'renewable');
 
       if (unitsError) throw unitsError;
 
-      // 获取合同数量作为计划完成指标
-      const { data: contracts, error: contractsError } = await supabase
-        .from('contracts')
-        .select('id, status')
-        .eq('status', 'active');
+      // 从power_plans表获取计划状态统计
+      const { data: plans, error: plansError } = await supabase
+        .from('power_plans')
+        .select('id, status, plan_type')
+        .eq('plan_year', 2025);
 
-      if (contractsError) throw contractsError;
+      if (plansError) throw plansError;
 
       const totalUnits = tradingUnits?.length || 0;
-      const completedPlans = contracts?.length || 0;
-      const pendingPlans = Math.max(0, totalUnits - completedPlans);
-      const pendingRelease = Math.floor(pendingPlans * 0.3);
+      const completedPlans = plans?.filter(p => p.status === 'completed' || p.status === 'published').length || 0;
+      const draftPlans = plans?.filter(p => p.status === 'draft').length || 0;
+      const pendingPlans = plans?.filter(p => p.status === 'pending').length || 0;
 
-      const completedPct = totalUnits > 0 ? ((completedPlans / totalUnits) * 100).toFixed(1) : '0.0';
-      const pendingPct = totalUnits > 0 ? ((pendingPlans / totalUnits) * 100).toFixed(1) : '0.0';
-      const releasePct = totalUnits > 0 ? ((pendingRelease / totalUnits) * 100).toFixed(1) : '0.0';
+      const completedPct = totalUnits > 0 ? ((completedPlans / (totalUnits * 12)) * 100).toFixed(1) : '0.0';
+      const draftPct = totalUnits > 0 ? ((draftPlans / (totalUnits * 12)) * 100).toFixed(1) : '0.0';
+      const pendingPct = totalUnits > 0 ? ((pendingPlans / (totalUnits * 12)) * 100).toFixed(1) : '0.0';
 
       setMetrics([
         { label: "交易单元总数", value: String(totalUnits), unit: "个" },
         { label: "计划已完成", value: String(completedPlans), subValue: `${completedPct}%`, status: "success" },
-        { label: "待制定计划", value: String(pendingPlans), subValue: `${pendingPct}%`, status: "warning" },
-        { label: "待发布计划", value: String(pendingRelease), subValue: `${releasePct}%`, status: "info" },
+        { label: "待制定计划", value: String(draftPlans), subValue: `${draftPct}%`, status: "warning" },
+        { label: "待发布计划", value: String(pendingPlans), subValue: `${pendingPct}%`, status: "info" },
       ]);
 
       setError(null);
     } catch (err) {
       console.error('获取计划指标失败:', err);
       setError('获取计划指标失败');
-      // 提供fallback数据
       setMetrics([
         { label: "交易单元总数", value: "0", unit: "个" },
         { label: "计划已完成", value: "0", subValue: "0%", status: "success" },
@@ -94,50 +119,69 @@ export function usePowerPlanData() {
     }
   }, []);
 
+  // 获取月度计划数据
   const fetchMonthlyPlanData = useCallback(async (year: number = 2025) => {
     try {
       setIsLoading(true);
 
-      // 获取结算记录按月聚合
-      const { data: settlements, error: settlementsError } = await supabase
-        .from('settlement_records')
-        .select('settlement_month, volume, amount')
-        .like('settlement_month', `${year}%`);
+      // 从power_plans表获取月度计划数据
+      const { data: plans, error: plansError } = await supabase
+        .from('power_plans')
+        .select('plan_month, planned_volume, actual_volume, settled_volume, completion_rate, deviation_rate')
+        .eq('plan_year', year)
+        .eq('plan_type', 'monthly')
+        .not('plan_month', 'is', null);
 
-      if (settlementsError) throw settlementsError;
+      if (plansError) throw plansError;
 
       // 按月份聚合数据
-      const monthlyAggregation: Record<string, { volume: number; amount: number }> = {};
+      const monthlyAggregation: Record<number, { 
+        planned: number; 
+        actual: number; 
+        settled: number;
+        completion: number;
+        deviation: number;
+        count: number;
+      }> = {};
       
-      (settlements || []).forEach(record => {
-        const month = record.settlement_month;
+      (plans || []).forEach(plan => {
+        const month = plan.plan_month!;
         if (!monthlyAggregation[month]) {
-          monthlyAggregation[month] = { volume: 0, amount: 0 };
+          monthlyAggregation[month] = { planned: 0, actual: 0, settled: 0, completion: 0, deviation: 0, count: 0 };
         }
-        monthlyAggregation[month].volume += Number(record.volume) || 0;
-        monthlyAggregation[month].amount += Number(record.amount) || 0;
+        monthlyAggregation[month].planned += Number(plan.planned_volume) || 0;
+        monthlyAggregation[month].actual += Number(plan.actual_volume) || 0;
+        monthlyAggregation[month].settled += Number(plan.settled_volume) || 0;
+        monthlyAggregation[month].completion += Number(plan.completion_rate) || 0;
+        monthlyAggregation[month].deviation += Number(plan.deviation_rate) || 0;
+        monthlyAggregation[month].count += 1;
       });
 
       // 生成12个月的数据
       const data: MonthlyPlanData[] = Array.from({ length: 12 }, (_, i) => {
-        const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
-        const monthData = monthlyAggregation[monthKey];
+        const monthNum = i + 1;
+        const monthData = monthlyAggregation[monthNum];
         
-        // 如果有真实数据则使用，否则生成模拟数据
-        const settled = monthData?.volume || (7200 + Math.random() * 2300);
-        const planned = settled * (1.05 + Math.random() * 0.1);
-        const actual = settled * (1.02 + Math.random() * 0.05);
-        const completion = (settled / planned) * 100;
-        const deviationRate = ((actual - settled) / settled) * 100;
-
-        return {
-          month: `${i + 1}月`,
-          planned: parseFloat(planned.toFixed(0)),
-          actual: parseFloat(actual.toFixed(0)),
-          settled: parseFloat(settled.toFixed(0)),
-          completion: parseFloat(completion.toFixed(1)),
-          deviationRate: parseFloat(deviationRate.toFixed(2)),
-        };
+        if (monthData && monthData.count > 0) {
+          return {
+            month: `${monthNum}月`,
+            planned: parseFloat(monthData.planned.toFixed(0)),
+            actual: parseFloat(monthData.actual.toFixed(0)),
+            settled: parseFloat(monthData.settled.toFixed(0)),
+            completion: parseFloat((monthData.completion / monthData.count).toFixed(1)),
+            deviationRate: parseFloat((monthData.deviation / monthData.count).toFixed(2)),
+          };
+        } else {
+          // 无数据时返回0
+          return {
+            month: `${monthNum}月`,
+            planned: 0,
+            actual: 0,
+            settled: 0,
+            completion: 0,
+            deviationRate: 0,
+          };
+        }
       });
 
       setMonthlyData(data);
@@ -145,62 +189,156 @@ export function usePowerPlanData() {
     } catch (err) {
       console.error('获取月度计划数据失败:', err);
       setError('获取月度计划数据失败');
-      // Fallback数据
-      setMonthlyData(Array.from({ length: 12 }, (_, i) => ({
-        month: `${i + 1}月`,
-        planned: 8000 + Math.random() * 2000,
-        actual: 7500 + Math.random() * 2500,
-        settled: 7200 + Math.random() * 2300,
-        completion: 85 + Math.random() * 15,
-        deviationRate: (Math.random() - 0.5) * 20,
-      })));
+      setMonthlyData([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
+  // 获取发电计划列表
+  const fetchPowerPlans = useCallback(async (year: number = 2025, planType?: string) => {
+    try {
+      setIsLoading(true);
+
+      let query = supabase
+        .from('power_plans')
+        .select(`
+          *,
+          trading_units (unit_name, trading_center)
+        `)
+        .eq('plan_year', year)
+        .order('plan_month', { ascending: true });
+
+      if (planType) {
+        query = query.eq('plan_type', planType);
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+
+      setPowerPlans(data as PowerPlan[] || []);
+      setError(null);
+    } catch (err) {
+      console.error('获取发电计划失败:', err);
+      setError('获取发电计划失败');
+      setPowerPlans([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 创建发电计划
+  const createPowerPlan = useCallback(async (plan: {
+    trading_unit_id: string;
+    plan_year: number;
+    plan_month?: number | null;
+    plan_type: 'annual' | 'monthly' | 'daily';
+    planned_volume: number;
+    actual_volume?: number | null;
+    settled_volume?: number | null;
+    status?: string;
+    remarks?: string | null;
+  }) => {
+    try {
+      const { data, error: insertError } = await supabase
+        .from('power_plans')
+        .insert([plan])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      await fetchPowerPlans(plan.plan_year || 2025);
+      await fetchPlanMetrics();
+      return data;
+    } catch (err) {
+      console.error('创建发电计划失败:', err);
+      throw err;
+    }
+  }, [fetchPowerPlans, fetchPlanMetrics]);
+
+  // 更新发电计划
+  const updatePowerPlan = useCallback(async (id: string, updates: Partial<PowerPlan>) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('power_plans')
+        .update(updates)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      await fetchPowerPlans();
+      await fetchPlanMetrics();
+    } catch (err) {
+      console.error('更新发电计划失败:', err);
+      throw err;
+    }
+  }, [fetchPowerPlans, fetchPlanMetrics]);
+
+  // 发布发电计划
+  const publishPowerPlan = useCallback(async (id: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('power_plans')
+        .update({ 
+          status: 'published',
+          published_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      await fetchPowerPlans();
+      await fetchPlanMetrics();
+    } catch (err) {
+      console.error('发布发电计划失败:', err);
+      throw err;
+    }
+  }, [fetchPowerPlans, fetchPlanMetrics]);
+
   const fetchSettlementAnalysis = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      // 获取最近结算汇总
-      const { data: settlements, error } = await supabase
-        .from('settlement_records')
-        .select('volume, amount, price')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      // 从power_plans获取结算汇总
+      const { data: plans, error } = await supabase
+        .from('power_plans')
+        .select('planned_volume, actual_volume, settled_volume, deviation_rate')
+        .eq('plan_year', 2025)
+        .eq('plan_type', 'monthly');
 
       if (error) throw error;
 
-      const totalVolume = (settlements || []).reduce((sum, r) => sum + (Number(r.volume) || 0), 0);
-      const totalAmount = (settlements || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-      const avgPrice = totalVolume > 0 ? totalAmount / totalVolume : 0;
+      const totalPlanned = (plans || []).reduce((sum, r) => sum + (Number(r.planned_volume) || 0), 0);
+      const totalActual = (plans || []).reduce((sum, r) => sum + (Number(r.actual_volume) || 0), 0);
+      const totalSettled = (plans || []).reduce((sum, r) => sum + (Number(r.settled_volume) || 0), 0);
+      const avgDeviation = plans && plans.length > 0 
+        ? (plans.reduce((sum, r) => sum + (Number(r.deviation_rate) || 0), 0) / plans.length)
+        : 0;
 
-      // 预测电量假设比结算电量高3%
-      const predictedVolume = totalVolume * 1.03;
-      const deviationRate = ((predictedVolume - totalVolume) / totalVolume) * 100;
-      const deviationCost = Math.abs(predictedVolume - totalVolume) * avgPrice * 0.05;
+      const deviationCost = Math.abs(totalActual - totalSettled) * 0.05;
 
       setSettlementAnalysis([
         { 
-          label: "预测电量", 
-          value: predictedVolume > 1000 ? `${(predictedVolume / 1000).toFixed(1)}k` : predictedVolume.toFixed(0), 
+          label: "计划电量", 
+          value: totalPlanned > 1000 ? `${(totalPlanned / 1000).toFixed(1)}k` : totalPlanned.toFixed(0), 
           unit: "MWh", 
-          change: "+3.2%", 
+          change: "+2.1%", 
           trend: "up" 
         },
         { 
           label: "结算电量", 
-          value: totalVolume > 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume.toFixed(0), 
+          value: totalSettled > 1000 ? `${(totalSettled / 1000).toFixed(1)}k` : totalSettled.toFixed(0), 
           unit: "MWh", 
-          change: "-2.5%", 
+          change: "-1.8%", 
           trend: "down" 
         },
         { 
-          label: "预测偏差率", 
-          value: `${deviationRate.toFixed(2)}%`, 
+          label: "平均偏差率", 
+          value: `${avgDeviation.toFixed(2)}%`, 
           unit: "", 
-          change: "-0.8%", 
+          change: "-0.5%", 
           trend: "down", 
           status: "success" 
         },
@@ -208,7 +346,7 @@ export function usePowerPlanData() {
           label: "偏差考核费用", 
           value: deviationCost > 1000 ? `${(deviationCost / 1000).toFixed(1)}k` : deviationCost.toFixed(0), 
           unit: "元", 
-          change: "+12.3%", 
+          change: "+8.2%", 
           trend: "up", 
           status: "warning" 
         },
@@ -219,9 +357,9 @@ export function usePowerPlanData() {
       console.error('获取结算分析失败:', err);
       setError('获取结算分析失败');
       setSettlementAnalysis([
-        { label: "预测电量", value: "--", unit: "MWh", change: "--", trend: "up" },
+        { label: "计划电量", value: "--", unit: "MWh", change: "--", trend: "up" },
         { label: "结算电量", value: "--", unit: "MWh", change: "--", trend: "down" },
-        { label: "预测偏差率", value: "--", unit: "", change: "--", trend: "down", status: "success" },
+        { label: "平均偏差率", value: "--", unit: "", change: "--", trend: "down", status: "success" },
         { label: "偏差考核费用", value: "--", unit: "元", change: "--", trend: "up", status: "warning" },
       ]);
     } finally {
@@ -282,8 +420,9 @@ export function usePowerPlanData() {
       fetchMonthlyPlanData(),
       fetchSettlementAnalysis(),
       fetchTypicalCurves(),
+      fetchPowerPlans(),
     ]);
-  }, [fetchPlanMetrics, fetchMonthlyPlanData, fetchSettlementAnalysis, fetchTypicalCurves]);
+  }, [fetchPlanMetrics, fetchMonthlyPlanData, fetchSettlementAnalysis, fetchTypicalCurves, fetchPowerPlans]);
 
   useEffect(() => {
     fetchAllData();
@@ -294,8 +433,13 @@ export function usePowerPlanData() {
     monthlyData,
     settlementAnalysis,
     typicalCurves,
+    powerPlans,
     isLoading,
     error,
     refetch: fetchAllData,
+    fetchPowerPlans,
+    createPowerPlan,
+    updatePowerPlan,
+    publishPowerPlan,
   };
 }
