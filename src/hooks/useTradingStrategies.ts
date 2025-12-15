@@ -1,24 +1,12 @@
+/**
+ * 交易策略数据钩子
+ * 使用服务层实现策略CRUD操作，支持缓存和实时订阅
+ */
+
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { tradingStrategyService, TradingStrategy as DbTradingStrategy } from '@/lib/services/trading-strategy-service';
 import { TradingStrategy, TriggerConditions, TradingParams, RiskControl } from '@/lib/trading/strategy-types';
 import { toast } from 'sonner';
-
-interface DbTradingStrategy {
-  id: string;
-  user_id: string | null;
-  name: string;
-  strategy_type: string;
-  description: string | null;
-  risk_level: string;
-  expected_return: number | null;
-  trigger_conditions: TriggerConditions | null;
-  trading_params: TradingParams | null;
-  risk_control: RiskControl | null;
-  is_preset: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 // 数据库记录转换为前端策略对象
 const mapDbToStrategy = (record: DbTradingStrategy): TradingStrategy => ({
@@ -28,17 +16,17 @@ const mapDbToStrategy = (record: DbTradingStrategy): TradingStrategy => ({
   description: record.description || '',
   riskLevel: record.risk_level as TradingStrategy['riskLevel'],
   expectedReturn: record.expected_return || 0,
-  triggerConditions: record.trigger_conditions || {
+  triggerConditions: (record.trigger_conditions as TriggerConditions) || {
     minP50Forecast: 0,
     minSpotPrice: 0,
     minConfidence: 0,
   },
-  tradingParams: record.trading_params || {
+  tradingParams: (record.trading_params as TradingParams) || {
     maxPosition: 100,
     singleTradeLimit: 50,
     dailyTradeLimit: 10,
   },
-  riskControl: record.risk_control || {
+  riskControl: (record.risk_control as RiskControl) || {
     stopLoss: 5,
     takeProfit: 10,
     maxDrawdown: 10,
@@ -46,7 +34,7 @@ const mapDbToStrategy = (record: DbTradingStrategy): TradingStrategy => ({
   isActive: record.is_active,
 });
 
-// 前端策略对象转换为数据库记录
+// 前端策略对象转换为数据库记录格式
 const mapStrategyToDb = (strategy: Omit<TradingStrategy, 'id'>) => ({
   name: strategy.name,
   strategy_type: strategy.type,
@@ -57,7 +45,6 @@ const mapStrategyToDb = (strategy: Omit<TradingStrategy, 'id'>) => ({
   trading_params: strategy.tradingParams,
   risk_control: strategy.riskControl,
   is_active: strategy.isActive,
-  is_preset: false,
 });
 
 export function useTradingStrategies() {
@@ -68,16 +55,8 @@ export function useTradingStrategies() {
   const fetchStrategies = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('trading_strategies')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      const mappedStrategies = (data || []).map((record) => 
-        mapDbToStrategy(record as unknown as DbTradingStrategy)
-      );
+      const data = await tradingStrategyService.getAll();
+      const mappedStrategies = data.map(mapDbToStrategy);
       setStrategies(mappedStrategies);
       setError(null);
     } catch (err) {
@@ -88,27 +67,23 @@ export function useTradingStrategies() {
     }
   }, []);
 
+  // 实时订阅
   useEffect(() => {
     fetchStrategies();
+    
+    const unsubscribe = tradingStrategyService.subscribe(({ eventType }) => {
+      if (eventType) {
+        fetchStrategies();
+      }
+    });
+
+    return unsubscribe;
   }, [fetchStrategies]);
 
   const createStrategy = async (strategy: Omit<TradingStrategy, 'id'>): Promise<TradingStrategy | null> => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const insertData = {
-        ...mapStrategyToDb(strategy),
-        user_id: userData.user?.id || null,
-      };
-
-      const { data, error: insertError } = await supabase
-        .from('trading_strategies')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      const newStrategy = mapDbToStrategy(data as unknown as DbTradingStrategy);
+      const data = await tradingStrategyService.create(mapStrategyToDb(strategy));
+      const newStrategy = mapDbToStrategy(data);
       setStrategies(prev => [newStrategy, ...prev]);
       toast.success('策略创建成功');
       return newStrategy;
@@ -132,13 +107,7 @@ export function useTradingStrategies() {
       if (updates.riskControl !== undefined) updateData.risk_control = updates.riskControl;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
 
-      const { error: updateError } = await supabase
-        .from('trading_strategies')
-        .update(updateData)
-        .eq('id', id);
-
-      if (updateError) throw updateError;
-
+      await tradingStrategyService.update(id, updateData);
       setStrategies(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
       toast.success('策略更新成功');
       return true;
@@ -151,13 +120,7 @@ export function useTradingStrategies() {
 
   const deleteStrategy = async (id: string): Promise<boolean> => {
     try {
-      const { error: deleteError } = await supabase
-        .from('trading_strategies')
-        .delete()
-        .eq('id', id);
-
-      if (deleteError) throw deleteError;
-
+      await tradingStrategyService.delete(id);
       setStrategies(prev => prev.filter(s => s.id !== id));
       toast.success('策略已删除');
       return true;
