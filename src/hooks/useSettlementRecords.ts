@@ -1,33 +1,14 @@
 /**
  * 结算记录数据钩子
- * 实现结算数据与数据库联动
+ * 使用服务层实现结算数据与数据库联动，支持缓存和实时订阅
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { settlementService, SettlementRecord } from '@/lib/services/settlement-service';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface SettlementRecord {
-  id: string;
-  trading_unit_id: string | null;
-  settlement_no: string;
-  settlement_month: string;
-  category: string;
-  sub_category: string | null;
-  side: string;
-  volume: number;
-  price: number | null;
-  amount: number;
-  status: string;
-  remark: string | null;
-  created_at: string;
-  updated_at: string;
-  trading_unit?: {
-    id: string;
-    unit_name: string;
-    unit_code: string;
-    trading_center: string;
-  };
-}
+export type { SettlementRecord } from '@/lib/services/settlement-service';
 
 export interface SettlementStatement {
   id: string;
@@ -53,23 +34,26 @@ export interface SettlementStatement {
 
 // 按月份获取结算记录
 export const useSettlementRecordsByMonth = (month: string) => {
+  const queryClient = useQueryClient();
+
+  // 实时订阅
+  useEffect(() => {
+    if (!month) return;
+    
+    const unsubscribe = settlementService.subscribe(({ eventType }) => {
+      if (eventType) {
+        queryClient.invalidateQueries({ queryKey: ['settlement_records'] });
+      }
+    });
+
+    return unsubscribe;
+  }, [month, queryClient]);
+
   return useQuery({
     queryKey: ['settlement_records', 'month', month],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settlement_records')
-        .select(`
-          *,
-          trading_unit:trading_units(id, unit_name, unit_code, trading_center)
-        `)
-        .eq('settlement_month', month)
-        .order('category', { ascending: true })
-        .order('sub_category', { ascending: true });
-      
-      if (error) throw error;
-      return data as SettlementRecord[];
-    },
+    queryFn: () => settlementService.getByMonth(month),
     enabled: !!month,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -77,27 +61,13 @@ export const useSettlementRecordsByMonth = (month: string) => {
 export const useSettlementRecordsByUnit = (tradingUnitId: string | null, month?: string) => {
   return useQuery({
     queryKey: ['settlement_records', 'unit', tradingUnitId, month],
-    queryFn: async () => {
-      let query = supabase
-        .from('settlement_records')
-        .select(`
-          *,
-          trading_unit:trading_units(id, unit_name, unit_code, trading_center)
-        `)
-        .order('settlement_month', { ascending: false })
-        .order('category', { ascending: true });
-      
-      if (tradingUnitId) {
-        query = query.eq('trading_unit_id', tradingUnitId);
-      }
-      if (month) {
-        query = query.eq('settlement_month', month);
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as SettlementRecord[];
-    },
+    queryFn: () => settlementService.getByTradingUnit(
+      tradingUnitId || '', 
+      month, 
+      month
+    ),
+    enabled: !!tradingUnitId,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -129,49 +99,9 @@ export const useSettlementStatements = (tradingUnitId?: string) => {
 export const useSettlementStats = (month: string) => {
   return useQuery({
     queryKey: ['settlement_stats', month],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settlement_records')
-        .select('*')
-        .eq('settlement_month', month);
-      
-      if (error) throw error;
-      
-      const records = data || [];
-      
-      // 按类别分组统计
-      const categoryStats: Record<string, { volume: number; amount: number; count: number }> = {};
-      const sideStats: Record<string, { volume: number; amount: number; count: number }> = {
-        purchase: { volume: 0, amount: 0, count: 0 },
-        sale: { volume: 0, amount: 0, count: 0 },
-      };
-      
-      records.forEach(record => {
-        // 类别统计
-        if (!categoryStats[record.category]) {
-          categoryStats[record.category] = { volume: 0, amount: 0, count: 0 };
-        }
-        categoryStats[record.category].volume += record.volume;
-        categoryStats[record.category].amount += record.amount;
-        categoryStats[record.category].count += 1;
-        
-        // 买卖方统计
-        if (record.side === 'purchase' || record.side === 'sale') {
-          sideStats[record.side].volume += record.volume;
-          sideStats[record.side].amount += record.amount;
-          sideStats[record.side].count += 1;
-        }
-      });
-      
-      return {
-        totalVolume: records.reduce((sum, r) => sum + r.volume, 0),
-        totalAmount: records.reduce((sum, r) => sum + r.amount, 0),
-        recordCount: records.length,
-        categoryStats,
-        sideStats,
-      };
-    },
+    queryFn: () => settlementService.getMonthlyStatistics(month),
     enabled: !!month,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
