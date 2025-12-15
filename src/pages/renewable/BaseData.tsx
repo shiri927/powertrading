@@ -14,34 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, ComposedChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, BarChart, Bar, ComposedChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, Info, BarChart3, Bell, RefreshCw, Eye, Megaphone } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, Info, BarChart3, Bell, RefreshCw, Eye, Megaphone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PowerPlanTab from "@/pages/retail/base-data/PowerPlanTab";
-
-// 合同分析数据生成
-const generateContractData = () => {
-  return [
-    { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "山东省场站A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中" },
-    { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "山东省场站B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中" },
-    { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "山西省场站A", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成" },
-    { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "浙江省场站A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中" },
-    { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "山西省场站B", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中" },
-  ];
-};
-
-const generatePositionAnalysisData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i.toString().padStart(2, '0')}:00`,
-    volume: 800 + Math.random() * 400,
-    avgPrice: 350 + Math.random() * 100,
-    contracts: Math.floor(2 + Math.random() * 3),
-    productionForecast: 750 + Math.random() * 450, // 产能预测
-    settlementVolume: 600 + Math.random() * 300, // 结算电量
-  }));
-};
+import { useContractAnalysis } from "@/hooks/useContracts";
 
 // 待办事项数据
 const generateTodoData = () => [
@@ -70,9 +49,8 @@ const BaseData = () => {
   const [newContractDialogOpen, setNewContractDialogOpen] = useState(false);
   const [newPlanType, setNewPlanType] = useState<"year" | "month">("year");
 
-  // 合同分析数据
-  const contractData = generateContractData();
-  const positionData = generatePositionAnalysisData();
+  // 使用数据库hook获取合同分析数据
+  const { contracts: contractData, positionData, metrics, isLoading: isContractLoading } = useContractAnalysis();
   const todoData = generateTodoData();
   const announcementData = generateAnnouncementData();
   
@@ -554,67 +532,74 @@ const BaseData = () => {
             </CardContent>
           </Card>
 
-          {/* 统计指标 - 扩展为6个 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">合同总数</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">{contractData.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">活跃合同</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">总持仓电量</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">{contractData.reduce((sum, c) => sum + c.volume, 0).toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">MWh</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">加权均价</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {(contractData.reduce((sum, c) => sum + c.avgPrice * c.volume, 0) / contractData.reduce((sum, c) => sum + c.volume, 0)).toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">元/MWh</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">覆盖交易单元</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">{new Set(contractData.map(c => c.tradingUnit)).size}</div>
-                <p className="text-xs text-muted-foreground mt-1">个</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">结算电量</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono text-primary">{Math.round(positionData.reduce((sum, p) => sum + p.settlementVolume, 0)).toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">MWh</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">剩余仓位</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono text-amber-600">
-                  {Math.round(positionData.reduce((sum, p) => sum + p.volume - p.settlementVolume, 0)).toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">MWh</p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* 统计指标 - 使用数据库数据 */}
+          {isContractLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">加载中...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">合同总数</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono">{metrics.totalContracts}</div>
+                  <p className="text-xs text-muted-foreground mt-1">活跃合同</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">总持仓电量</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono">{metrics.totalVolume.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">MWh</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">加权均价</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono">
+                    {metrics.weightedAvgPrice.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">元/MWh</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">覆盖交易单元</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono">{metrics.uniqueUnits}</div>
+                  <p className="text-xs text-muted-foreground mt-1">个</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">结算电量</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono text-primary">{Math.round(metrics.settlementVolume).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">MWh</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">剩余仓位</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-mono text-amber-600">
+                    {Math.round(metrics.remainingPosition).toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">MWh</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* 仓位分析图表 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
