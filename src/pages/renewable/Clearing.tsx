@@ -13,7 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useClearingRecordsByDate, useClearingStats, transformClearingDataForChart } from "@/hooks/useClearingRecords";
+import { 
+  useMarketClearingPrices, 
+  useMarketClearingStats, 
+  useAvailableDates,
+  transformMarketClearingForChart 
+} from "@/hooks/useMarketClearingPrices";
 
 // 分时段交易出清数据 (保留Mock数据用于分时段交易)
 const generateSegmentClearingData = () => {
@@ -54,18 +59,20 @@ const Clearing = () => {
   // 省内现货出清状态
   const [spotDate, setSpotDate] = useState<Date | undefined>(new Date());
   const [spotUnit, setSpotUnit] = useState<string>("all");
+  const [spotProvince, setSpotProvince] = useState<string>("山东");
   const [spotDataType, setSpotDataType] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
 
-  // 使用数据库数据
+  // 使用市场出清价格数据库数据
   const dateStr = spotDate ? format(spotDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-  const { data: clearingRecords = [], isLoading: isLoadingRecords } = useClearingRecordsByDate(dateStr);
-  const { data: clearingStats, isLoading: isLoadingStats } = useClearingStats(dateStr);
+  const { data: marketPrices = [], isLoading: isLoadingPrices } = useMarketClearingPrices(dateStr, spotProvince);
+  const { data: clearingStats, isLoading: isLoadingStats } = useMarketClearingStats(dateStr, spotProvince);
+  const { data: availableDates = [] } = useAvailableDates(spotProvince);
 
   // 转换为图表数据
   const spotData = useMemo(() => {
-    if (clearingRecords.length > 0) {
-      return transformClearingDataForChart(clearingRecords);
+    if (marketPrices.length > 0) {
+      return transformMarketClearingForChart(marketPrices);
     }
     // 如果数据库无数据，使用生成的数据
     return Array.from({ length: 24 }, (_, i) => ({
@@ -77,7 +84,7 @@ const Clearing = () => {
       priceDeviation: (Math.random() - 0.5) * 40,
       volumeDeviation: (Math.random() - 0.5) * 20,
     }));
-  }, [clearingRecords]);
+  }, [marketPrices]);
 
   const segmentData = generateSegmentClearingData();
 
@@ -107,7 +114,7 @@ const Clearing = () => {
   const showDayAhead = spotDataType === "all" || spotDataType === "dayAhead";
   const showRealTime = spotDataType === "all" || spotDataType === "realTime";
 
-  const isLoading = isLoadingRecords || isLoadingStats;
+  const isLoading = isLoadingPrices || isLoadingStats;
 
   return (
     <div className="p-8 space-y-6">
