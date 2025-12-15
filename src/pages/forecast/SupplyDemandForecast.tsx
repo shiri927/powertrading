@@ -13,13 +13,11 @@ import {
   useLoadForecast,
   useTieLineForecast,
   useThermalBiddingForecast,
-  useBiddingBehaviorAnalysis,
   useSupplyDemandStats,
   transformRenewableData,
   transformLoadData,
   transformTieLineData,
   transformThermalData,
-  transformBiddingBehaviorData,
 } from "@/hooks/useSupplyDemandData";
 
 const SupplyDemandForecast = () => {
@@ -30,7 +28,6 @@ const SupplyDemandForecast = () => {
   const { data: loadRawData, isLoading: loadLoading } = useLoadForecast(province);
   const { data: tieLineRawData, isLoading: tieLineLoading } = useTieLineForecast(province);
   const { data: thermalRawData, isLoading: thermalLoading } = useThermalBiddingForecast(province);
-  const { data: behaviorRawData, isLoading: behaviorLoading } = useBiddingBehaviorAnalysis(province);
   const stats = useSupplyDemandStats(province);
 
   // 转换数据
@@ -38,7 +35,6 @@ const SupplyDemandForecast = () => {
   const loadData = transformLoadData(loadRawData);
   const tieLineData = transformTieLineData(tieLineRawData);
   const thermalData = transformThermalData(thermalRawData);
-  const biddingBehaviorData = transformBiddingBehaviorData(behaviorRawData);
 
   const isLoading = renewableLoading || loadLoading || tieLineLoading || thermalLoading;
 
@@ -134,7 +130,6 @@ const SupplyDemandForecast = () => {
           <TabsTrigger value="load">负荷预测</TabsTrigger>
           <TabsTrigger value="tieline">联络线预测</TabsTrigger>
           <TabsTrigger value="thermal">火电竞价空间</TabsTrigger>
-          <TabsTrigger value="behavior">历史竞价行为</TabsTrigger>
         </TabsList>
 
         <TabsContent value="renewable">
@@ -251,41 +246,6 @@ const SupplyDemandForecast = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="behavior">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">历史竞价行为分析</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-sm font-medium mb-4">报价分布</h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={biddingBehaviorData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="range" tick={{ fontSize: 12 }} label={{ value: '报价区间 (¥/MWh)', position: 'bottom', fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" name="报价次数" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-4">中标率分析</h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={biddingBehaviorData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="range" tick={{ fontSize: 12 }} label={{ value: '报价区间 (¥/MWh)', position: 'bottom', fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="rate" stroke="#00B04D" strokeWidth={2} name="中标率 (%)" dot={{ fill: "#00B04D" }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
