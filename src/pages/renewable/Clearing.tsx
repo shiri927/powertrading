@@ -19,23 +19,11 @@ import {
   useAvailableDates,
   transformMarketClearingForChart 
 } from "@/hooks/useMarketClearingPrices";
-
-// 分时段交易出清数据 (保留Mock数据用于分时段交易)
-const generateSegmentClearingData = () => {
-  const tradingTypes = ["集中竞价", "滚动撮合", "挂牌交易", "双边协商"];
-  return Array.from({ length: 20 }, (_, i) => ({
-    id: `T${(i + 1).toString().padStart(3, '0')}`,
-    tradingType: tradingTypes[i % tradingTypes.length],
-    tradingUnit: ["山东省场站A", "山东省场站B", "山西省场站A", "浙江省场站A"][i % 4],
-    tradingSequence: `第${Math.floor(i / 4) + 1}序`,
-    period: `${(i % 24).toString().padStart(2, '0')}:00-${((i % 24) + 1).toString().padStart(2, '0')}:00`,
-    clearPrice: 300 + Math.random() * 150,
-    clearVolume: 50 + Math.random() * 100,
-    bidPrice: 280 + Math.random() * 160,
-    status: Math.random() > 0.2 ? "已出清" : "未出清",
-    clearTime: `2025-12-14 ${(9 + i % 8).toString().padStart(2, '0')}:${(Math.floor(Math.random() * 60)).toString().padStart(2, '0')}`,
-  }));
-};
+import {
+  useTimeSegmentClearing,
+  useTimeSegmentClearingStats,
+  transformTimeSegmentForTable,
+} from "@/hooks/useTimeSegmentClearing";
 
 const priceChartConfig = {
   dayAheadClearPrice: { label: "日前出清电价", color: "#00B04D" },
@@ -63,6 +51,30 @@ const Clearing = () => {
   const [spotDataType, setSpotDataType] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
 
+  // 分时段交易出清 - 使用数据库数据
+  const segmentDateStr = segmentDate ? format(segmentDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+  const segmentFilters = useMemo(() => ({
+    date: segmentDateStr,
+    tradingType: tradingType,
+    tradingSequence: tradingSequence,
+    province: region === "shandong" ? "山东" : region === "shanxi" ? "山西" : region === "zhejiang" ? "浙江" : undefined,
+  }), [segmentDateStr, tradingType, tradingSequence, region]);
+  
+  const { data: segmentRecords = [], isLoading: isLoadingSegment } = useTimeSegmentClearing(segmentFilters);
+  const { data: segmentStats, isLoading: isLoadingSegmentStats } = useTimeSegmentClearingStats(
+    segmentDateStr, 
+    region === "all" ? undefined : (region === "shandong" ? "山东" : region === "shanxi" ? "山西" : "浙江")
+  );
+
+  // 转换为表格格式并过滤
+  const filteredSegmentData = useMemo(() => {
+    const tableData = transformTimeSegmentForTable(segmentRecords);
+    return tableData.filter(item => {
+      if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
+      return true;
+    });
+  }, [segmentRecords, tradingUnit]);
+
   // 使用市场出清价格数据库数据
   const dateStr = spotDate ? format(spotDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
   const { data: marketPrices = [], isLoading: isLoadingPrices } = useMarketClearingPrices(dateStr, spotProvince);
@@ -86,22 +98,16 @@ const Clearing = () => {
     }));
   }, [marketPrices]);
 
-  const segmentData = generateSegmentClearingData();
-
-  // 根据筛选条件过滤分时段数据
-  const filteredSegmentData = segmentData.filter(item => {
-    if (tradingType !== "all" && item.tradingType !== tradingType) return false;
-    if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
-    if (tradingSequence !== "all" && item.tradingSequence !== tradingSequence) return false;
-    return true;
-  });
-
-  // 计算统计指标
-  const segmentStats = {
+  // 计算统计指标 - 使用数据库统计
+  const displaySegmentStats = segmentStats || {
     totalVolume: filteredSegmentData.reduce((sum, item) => sum + item.clearVolume, 0),
-    avgPrice: filteredSegmentData.reduce((sum, item) => sum + item.clearPrice, 0) / filteredSegmentData.length,
-    clearCount: filteredSegmentData.filter(item => item.status === "已出清").length,
-    totalCount: filteredSegmentData.length,
+    avgPrice: filteredSegmentData.length > 0 
+      ? filteredSegmentData.reduce((sum, item) => sum + item.clearPrice, 0) / filteredSegmentData.length 
+      : 0,
+    successRate: filteredSegmentData.length > 0
+      ? (filteredSegmentData.filter(item => item.status === "已出清").length / filteredSegmentData.length) * 100
+      : 0,
+    totalTransactions: filteredSegmentData.length,
   };
 
   const spotStats = clearingStats || {
@@ -114,7 +120,7 @@ const Clearing = () => {
   const showDayAhead = spotDataType === "all" || spotDataType === "dayAhead";
   const showRealTime = spotDataType === "all" || spotDataType === "realTime";
 
-  const isLoading = isLoadingPrices || isLoadingStats;
+  const isLoading = isLoadingPrices || isLoadingStats || isLoadingSegment || isLoadingSegmentStats;
 
   return (
     <div className="p-8 space-y-6">
@@ -241,27 +247,27 @@ const Clearing = () => {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">总出清电量</p>
-                <p className="text-2xl font-bold text-primary font-mono">{segmentStats.totalVolume.toFixed(1)} MWh</p>
+                <p className="text-2xl font-bold text-primary font-mono">{displaySegmentStats.totalVolume.toFixed(1)} MWh</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">平均出清价格</p>
-                <p className="text-2xl font-bold text-primary font-mono">¥ {segmentStats.avgPrice.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary font-mono">¥ {displaySegmentStats.avgPrice.toFixed(2)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">出清成功率</p>
                 <p className="text-2xl font-bold text-green-600 font-mono">
-                  {((segmentStats.clearCount / segmentStats.totalCount) * 100).toFixed(1)}%
+                  {displaySegmentStats.successRate.toFixed(1)}%
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs text-muted-foreground">交易笔数</p>
-                <p className="text-2xl font-bold text-primary font-mono">{segmentStats.totalCount} 笔</p>
+                <p className="text-2xl font-bold text-primary font-mono">{displaySegmentStats.totalTransactions} 笔</p>
               </CardContent>
             </Card>
           </div>
