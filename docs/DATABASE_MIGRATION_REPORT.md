@@ -12,14 +12,15 @@
 
 | 模块 | 已迁移页面 | 待迁移页面 | 完成率 |
 |------|-----------|-----------|--------|
-| 新能源发电侧 - 复盘分析 | 4 | 0 | 100% |
+| 新能源发电侧 - 复盘分析 | 5 | 0 | 100% |
 | 新能源发电侧 - 交易决策 | 4 | 0 | 100% |
 | 新能源发电侧 - 出清结算 | 2 | 0 | 100% |
 | 新能源发电侧 - 基础数据 | 2 | 1 | 67% |
 | 售电业务侧 - 客户管理 | 4 | 0 | 100% |
-| 市场与基本面数据 | 4 | 2 | 67% |
+| 售电业务侧 - 出清结算 | 2 | 0 | 100% |
+| 市场与基本面数据 | 6 | 1 | 86% |
 | 报表与报告 | 1 | 1 | 50% |
-| **总计** | **21** | **4** | **84%** |
+| **总计** | **26** | **3** | **90%** |
 
 ---
 
@@ -33,6 +34,7 @@
 | 省内现货复盘 | `src/pages/renewable/review/IntraProvincialReviewTab.tsx` | `useReviewData` | `clearing_records`, `market_clearing_prices`, `trading_units` | ✅ 完成 |
 | 省间现货复盘 | `src/pages/renewable/Review.tsx` (InterProvincialReview) | `useReviewData` | `clearing_records`, `market_clearing_prices`, `trading_units` | ✅ 完成 |
 | 预测功率调整复盘 | `src/pages/renewable/review/ForecastAdjustmentReviewTab.tsx` | `useReviewData` | `load_predictions`, `market_clearing_prices`, `trading_units` | ✅ 完成 |
+| 报告列表 | `src/pages/renewable/Review.tsx` | `useAnalysisReports` | `analysis_reports`, `trading_units` | ✅ 完成 |
 
 ### 2.2 新能源发电侧 - 交易决策 (`/renewable/decision`)
 
@@ -41,7 +43,7 @@
 | AI功率预测 | `src/pages/renewable/decision/AIForecastTab.tsx` | `usePredictionData` | `load_predictions`, `price_predictions` | ✅ 完成 |
 | 策略配置 | `src/pages/renewable/decision/StrategyConfigTab.tsx` | `useTradingStrategies` | `trading_strategies` | ✅ 完成 |
 | 回测模拟 | `src/pages/renewable/decision/BacktestTab.tsx` | `useBacktestResults`, `useTradingStrategies` | `backtest_results`, `trading_strategies` | ✅ 完成 |
-| 日滚动交易 | `src/pages/renewable/decision/DailyRollingTab.tsx` | `useTradingCalendar` | `trading_calendar` | ✅ 完成 |
+| 日滚动交易 | `src/pages/renewable/decision/DailyRollingTab.tsx` | `usePredictionData`, `useTradingStrategies` | `price_predictions`, `load_predictions`, `trading_strategies` | ✅ 完成 |
 
 ### 2.3 新能源发电侧 - 出清结算
 
@@ -67,7 +69,14 @@
 | 套餐模拟 | `src/pages/retail/trading/PackageSimulation.tsx` | `usePackageSimulations` | `package_simulations`, `customers` | ✅ 完成 |
 | 执行追踪 | `src/pages/retail/trading/ExecutionTracking.tsx` | `useExecutionRecords` | `execution_records`, `customers` | ✅ 完成 |
 
-### 2.6 市场与基本面数据
+### 2.6 售电业务侧 - 出清结算
+
+| 页面 | 文件路径 | 使用的Hook | 数据库表 | 状态 |
+|------|----------|------------|----------|------|
+| 出清管理 | `src/pages/retail/ClearingSettlement.tsx` | `useClearingRecords` | `clearing_records`, `trading_units` | ✅ 完成 |
+| 结算管理 | `src/pages/retail/ClearingSettlement.tsx` | `useSettlementRecords` | `settlement_records`, `trading_units` | ✅ 完成 |
+
+### 2.7 市场与基本面数据
 
 | 页面 | 文件路径 | 使用的Hook | 数据库表 | 状态 |
 |------|----------|------------|----------|------|
@@ -75,11 +84,12 @@
 | 市场出清 | `src/pages/market-fundamentals/SpotDisclosure.tsx` | `useMarketClearingPrices` | `market_clearing_prices` | ✅ 完成 |
 | 中长期交易 | `src/pages/market-fundamentals/MediumLongTerm.tsx` | `useMediumLongTermData` | `medium_long_term_prices`, `price_distribution` | ✅ 完成 |
 | 气象数据 | `src/pages/market-fundamentals/WeatherData.tsx` | `useWeatherData` | `weather_data`, `weather_alerts` | ✅ 完成 |
-| 电网系统 | `src/pages/market-fundamentals/GridSystem.tsx` | - | - | ⏳ Mock数据 |
+| 电网系统 | `src/pages/market-fundamentals/GridSystem.tsx` | - | - | ⚠️ Mock数据（静态参考数据） |
 | 能源行情 | `src/pages/market-fundamentals/EnergyQuotes.tsx` | `useEnergyQuotesData` | `energy_crude_quotes`, `energy_refined_quotes`, `energy_crack_spreads`, `energy_inventory`, `energy_related_stocks`, `energy_news`, `energy_market_indices`, `energy_ine_intraday` | ✅ 完成 |
 | 新闻政策 | `src/pages/market-fundamentals/NewsPolicy.tsx` | `useNewsPolicies` | `news_policies` | ✅ 完成 |
+| 机组结算 | `src/pages/market-fundamentals/UnitSettlement.tsx` | `useSettlementRecords` | `settlement_records`, `trading_units` | ✅ 完成 |
 
-### 2.7 报表与报告
+### 2.8 报表与报告
 
 | 页面 | 文件路径 | 使用的Hook | 数据库表 | 状态 |
 |------|----------|------------|----------|------|
@@ -109,12 +119,15 @@
 | `useDashboardData` | `src/hooks/useDashboardData.ts` | 仪表板数据聚合 |
 | `useRealtimeData` | `src/hooks/useRealtimeData.ts` | 实时数据更新 |
 | `usePowerPlanData` | `src/hooks/usePowerPlanData.ts` | 发电计划数据 |
+| `usePowerPlanTimeSeries` | `src/hooks/usePowerPlanTimeSeries.ts` | 发电计划时序数据 |
 | `useMediumLongTermData` | `src/hooks/useMediumLongTermData.ts` | 中长期交易行情数据 |
 | `useMarketClearingPrices` | `src/hooks/useMarketClearingPrices.ts` | 市场出清价格数据 |
 | `useWeatherData` | `src/hooks/useWeatherData.ts` | 气象数据和预警 |
 | `useEnergyQuotesData` | `src/hooks/useEnergyQuotesData.ts` | 能源行情数据 |
 | `useNewsPolicies` | `src/hooks/useNewsPolicies.ts` | 新闻政策数据 |
 | `useSupplyDemandData` | `src/hooks/useSupplyDemandData.ts` | 供需预测数据 |
+| `useContracts` | `src/hooks/useContracts.ts` | 合同数据查询 |
+| `useAnalysisReports` | `src/hooks/useAnalysisReports.ts` | 分析报告CRUD操作 |
 
 ---
 
@@ -137,8 +150,11 @@
 │                       │                            ├──────> load_predictions │
 │                       │                            │         (负荷预测)       │
 │                       │                            │                        │
-│                       │                            └──────> trading_bids     │
-│                                                              (交易申报)       │
+│                       │                            ├──────> trading_bids     │
+│                       │                            │         (交易申报)       │
+│                       │                            │                        │
+│                       │                            └──────> analysis_reports │
+│                                                              (分析报告)       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                              市场数据表                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -205,6 +221,12 @@
 │  news_policies ─────────────────> 新闻、政策、公告信息                         │
 │                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
+│                              报告分析表                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  analysis_reports ──────────────> 分析报告（市场月报、策略复盘、风险评估等）     │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                              系统管理表                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
@@ -243,6 +265,7 @@
 | `market_clearing_prices` | 17,016 | 多省份多日期 | ✅ 生产数据 |
 | `medium_long_term_prices` | 48 | 2024-02 至 2025-01 | ✅ 生产数据 |
 | `price_distribution` | 30 | 多月份 | ✅ 生产数据 |
+| `analysis_reports` | 6+ | 2025年 | ✅ 示例数据 |
 | `load_predictions` | 501 | 2025-11-01 至 2025-11-07 | ⚠️ 需扩展 |
 | `price_predictions` | 0 | - | ⏳ 待填充 |
 | `energy_usage` | 0 | - | ⏳ 待填充 |
@@ -271,8 +294,7 @@
 
 | 任务 | 描述 | 影响页面 | 预计工作量 |
 |------|------|----------|------------|
-| 场站发电计划模块 | 创建power_plans表并迁移页面 | 基础数据-发电计划 | 4小时 |
-| 电网系统数据集成 | 创建network_topology表或集成外部API | 电网系统页面 | 8小时 |
+| 场站发电计划模块 | 完善power_plans数据集成 | 基础数据-发电计划 | 4小时 |
 | 报告分析功能 | 实现自动化报告生成 | 报告分析页面 | 6小时 |
 
 ### 6.3 低优先级
@@ -281,6 +303,7 @@
 |------|------|----------|------------|
 | 扩展medium_long_term_prices数据 | 增加更多月份的历史数据 | 中长期交易页面 | 2小时 |
 | 扩展price_distribution数据 | 增加更多月份的分布数据 | 中长期交易页面 | 2小时 |
+| 电网系统数据集成 | 保持现有Mock数据（静态参考数据） | 电网系统页面 | - |
 
 ---
 
@@ -306,9 +329,14 @@
 │  │useMediumLong│  │useMarketClea│  │useWeatherDat│  │useEnergyQuot│    │
 │  │TermData    │  │ringPrices   │  │a            │  │esData       │    │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
-└─────────┼────────────────┼────────────────┼────────────────┼───────────┘
-          │                │                │                │
-          ▼                ▼                ▼                ▼
+│                                                                         │
+│  ┌─────────────┐  ┌─────────────┐                                      │
+│  │useAnalysisRe│  │usePrediction│                                      │
+│  │ports       │  │Data         │                                      │
+│  └──────┬──────┘  └──────┬──────┘                                      │
+└─────────┼────────────────┼──────────────────────────────────────────────┘
+          │                │
+          ▼                ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        Supabase Client层                                 │
 │                   src/integrations/supabase/client.ts                   │
@@ -322,6 +350,7 @@
 │  │  customers     │ strategies │ predictions      │ market_prices    │  │
 │  │  medium_long_term_prices │ weather_data │ energy_quotes          │  │
 │  │  news_policies │ price_distribution │ weather_alerts             │  │
+│  │  analysis_reports │ power_plans │ report_templates               │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -334,7 +363,7 @@
 
 | 策略类型 | 适用表 | 描述 |
 |----------|--------|------|
-| 公开读取 | `market_clearing_prices`, `trading_units`, `power_stations`, `trading_calendar`, `medium_long_term_prices`, `price_distribution`, `weather_data`, `weather_alerts`, `energy_*`, `news_policies` | 所有用户可读取 |
+| 公开读取 | `market_clearing_prices`, `trading_units`, `power_stations`, `trading_calendar`, `medium_long_term_prices`, `price_distribution`, `weather_data`, `weather_alerts`, `energy_*`, `news_policies`, `analysis_reports` | 所有用户可读取 |
 | 管理员完全控制 | 所有表 | `is_admin(auth.uid())` 条件 |
 | 用户自有数据 | `trading_strategies`, `backtest_results`, `package_simulations` | `user_id = auth.uid()` 条件 |
 | 演示模式 | 部分表 | `Allow public read access for demo` 策略 |
@@ -351,35 +380,41 @@
 | 滚动撮合数据返回空数组 | 将查询参数从天数改为月数，基于数据库最新日期回溯 | `src/hooks/useMediumLongTermData.ts` |
 | 价格分布查询返回空数组 | 自动获取数据库中最新月份而非使用当前月份 | `src/hooks/useMediumLongTermData.ts` |
 | 现货出清页面使用Mock数据 | 集成`useMarketClearingPrices`等Hook使用真实数据库数据 | `src/pages/market-fundamentals/SpotDisclosure.tsx` |
+| 日滚动交易页面使用Mock数据 | 集成`usePredictionData`和`useTradingStrategies`Hook | `src/pages/renewable/decision/DailyRollingTab.tsx` |
+| 复盘分析报告列表使用Mock数据 | 创建`analysis_reports`表和`useAnalysisReports`Hook | `src/pages/renewable/Review.tsx` |
+| 机组结算页面刷新按钮类型错误 | 修复onClick事件处理函数类型 | `src/pages/market-fundamentals/UnitSettlement.tsx` |
 
 ---
 
 ## 十、结论
 
 ### 10.1 已完成成果
-- ✅ 核心复盘分析模块100%完成数据库迁移
-- ✅ 交易决策智能中心100%完成数据库迁移  
+- ✅ 核心复盘分析模块100%完成数据库迁移（含报告列表）
+- ✅ 交易决策智能中心100%完成数据库迁移（含日滚动交易）
 - ✅ 出清结算模块100%完成数据库迁移
 - ✅ 售电客户管理模块100%完成数据库迁移
+- ✅ 售电出清结算模块100%完成数据库迁移
 - ✅ 中长期交易页面完成数据库迁移
 - ✅ 现货出清页面完成数据库迁移
 - ✅ 气象数据页面完成数据库迁移
 - ✅ 能源行情页面完成数据库迁移
 - ✅ 新闻政策页面完成数据库迁移
-- ✅ 创建21个专用数据获取Hooks
+- ✅ 机组结算页面完成数据库迁移
+- ✅ 创建24个专用数据获取Hooks
 - ✅ 建立完整的数据库表关系结构
+- ✅ 新建`analysis_reports`表存储复盘分析报告
 
 ### 10.2 关键指标
-- 页面迁移完成率: **84%** (21/25)
+- 页面迁移完成率: **90%** (26/29)
 - Hooks覆盖率: **100%**（所有已迁移页面）
-- 数据表利用率: **90%**（27/30个表已使用）
+- 数据表利用率: **93%**（28/30个表已使用）
 
 ### 10.3 下一步建议
 1. 优先扩展`load_predictions`数据日期范围
 2. 填充`energy_usage`和`execution_records`表
-3. 完成场站发电计划模块的数据库集成
-4. 完成电网系统页面的数据库集成
+3. 完成场站发电计划模块的数据完善
+4. 完成报告分析功能开发
 
 ---
 
-*报告生成完成*
+*报告生成完成 - 最后更新: 2025-12-15*
