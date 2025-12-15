@@ -305,6 +305,267 @@ export type Database = {
         }
         Relationships: []
       }
+      energy_crack_spreads: {
+        Row: {
+          change_percent: number | null
+          change_value: number | null
+          created_at: string
+          id: string
+          name: string
+          price: number
+          quote_date: string
+          ytd: number | null
+        }
+        Insert: {
+          change_percent?: number | null
+          change_value?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          price: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Update: {
+          change_percent?: number | null
+          change_value?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Relationships: []
+      }
+      energy_crude_quotes: {
+        Row: {
+          category: string
+          change_percent: number | null
+          change_value: number | null
+          contract: string | null
+          created_at: string
+          id: string
+          name: string | null
+          price: number
+          quote_date: string
+          quote_time: string | null
+          ytd: number | null
+        }
+        Insert: {
+          category: string
+          change_percent?: number | null
+          change_value?: number | null
+          contract?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          price: number
+          quote_date?: string
+          quote_time?: string | null
+          ytd?: number | null
+        }
+        Update: {
+          category?: string
+          change_percent?: number | null
+          change_value?: number | null
+          contract?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          price?: number
+          quote_date?: string
+          quote_time?: string | null
+          ytd?: number | null
+        }
+        Relationships: []
+      }
+      energy_ine_intraday: {
+        Row: {
+          created_at: string
+          id: string
+          price: number
+          quote_date: string
+          time_point: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price: number
+          quote_date?: string
+          time_point: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price?: number
+          quote_date?: string
+          time_point?: string
+        }
+        Relationships: []
+      }
+      energy_inventory: {
+        Row: {
+          change_percent: string | null
+          change_text: string | null
+          created_at: string
+          id: string
+          name: string
+          quote_date: string
+          status: string | null
+          value: string
+        }
+        Insert: {
+          change_percent?: string | null
+          change_text?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          quote_date?: string
+          status?: string | null
+          value: string
+        }
+        Update: {
+          change_percent?: string | null
+          change_text?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          quote_date?: string
+          status?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      energy_market_indices: {
+        Row: {
+          change_percent: string | null
+          change_value: string | null
+          created_at: string
+          id: string
+          name: string
+          quote_date: string
+          value: string
+        }
+        Insert: {
+          change_percent?: string | null
+          change_value?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          quote_date?: string
+          value: string
+        }
+        Update: {
+          change_percent?: string | null
+          change_value?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          quote_date?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      energy_news: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          is_scrolling: boolean | null
+          publish_date: string
+          publish_time: string | null
+          source: string | null
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_scrolling?: boolean | null
+          publish_date?: string
+          publish_time?: string | null
+          source?: string | null
+          title: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_scrolling?: boolean | null
+          publish_date?: string
+          publish_time?: string | null
+          source?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      energy_refined_quotes: {
+        Row: {
+          change_percent: number | null
+          change_value: number | null
+          created_at: string
+          id: string
+          name: string
+          price: number
+          quote_date: string
+          ytd: number | null
+        }
+        Insert: {
+          change_percent?: number | null
+          change_value?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          price: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Update: {
+          change_percent?: number | null
+          change_value?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Relationships: []
+      }
+      energy_related_stocks: {
+        Row: {
+          change_percent: number | null
+          change_value: number | null
+          code: string
+          created_at: string
+          id: string
+          price: number
+          quote_date: string
+          ytd: number | null
+        }
+        Insert: {
+          change_percent?: number | null
+          change_value?: number | null
+          code: string
+          created_at?: string
+          id?: string
+          price: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Update: {
+          change_percent?: number | null
+          change_value?: number | null
+          code?: string
+          created_at?: string
+          id?: string
+          price?: number
+          quote_date?: string
+          ytd?: number | null
+        }
+        Relationships: []
+      }
       energy_usage: {
         Row: {
           actual_energy: number | null
