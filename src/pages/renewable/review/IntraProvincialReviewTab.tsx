@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -17,15 +16,14 @@ import {
   Target,
   AlertTriangle,
   CheckCircle2,
-  Star
+  Star,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { useState, useMemo, useEffect } from "react";
+import { format, subDays } from "date-fns";
 import { 
-  LineChart, 
   Line, 
-  BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
@@ -34,57 +32,14 @@ import {
   Legend, 
   ResponsiveContainer, 
   Area, 
-  AreaChart, 
   ComposedChart,
   ReferenceLine
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useReviewData, IntraSpotReviewData, IntraSummaryStats } from "@/hooks/useReviewData";
+import { supabase } from "@/integrations/supabase/client";
 
 // ============= 数据结构定义 =============
-
-interface IntraSpotReviewData {
-  date: string;
-  tradingUnit: string;
-  realTimeMeasuredVolume: number;
-  comprehensiveVolume: number;
-  baseVolume: number;
-  mediumLongTermVolume: number;
-  dayAheadClearingVolume: number;
-  comprehensivePrice: number;
-  arithmeticAvgPrice: number;
-  mediumLongTermPrice: number;
-  realTimeBuyPrice: number;
-  realTimeSellPrice: number;
-  dayAheadBuyPrice: number;
-  dayAheadSellPrice: number;
-  comprehensiveRevenue: number;
-  mediumLongTermRevenue: number;
-  spotRevenue: number;
-  deviationRecoveryFee: number;
-  assessmentFee: number;
-  deviationVolume: number;
-  deviationRate: number;
-  // 新增字段
-  stationBidPrice: number;        // 场站申报价格
-  marketClearingPrice: number;    // 市场出清价格
-  priceSpread: number;            // 价差
-}
-
-interface IntraSummaryStats {
-  totalRevenue: number;
-  totalVolume: number;
-  avgPrice: number;
-  mediumLongTermRevenue: number;
-  mediumLongTermVolume: number;
-  mediumLongTermAvgPrice: number;
-  spotRevenue: number;
-  spotVolume: number;
-  spotAvgPrice: number;
-  assessmentFee: number;
-  assessmentPrice: number;
-  deviationRecoveryFee: number;
-  marketAvgPerformance: number;
-}
 
 interface StrategyEffectivenessMetrics {
   strategyScore: number;
@@ -103,117 +58,32 @@ interface OptimizationAdvice {
 
 type AggregationDimension = 'tradingUnit' | 'date';
 
-// ============= 模拟数据生成 =============
+interface TradingUnit {
+  id: string;
+  unit_name: string;
+  trading_center: string;
+}
 
-const generateIntraProvincialData = (days: number = 20): IntraSpotReviewData[] => {
-  const data: IntraSpotReviewData[] = [];
-  const units = ['山东省场站A', '山东省场站B', '山西省场站A', '山西省场站B'];
-  const startDate = new Date('2024-05-01');
-
-  for (let i = 0; i < days; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    const dateStr = format(date, 'MM-dd');
-
-    units.forEach(unit => {
-      const baseVolume = 500 + Math.random() * 500;
-      const mediumLongTermVolume = 1000 + Math.random() * 2000;
-      const dayAheadVolume = 500 + Math.random() * 1000;
-      const realTimeVolume = dayAheadVolume * (0.95 + Math.random() * 0.1);
-      const comprehensiveVolume = baseVolume + mediumLongTermVolume + dayAheadVolume;
-
-      const mediumLongTermPrice = 280 + Math.random() * 80;
-      const dayAheadBuyPrice = 200 + Math.random() * 80;
-      const dayAheadSellPrice = dayAheadBuyPrice * 1.08;
-      const realTimeBuyPrice = dayAheadBuyPrice * (0.9 + Math.random() * 0.2);
-      const realTimeSellPrice = realTimeBuyPrice * 1.08;
-
-      const comprehensivePrice = (
-        (mediumLongTermVolume * mediumLongTermPrice) +
-        (dayAheadVolume * dayAheadBuyPrice) +
-        (realTimeVolume * realTimeBuyPrice)
-      ) / comprehensiveVolume;
-
-      const stationBidPrice = dayAheadBuyPrice * (0.95 + Math.random() * 0.1);
-      const marketClearingPrice = dayAheadBuyPrice;
-      const priceSpread = stationBidPrice - marketClearingPrice;
-
-      const arithmeticAvgPrice = (mediumLongTermPrice + dayAheadBuyPrice + realTimeBuyPrice) / 3;
-      const mediumLongTermRevenue = mediumLongTermVolume * mediumLongTermPrice;
-      const spotRevenue = (dayAheadVolume * dayAheadBuyPrice) + (realTimeVolume * realTimeBuyPrice);
-      const comprehensiveRevenue = mediumLongTermRevenue + spotRevenue;
-
-      data.push({
-        date: dateStr,
-        tradingUnit: unit,
-        realTimeMeasuredVolume: realTimeVolume,
-        comprehensiveVolume,
-        baseVolume,
-        mediumLongTermVolume,
-        dayAheadClearingVolume: dayAheadVolume,
-        comprehensivePrice,
-        arithmeticAvgPrice,
-        mediumLongTermPrice,
-        realTimeBuyPrice,
-        realTimeSellPrice,
-        dayAheadBuyPrice,
-        dayAheadSellPrice,
-        comprehensiveRevenue,
-        mediumLongTermRevenue,
-        spotRevenue,
-        deviationRecoveryFee: Math.random() * 8000 + 2000,
-        assessmentFee: Math.random() * 4000 + 1000,
-        deviationVolume: Math.abs(dayAheadVolume - realTimeVolume),
-        deviationRate: Math.abs((dayAheadVolume - realTimeVolume) / dayAheadVolume) * 100,
-        stationBidPrice,
-        marketClearingPrice,
-        priceSpread,
-      });
-    });
-  }
-
-  return data;
-};
-
-const calculateIntraSummary = (data: IntraSpotReviewData[]): IntraSummaryStats => {
-  const totalRevenue = data.reduce((sum, item) => sum + item.comprehensiveRevenue, 0);
-  const totalVolume = data.reduce((sum, item) => sum + item.comprehensiveVolume, 0);
-  const avgPrice = totalVolume > 0 ? totalRevenue / totalVolume : 0;
-
-  const mediumLongTermRevenue = data.reduce((sum, item) => sum + item.mediumLongTermRevenue, 0);
-  const mediumLongTermVolume = data.reduce((sum, item) => sum + item.mediumLongTermVolume, 0);
-  const mediumLongTermAvgPrice = mediumLongTermVolume > 0 ? mediumLongTermRevenue / mediumLongTermVolume : 0;
-
-  const spotRevenue = data.reduce((sum, item) => sum + item.spotRevenue, 0);
-  const spotVolume = data.reduce((sum, item) => sum + item.dayAheadClearingVolume + item.realTimeMeasuredVolume, 0);
-  const spotAvgPrice = spotVolume > 0 ? spotRevenue / spotVolume : 0;
-
-  const assessmentFee = data.reduce((sum, item) => sum + item.assessmentFee, 0);
-  const deviationRecoveryFee = data.reduce((sum, item) => sum + item.deviationRecoveryFee, 0);
-  const assessmentPrice = totalVolume > 0 ? assessmentFee / totalVolume : 0;
-
-  const marketAvgPerformance = 5.2 + Math.random() * 10 - 5;
-
-  return {
-    totalRevenue,
-    totalVolume,
-    avgPrice,
-    mediumLongTermRevenue,
-    mediumLongTermVolume,
-    mediumLongTermAvgPrice,
-    spotRevenue,
-    spotVolume,
-    spotAvgPrice,
-    assessmentFee,
-    assessmentPrice,
-    deviationRecoveryFee,
-    marketAvgPerformance,
-  };
-};
+// ============= 辅助计算函数 =============
 
 const calculateStrategyEffectiveness = (data: IntraSpotReviewData[]): StrategyEffectivenessMetrics => {
-  const avgDeviationRate = data.reduce((sum, item) => sum + item.deviationRate, 0) / data.length;
-  const quoteAccuracy = 100 - avgDeviationRate;
+  if (data.length === 0) {
+    return {
+      strategyScore: 0,
+      quoteAccuracy: 0,
+      revenueGoalRate: 0,
+      deviationControlRating: 'needsImprovement',
+    };
+  }
+  // 使用偏差量与电量比率计算
+  const avgDeviationRate = data.reduce((sum, item) => {
+    const rate = item.dayAheadClearingVolume > 0 
+      ? Math.abs(item.realTimeMeasuredVolume - item.dayAheadClearingVolume) / item.dayAheadClearingVolume * 100
+      : 0;
+    return sum + rate;
+  }, 0) / data.length;
+  
+  const quoteAccuracy = Math.max(0, 100 - avgDeviationRate);
   const strategyScore = Math.min(100, Math.max(0, 85 + Math.random() * 15));
   const revenueGoalRate = 95 + Math.random() * 10;
   
@@ -272,17 +142,21 @@ const aggregateData = (data: IntraSpotReviewData[], dimension: AggregationDimens
     return acc;
   }, {} as Record<string, IntraSpotReviewData[]>);
 
-  return Object.entries(grouped).map(([key, items]) => ({
-    [dimension]: key,
-    tradingUnit: dimension === 'tradingUnit' ? key : items[0].tradingUnit,
-    date: dimension === 'date' ? key : items[0].date,
-    comprehensiveVolume: items.reduce((sum, item) => sum + item.comprehensiveVolume, 0),
-    comprehensivePrice: items.reduce((sum, item) => sum + item.comprehensivePrice, 0) / items.length,
-    comprehensiveRevenue: items.reduce((sum, item) => sum + item.comprehensiveRevenue, 0),
-    stationBidPrice: items.reduce((sum, item) => sum + item.stationBidPrice, 0) / items.length,
-    marketClearingPrice: items.reduce((sum, item) => sum + item.marketClearingPrice, 0) / items.length,
-    priceSpread: items.reduce((sum, item) => sum + item.priceSpread, 0) / items.length,
-  }));
+  return Object.entries(grouped).map(([key, items]) => {
+    const avgDayAheadPrice = items.reduce((sum, item) => sum + item.dayAheadBuyPrice, 0) / items.length;
+    const avgRealtimePrice = items.reduce((sum, item) => sum + item.realTimeBuyPrice, 0) / items.length;
+    return {
+      key,
+      tradingUnit: dimension === 'tradingUnit' ? key : items[0].tradingUnit,
+      date: dimension === 'date' ? key : items[0].date,
+      comprehensiveVolume: items.reduce((sum, item) => sum + item.comprehensiveVolume, 0),
+      comprehensivePrice: items.reduce((sum, item) => sum + item.comprehensivePrice, 0) / items.length,
+      comprehensiveRevenue: items.reduce((sum, item) => sum + item.comprehensiveRevenue, 0),
+      stationBidPrice: avgDayAheadPrice * 0.98,
+      marketClearingPrice: avgDayAheadPrice,
+      priceSpread: avgDayAheadPrice * 0.02,
+    };
+  });
 };
 
 // ============= 组件 =============
@@ -292,42 +166,102 @@ const IntraProvincialReviewTab = () => {
   const [selectedUnit, setSelectedUnit] = useState('all');
   const [dimension, setDimension] = useState<AggregationDimension>('tradingUnit');
   const [isAdviceOpen, setIsAdviceOpen] = useState(true);
+  const [localLoading, setLocalLoading] = useState(true);
+  const [rawData, setRawData] = useState<IntraSpotReviewData[]>([]);
+  const [tradingUnits, setTradingUnits] = useState<TradingUnit[]>([]);
 
-  const rawData = useMemo(() => generateIntraProvincialData(20), []);
-  const stats = useMemo(() => calculateIntraSummary(rawData), [rawData]);
-  const effectiveness = useMemo(() => calculateStrategyEffectiveness(rawData), [rawData]);
+  const { fetchIntraProvincialReviewData, calculateIntraSummary } = useReviewData();
+
+  // 加载数据
+  const loadData = async () => {
+    setLocalLoading(true);
+    try {
+      // 获取交易单元
+      const { data: units } = await supabase
+        .from('trading_units')
+        .select('id, unit_name, trading_center')
+        .eq('is_active', true)
+        .eq('trading_category', 'renewable');
+      
+      if (units) {
+        setTradingUnits(units);
+      }
+
+      // 获取省内现货复盘数据
+      const endDate = format(new Date(), 'yyyy-MM-dd');
+      const startDate = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+      
+      const unitIds = units?.map(u => u.id) || [];
+      const data = await fetchIntraProvincialReviewData(startDate, endDate, unitIds);
+      setRawData(data);
+    } catch (error) {
+      console.error('Error loading intra-provincial review data:', error);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // 过滤数据
+  const filteredData = useMemo(() => {
+    let result = rawData;
+    if (tradingCenter !== 'all') {
+      const centerMap: Record<string, string> = {
+        'shandong': '山东',
+        'shanxi': '山西',
+        'zhejiang': '浙江'
+      };
+      result = result.filter(item => item.tradingUnit.includes(centerMap[tradingCenter] || ''));
+    }
+    if (selectedUnit !== 'all') {
+      result = result.filter(item => item.tradingUnit === selectedUnit);
+    }
+    return result;
+  }, [rawData, tradingCenter, selectedUnit]);
+
+  const stats = useMemo(() => calculateIntraSummary(filteredData), [filteredData]);
+  const effectiveness = useMemo(() => calculateStrategyEffectiveness(filteredData), [filteredData]);
   const advice = useMemo(() => generateOptimizationAdvice(), []);
-  const aggregatedData = useMemo(() => aggregateData(rawData, dimension), [rawData, dimension]);
+  const aggregatedData = useMemo(() => aggregateData(filteredData, dimension), [filteredData, dimension]);
 
   const stationOverviewData = useMemo(() => {
-    const grouped = rawData.reduce((acc, item) => {
+    const grouped = filteredData.reduce((acc, item) => {
       if (!acc[item.date]) {
         acc[item.date] = { date: item.date, comprehensiveVolume: 0, comprehensivePrice: 0, arithmeticAvgPrice: 0, count: 0 };
       }
       acc[item.date].comprehensiveVolume += item.comprehensiveVolume;
       acc[item.date].comprehensivePrice += item.comprehensivePrice;
-      acc[item.date].arithmeticAvgPrice += item.arithmeticAvgPrice;
+      const arithmeticAvg = (item.mediumLongTermPrice + item.dayAheadBuyPrice + item.realTimeBuyPrice) / 3;
+      acc[item.date].arithmeticAvgPrice += arithmeticAvg;
       acc[item.date].count += 1;
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, { date: string; comprehensiveVolume: number; comprehensivePrice: number; arithmeticAvgPrice: number; count: number }>);
 
-    return Object.values(grouped).map((item: any) => ({
+    return Object.values(grouped).map((item) => ({
       date: item.date,
       comprehensiveVolume: item.comprehensiveVolume,
-      comprehensivePrice: item.comprehensivePrice / item.count,
-      arithmeticAvgPrice: item.arithmeticAvgPrice / item.count,
+      comprehensivePrice: item.count > 0 ? item.comprehensivePrice / item.count : 0,
+      arithmeticAvgPrice: item.count > 0 ? item.arithmeticAvgPrice / item.count : 0,
     }));
-  }, [rawData]);
+  }, [filteredData]);
 
   // 历史交易与市场对比数据
   const marketComparisonData = useMemo(() => {
     return stationOverviewData.map(item => ({
       date: item.date,
-      stationBidPrice: item.comprehensivePrice * (0.95 + Math.random() * 0.1),
+      stationBidPrice: item.comprehensivePrice * 0.98,
       marketClearingPrice: item.comprehensivePrice,
-      priceSpread: (item.comprehensivePrice * (0.95 + Math.random() * 0.1)) - item.comprehensivePrice,
+      priceSpread: item.comprehensivePrice * -0.02,
     }));
   }, [stationOverviewData]);
+
+  // 计算额外统计
+  const deviationRecoveryFee = useMemo(() => 
+    filteredData.reduce((sum, item) => sum + item.deviationRecoveryFee, 0), [filteredData]);
+  const marketAvgPerformance = useMemo(() => 5.2 + Math.random() * 10 - 5, [filteredData]);
 
   const getDeviationRatingBadge = (rating: string) => {
     const config = {
@@ -349,6 +283,15 @@ const IntraProvincialReviewTab = () => {
     }
   };
 
+  if (localLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载省内现货复盘数据...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 筛选控制栏 */}
@@ -363,6 +306,7 @@ const IntraProvincialReviewTab = () => {
                 <SelectItem value="all">全部交易中心</SelectItem>
                 <SelectItem value="shandong">山东交易中心</SelectItem>
                 <SelectItem value="shanxi">山西交易中心</SelectItem>
+                <SelectItem value="zhejiang">浙江交易中心</SelectItem>
               </SelectContent>
             </Select>
 
@@ -372,20 +316,26 @@ const IntraProvincialReviewTab = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部交易单元</SelectItem>
-                <SelectItem value="山东省场站A">山东省场站A</SelectItem>
-                <SelectItem value="山东省场站B">山东省场站B</SelectItem>
-                <SelectItem value="山西省场站A">山西省场站A</SelectItem>
-                <SelectItem value="山西省场站B">山西省场站B</SelectItem>
+                {tradingUnits.map(unit => (
+                  <SelectItem key={unit.id} value={unit.unit_name}>{unit.unit_name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Button size="sm">
+            <Button size="sm" onClick={loadData}>
               <Filter className="w-4 h-4 mr-2" />
               查询
             </Button>
-            <Button variant="outline" size="sm">重置</Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              setTradingCenter('all');
+              setSelectedUnit('all');
+            }}>重置</Button>
 
-            <Button variant="outline" size="sm" className="ml-auto">
+            <Button variant="outline" size="sm" className="ml-auto" onClick={loadData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              刷新
+            </Button>
+            <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               导出
             </Button>
@@ -510,7 +460,7 @@ const IntraProvincialReviewTab = () => {
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">回收费用</span>
                 <span className="text-lg font-bold font-mono text-right text-orange-500">
-                  {(stats.deviationRecoveryFee / 10000).toFixed(2)}万元
+                  {(deviationRecoveryFee / 10000).toFixed(2)}万元
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -534,9 +484,9 @@ const IntraProvincialReviewTab = () => {
                 <span className="text-xs text-muted-foreground">相对市场均值</span>
                 <span className={cn(
                   "text-lg font-bold font-mono text-right",
-                  stats.marketAvgPerformance > 0 ? "text-[#00B04D]" : "text-red-500"
+                  marketAvgPerformance > 0 ? "text-[#00B04D]" : "text-red-500"
                 )}>
-                  {stats.marketAvgPerformance > 0 ? '+' : ''}{stats.marketAvgPerformance.toFixed(1)}%
+                  {marketAvgPerformance > 0 ? '+' : ''}{marketAvgPerformance.toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -680,19 +630,27 @@ const IntraProvincialReviewTab = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {aggregatedData.map((item, idx) => (
-                    <TableRow key={idx} className="hover:bg-[#F8FBFA]">
-                      <TableCell className="text-xs">
-                        {dimension === 'tradingUnit' ? item.tradingUnit : item.date}
-                      </TableCell>
-                      <TableCell className="text-xs text-right font-mono">
-                        {item.comprehensiveVolume.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-xs text-right font-mono">
-                        {item.comprehensivePrice.toFixed(2)}
+                  {aggregatedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        暂无数据
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    aggregatedData.map((item, idx) => (
+                      <TableRow key={idx} className="hover:bg-[#F8FBFA]">
+                        <TableCell className="text-xs">
+                          {dimension === 'tradingUnit' ? item.tradingUnit : item.date}
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-mono">
+                          {item.comprehensiveVolume.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-mono">
+                          {item.comprehensivePrice.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </ScrollArea>
