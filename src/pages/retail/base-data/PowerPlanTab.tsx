@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ResponsiveContai
 import { Plus, TrendingUp, TrendingDown, ChevronDown, Download, Upload, Loader2, RefreshCw, Clock } from "lucide-react";
 import { usePowerPlanData } from "@/hooks/usePowerPlanData";
 import { usePowerPlanTimeSeries } from "@/hooks/usePowerPlanTimeSeries";
+import { toast } from "sonner";
 
 const chartConfig = {
   planned: { label: "计划电量", color: "#3b82f6" },
@@ -34,13 +35,34 @@ const PowerPlanTab = () => {
   const [curveOpen, setCurveOpen] = useState(false);
   const [timeSeriesMonth, setTimeSeriesMonth] = useState("1");
   
+  // 年度计划表单状态
+  const [annualDialogOpen, setAnnualDialogOpen] = useState(false);
+  const [annualForm, setAnnualForm] = useState({
+    tradingUnitId: "",
+    planYear: "2025",
+    plannedVolume: "",
+    remarks: "",
+  });
+  const [annualSubmitting, setAnnualSubmitting] = useState(false);
+
+  // 月度计划表单状态
+  const [monthlyDialogOpen, setMonthlyDialogOpen] = useState(false);
+  const [monthlyForm, setMonthlyForm] = useState({
+    tradingUnitId: "",
+    planMonth: "2025-01",
+    plannedVolume: "",
+    remarks: "",
+  });
+  const [monthlySubmitting, setMonthlySubmitting] = useState(false);
+  
   const { 
     metrics: powerPlanMetrics, 
     monthlyData: powerPlanData, 
     settlementAnalysis, 
     typicalCurves: typicalCurveData,
     isLoading,
-    refetch 
+    refetch,
+    createPowerPlan,
   } = usePowerPlanData();
 
   const {
@@ -53,6 +75,66 @@ const PowerPlanTab = () => {
   useEffect(() => {
     fetchAggregatedTimeSeries(2025, parseInt(timeSeriesMonth));
   }, [timeSeriesMonth, fetchAggregatedTimeSeries]);
+
+  // 提交年度计划
+  const handleAnnualSubmit = async () => {
+    if (!annualForm.tradingUnitId || !annualForm.plannedVolume) {
+      toast.error("请填写完整的计划信息");
+      return;
+    }
+
+    setAnnualSubmitting(true);
+    try {
+      await createPowerPlan({
+        trading_unit_id: annualForm.tradingUnitId,
+        plan_year: parseInt(annualForm.planYear),
+        plan_month: null,
+        plan_type: 'annual',
+        planned_volume: parseFloat(annualForm.plannedVolume),
+        status: 'draft',
+        remarks: annualForm.remarks || null,
+      });
+      toast.success("年度计划创建成功");
+      setAnnualDialogOpen(false);
+      setAnnualForm({ tradingUnitId: "", planYear: "2025", plannedVolume: "", remarks: "" });
+    } catch (error) {
+      console.error("创建年度计划失败:", error);
+      toast.error("创建年度计划失败");
+    } finally {
+      setAnnualSubmitting(false);
+    }
+  };
+
+  // 提交月度计划
+  const handleMonthlySubmit = async () => {
+    if (!monthlyForm.tradingUnitId || !monthlyForm.plannedVolume || !monthlyForm.planMonth) {
+      toast.error("请填写完整的计划信息");
+      return;
+    }
+
+    const [year, month] = monthlyForm.planMonth.split("-").map(Number);
+
+    setMonthlySubmitting(true);
+    try {
+      await createPowerPlan({
+        trading_unit_id: monthlyForm.tradingUnitId,
+        plan_year: year,
+        plan_month: month,
+        plan_type: 'monthly',
+        planned_volume: parseFloat(monthlyForm.plannedVolume),
+        status: 'draft',
+        remarks: monthlyForm.remarks || null,
+      });
+      toast.success("月度计划创建成功");
+      setMonthlyDialogOpen(false);
+      setMonthlyForm({ tradingUnitId: "", planMonth: "2025-01", plannedVolume: "", remarks: "" });
+    } catch (error) {
+      console.error("创建月度计划失败:", error);
+      toast.error("创建月度计划失败");
+    } finally {
+      setMonthlySubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -153,7 +235,7 @@ const PowerPlanTab = () => {
 
       {/* 操作按钮 */}
       <div className="flex gap-3">
-        <Dialog>
+        <Dialog open={annualDialogOpen} onOpenChange={setAnnualDialogOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />新建年度计划</Button>
           </DialogTrigger>
@@ -166,7 +248,10 @@ const PowerPlanTab = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>交易单元</Label>
-                  <Select>
+                  <Select 
+                    value={annualForm.tradingUnitId} 
+                    onValueChange={(v) => setAnnualForm(prev => ({ ...prev, tradingUnitId: v }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="选择交易单元" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unit-a">山东省场站A</SelectItem>
@@ -178,7 +263,10 @@ const PowerPlanTab = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>计划年份</Label>
-                  <Select>
+                  <Select 
+                    value={annualForm.planYear} 
+                    onValueChange={(v) => setAnnualForm(prev => ({ ...prev, planYear: v }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="选择年份" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="2025">2025</SelectItem>
@@ -189,20 +277,35 @@ const PowerPlanTab = () => {
               </div>
               <div className="space-y-2">
                 <Label>计划总电量 (MWh)</Label>
-                <Input type="number" placeholder="输入年度计划总电量" />
+                <Input 
+                  type="number" 
+                  placeholder="输入年度计划总电量" 
+                  value={annualForm.plannedVolume}
+                  onChange={(e) => setAnnualForm(prev => ({ ...prev, plannedVolume: e.target.value }))}
+                />
               </div>
               <div className="space-y-2">
                 <Label>备注</Label>
-                <Textarea placeholder="输入备注信息" rows={3} />
+                <Textarea 
+                  placeholder="输入备注信息" 
+                  rows={3} 
+                  value={annualForm.remarks}
+                  onChange={(e) => setAnnualForm(prev => ({ ...prev, remarks: e.target.value }))}
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline">取消</Button>
-              <Button>确认创建</Button>
+              <DialogClose asChild>
+                <Button variant="outline">取消</Button>
+              </DialogClose>
+              <Button onClick={handleAnnualSubmit} disabled={annualSubmitting}>
+                {annualSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                确认创建
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
-        <Dialog>
+        <Dialog open={monthlyDialogOpen} onOpenChange={setMonthlyDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline"><Plus className="h-4 w-4 mr-2" />新建月度计划</Button>
           </DialogTrigger>
@@ -215,27 +318,55 @@ const PowerPlanTab = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>交易单元</Label>
-                  <Select>
+                  <Select 
+                    value={monthlyForm.tradingUnitId} 
+                    onValueChange={(v) => setMonthlyForm(prev => ({ ...prev, tradingUnitId: v }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="选择交易单元" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unit-a">单元A</SelectItem>
-                      <SelectItem value="unit-b">单元B</SelectItem>
+                      <SelectItem value="unit-a">山东省场站A</SelectItem>
+                      <SelectItem value="unit-b">山东省场站B</SelectItem>
+                      <SelectItem value="unit-c">山西省场站A</SelectItem>
+                      <SelectItem value="unit-d">浙江省场站A</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>计划月份</Label>
-                  <Input type="month" defaultValue="2025-11" />
+                  <Input 
+                    type="month" 
+                    value={monthlyForm.planMonth}
+                    onChange={(e) => setMonthlyForm(prev => ({ ...prev, planMonth: e.target.value }))}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>计划电量 (MWh)</Label>
-                <Input type="number" placeholder="输入月度计划电量" />
+                <Input 
+                  type="number" 
+                  placeholder="输入月度计划电量" 
+                  value={monthlyForm.plannedVolume}
+                  onChange={(e) => setMonthlyForm(prev => ({ ...prev, plannedVolume: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>备注</Label>
+                <Textarea 
+                  placeholder="输入备注信息" 
+                  rows={2} 
+                  value={monthlyForm.remarks}
+                  onChange={(e) => setMonthlyForm(prev => ({ ...prev, remarks: e.target.value }))}
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline">取消</Button>
-              <Button>确认创建</Button>
+              <DialogClose asChild>
+                <Button variant="outline">取消</Button>
+              </DialogClose>
+              <Button onClick={handleMonthlySubmit} disabled={monthlySubmitting}>
+                {monthlySubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                确认创建
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
