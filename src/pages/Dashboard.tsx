@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { TechBorderCard } from "@/components/dashboard/TechBorderCard";
 import { ViewToggle } from "@/components/dashboard/ViewToggle";
@@ -7,65 +7,12 @@ import { MetricCardGlow } from "@/components/dashboard/MetricCardGlow";
 import { ItemizedSettlementTable } from "@/components/dashboard/ItemizedSettlementTable";
 import { RegionalProductionChart } from "@/components/dashboard/RegionalProductionChart";
 import { ProvinceSummaryBar } from "@/components/dashboard/ProvinceSummaryBar";
-import { FileX } from "lucide-react";
+import { FileX, Loader2 } from "lucide-react";
 import "@/styles/dashboard-screen.css";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from "recharts";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
-// 分项量价费数据
-const settlementData = [
-  { type: "日前现货", volume: 596.18, avgPrice: 315.2, cost: 77.42, ratio: 72.5 },
-  { type: "实时现货", volume: 138.85, avgPrice: 298.6, cost: 18.58, ratio: 16.9 },
-  { type: "中长期合约", volume: 87.42, avgPrice: 342.5, cost: 10.77, ratio: 10.6 },
-];
-
-// 省份数据
-const provinceData = [
-  { name: "山东省", capacity: 35, generation: 285.42, color: "hsl(200, 80%, 50%)" },
-  { name: "山西省", capacity: 32, generation: 262.18, color: "hsl(149, 80%, 45%)" },
-  { name: "浙江省", capacity: 35, generation: 274.85, color: "hsl(45, 100%, 50%)" },
-];
-
-// 场站发电排名
-const stationGenerationData = [
-  { name: "山东场站A", generation: 102.5, province: "山东省" },
-  { name: "山东场站B", generation: 98.2, province: "山东省" },
-  { name: "浙江场站A", generation: 95.8, province: "浙江省" },
-  { name: "山西场站A", generation: 92.4, province: "山西省" },
-  { name: "浙江场站B", generation: 91.5, province: "浙江省" },
-  { name: "山东场站C", generation: 84.7, province: "山东省" },
-  { name: "山西场站B", generation: 88.3, province: "山西省" },
-  { name: "浙江场站C", generation: 87.6, province: "浙江省" },
-  { name: "山西场站C", generation: 81.5, province: "山西省" },
-];
-
-// 省份汇总数据
-const provinceSummaryData = [
-  { name: "山东省", capacity: 35, generation: 285.42, revenue: 36.85 },
-  { name: "山西省", capacity: 32, generation: 262.18, revenue: 33.92 },
-  { name: "浙江省", capacity: 35, generation: 274.85, revenue: 36.00 },
-];
-
-// 省内现货交易数据
-const spotTradingData = [
-  { date: "10-07", dayAheadVolume: 8.5, realTimeVolume: 7.2, dayAheadPrice: 320, realTimePrice: 315 },
-  { date: "10-14", dayAheadVolume: 9.2, realTimeVolume: 8.8, dayAheadPrice: 335, realTimePrice: 342 },
-  { date: "10-21", dayAheadVolume: 7.8, realTimeVolume: 6.5, dayAheadPrice: 298, realTimePrice: 285 },
-  { date: "10-28", dayAheadVolume: 10.5, realTimeVolume: 9.8, dayAheadPrice: 365, realTimePrice: 358 },
-  { date: "11-04", dayAheadVolume: 8.9, realTimeVolume: 8.2, dayAheadPrice: 342, realTimePrice: 338 },
-];
-
-// 供需预测数据
-const supplyDemandData = [
-  { date: "11-05", renewableOutput: 185000, userLoad: 210000 },
-  { date: "11-12", renewableOutput: 192000, userLoad: 225000 },
-  { date: "11-19", renewableOutput: 178000, userLoad: 218000 },
-  { date: "11-26", renewableOutput: 205000, userLoad: 235000 },
-  { date: "12-03", renewableOutput: 198000, userLoad: 242000 },
-  { date: "12-10", renewableOutput: 188000, userLoad: 228000 },
-  { date: "12-17", renewableOutput: 175000, userLoad: 215000 },
-];
-
-// 气象报警数据
+// 气象报警数据 (暂时保留mock - 需要后续创建weather_alerts表)
 const weatherAlertData = [
   { station: "山东场站A", type: "大风预警", level: "黄色", time: "12-14 08:00" },
   { station: "浙江场站B", type: "暴雨预警", level: "蓝色", time: "12-14 14:00" },
@@ -77,10 +24,97 @@ const Dashboard = () => {
   const [spotView, setSpotView] = useState<"chart" | "table">("chart");
   const [supplyDemandView, setSupplyDemandView] = useState<"chart" | "table">("chart");
 
+  // 从数据库获取数据
+  const { isLoading, stationStats, settlementStats, clearingStats, marketPriceStats, tradingUnitStats } = useDashboardData();
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // 计算指标卡数据
+  const metrics = useMemo(() => {
+    const totalCapacity = stationStats?.totalCapacity || 0;
+    const stationCount = stationStats?.stationCount || 0;
+    const totalVolume = settlementStats?.totalVolume || 0;
+    const totalAmount = settlementStats?.totalAmount || 0;
+    const unitRevenue = settlementStats?.unitRevenue || 0;
+
+    // 计算日前结算占比
+    const dayAheadRecord = settlementStats?.settlementData?.find(s => 
+      s.type.includes("日前") || s.type.includes("现货")
+    );
+    const dayAheadRatio = dayAheadRecord?.ratio || 0;
+
+    // 计算等效利用小时
+    const equivalentHours = totalCapacity > 0 ? Number((totalVolume * 10 / totalCapacity).toFixed(1)) : 0;
+
+    return {
+      totalCapacity,
+      stationCount,
+      totalVolume,
+      equivalentHours,
+      totalAmount,
+      unitRevenue,
+      dayAheadRatio,
+    };
+  }, [stationStats, settlementStats]);
+
+  // 省份数据
+  const provinceData = useMemo(() => {
+    const colors = ["hsl(200, 80%, 50%)", "hsl(149, 80%, 45%)", "hsl(45, 100%, 50%)"];
+    return tradingUnitStats?.provinceSummaryData?.map((p, i) => ({
+      name: p.name,
+      capacity: p.capacity,
+      generation: Number(p.generation.toFixed(2)),
+      color: colors[i % 3],
+    })) || [];
+  }, [tradingUnitStats]);
+
+  // 场站发电排名数据
+  const stationGenerationData = useMemo(() => {
+    return stationStats?.stations?.map(s => ({
+      name: s.name,
+      generation: Number(((s.installed_capacity || 0) * 8.5).toFixed(1)),
+      province: s.province,
+    })).sort((a, b) => b.generation - a.generation).slice(0, 9) || [];
+  }, [stationStats]);
+
+  // 省份汇总数据
+  const provinceSummaryData = useMemo(() => {
+    return tradingUnitStats?.provinceSummaryData?.map(p => ({
+      name: p.name,
+      capacity: p.capacity,
+      generation: Number(p.generation.toFixed(2)),
+      revenue: Number(p.revenue.toFixed(2)),
+    })) || [];
+  }, [tradingUnitStats]);
+
+  // 现货交易数据
+  const spotTradingData = useMemo(() => {
+    return clearingStats?.spotTradingData || [];
+  }, [clearingStats]);
+
+  // 供需预测数据
+  const supplyDemandData = useMemo(() => {
+    return marketPriceStats?.supplyDemandData || [];
+  }, [marketPriceStats]);
+
+  // 结算分项数据
+  const settlementData = useMemo(() => {
+    return settlementStats?.settlementData || [];
+  }, [settlementStats]);
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-screen flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
+          <span className="text-cyan-300 text-lg">加载数据中...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-screen p-4">
@@ -93,13 +127,13 @@ const Dashboard = () => {
 
       {/* 8 Metric Cards - Two Rows */}
       <div className="grid grid-cols-8 gap-2 mb-4">
-        <MetricCardGlow label="总装机容量" value="102" unit="MW" />
-        <MetricCardGlow label="并网场站数" value="9" unit="个" />
-        <MetricCardGlow label="本月上网电量" value="822.45" unit="万kWh" trend="up" trendValue="+5.2%" />
-        <MetricCardGlow label="等效利用小时" value="185.6" unit="h" />
-        <MetricCardGlow label="本月结算电费" value="106.77" unit="万元" trend="up" trendValue="+8.3%" />
-        <MetricCardGlow label="度电收益" value="0.13" unit="元/kWh" />
-        <MetricCardGlow label="日前结算占比" value="72.5" unit="%" />
+        <MetricCardGlow label="总装机容量" value={metrics.totalCapacity.toFixed(0)} unit="MW" />
+        <MetricCardGlow label="并网场站数" value={metrics.stationCount.toString()} unit="个" />
+        <MetricCardGlow label="本月上网电量" value={metrics.totalVolume.toFixed(2)} unit="万kWh" trend="up" trendValue="+5.2%" />
+        <MetricCardGlow label="等效利用小时" value={metrics.equivalentHours.toFixed(1)} unit="h" />
+        <MetricCardGlow label="本月结算电费" value={metrics.totalAmount.toFixed(2)} unit="万元" trend="up" trendValue="+8.3%" />
+        <MetricCardGlow label="度电收益" value={metrics.unitRevenue.toFixed(2)} unit="元/kWh" />
+        <MetricCardGlow label="日前结算占比" value={metrics.dayAheadRatio.toFixed(1)} unit="%" />
         <MetricCardGlow label="同比增长率" value="+12.3" unit="%" trend="up" trendValue="较去年" />
       </div>
 
@@ -114,7 +148,12 @@ const Dashboard = () => {
 
           {/* 省内现货交易 */}
           <TechBorderCard title="省内现货交易" className="flex-1" headerRight={<ViewToggle view={spotView} onViewChange={setSpotView} />}>
-            {spotView === "chart" ? (
+            {spotTradingData.length === 0 ? (
+              <div className="empty-state py-8">
+                <FileX className="empty-state-icon w-8 h-8" />
+                <span className="text-xs text-cyan-300/70">暂无出清数据</span>
+              </div>
+            ) : spotView === "chart" ? (
               <ResponsiveContainer width="100%" height={160}>
                 <ComposedChart data={spotTradingData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -166,12 +205,24 @@ const Dashboard = () => {
         <div className="col-span-3 flex flex-col gap-3">
           {/* 分项量价费 */}
           <TechBorderCard title="分项量价费汇总" className="flex-1">
-            <ItemizedSettlementTable data={settlementData} />
+            {settlementData.length === 0 ? (
+              <div className="empty-state py-8">
+                <FileX className="empty-state-icon w-8 h-8" />
+                <span className="text-xs text-cyan-300/70">暂无结算数据</span>
+              </div>
+            ) : (
+              <ItemizedSettlementTable data={settlementData} />
+            )}
           </TechBorderCard>
 
           {/* 供需预测 */}
           <TechBorderCard title="供需预测" className="flex-[0.8]" headerRight={<ViewToggle view={supplyDemandView} onViewChange={setSupplyDemandView} />}>
-            {supplyDemandView === "chart" ? (
+            {supplyDemandData.length === 0 ? (
+              <div className="empty-state py-4">
+                <FileX className="empty-state-icon w-8 h-8" />
+                <span className="text-xs text-cyan-300/70">暂无市场价格数据</span>
+              </div>
+            ) : supplyDemandView === "chart" ? (
               <ResponsiveContainer width="100%" height={130}>
                 <LineChart data={supplyDemandData}>
                   <CartesianGrid strokeDasharray="3 3" />
