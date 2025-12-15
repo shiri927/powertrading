@@ -9,18 +9,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { Plus, Search, Eye, RefreshCw, Calendar, List } from "lucide-react";
-
-// 合同数据
-const generateContractData = () => [
-  { id: "C001", name: "2025年度中长期购电合同", tradingCenter: "山西交易中心", tradingUnit: "山东省场站A", type: "年度合同", startDate: "2025-01-01", endDate: "2025-12-31", volume: 50000, avgPrice: 385.5, status: "执行中", syncStatus: "synced" },
-  { id: "C002", name: "省间现货月度合同", tradingCenter: "国家交易中心", tradingUnit: "山东省场站B", type: "月度合同", startDate: "2025-11-01", endDate: "2025-11-30", volume: 3200, avgPrice: 420.3, status: "执行中", syncStatus: "synced" },
-  { id: "C003", name: "日滚动交易合同", tradingCenter: "山东交易中心", tradingUnit: "山西省场站A", type: "日滚动", startDate: "2025-11-20", endDate: "2025-11-21", volume: 800, avgPrice: 395.8, status: "已完成", syncStatus: "synced" },
-  { id: "C004", name: "绿证交易合同", tradingCenter: "绿证交易平台", tradingUnit: "浙江省场站A", type: "绿证", startDate: "2025-11-01", endDate: "2025-12-31", volume: 1000, avgPrice: 50.0, status: "执行中", syncStatus: "pending" },
-  { id: "C005", name: "省内现货双边合同", tradingCenter: "山西交易中心", tradingUnit: "山西省场站B", type: "现货双边", startDate: "2025-11-15", endDate: "2025-12-15", volume: 4500, avgPrice: 405.2, status: "执行中", syncStatus: "synced" },
-  { id: "C006", name: "2025年Q1季度合同", tradingCenter: "山东交易中心", tradingUnit: "山东省场站A", type: "季度合同", startDate: "2025-01-01", endDate: "2025-03-31", volume: 12000, avgPrice: 392.0, status: "执行中", syncStatus: "failed" },
-  { id: "C007", name: "月度挂牌交易合同", tradingCenter: "浙江交易中心", tradingUnit: "浙江省场站B", type: "月度合同", startDate: "2025-12-01", endDate: "2025-12-31", volume: 2800, avgPrice: 415.6, status: "待执行", syncStatus: "synced" },
-];
+import { Plus, Search, Eye, RefreshCw, Calendar, List, Loader2 } from "lucide-react";
+import { useContracts } from "@/hooks/useContracts";
 
 const ContractManagementTab = () => {
   const [contractFilter, setContractFilter] = useState({ tradingCenter: "all", tradingUnit: "all", keyword: "" });
@@ -28,14 +18,38 @@ const ContractManagementTab = () => {
   const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
   const [lastSyncTime, setLastSyncTime] = useState(new Date());
 
-  const contractData = generateContractData();
+  // 使用数据库hook获取合同数据
+  const { data: contractData, isLoading, refetch } = useContracts({
+    searchTerm: contractFilter.keyword
+  });
+
+  // 将数据库合同数据转换为显示格式
+  const transformedContracts = useMemo(() => {
+    return (contractData || []).map(c => ({
+      id: c.contract_no,
+      name: c.contract_name,
+      tradingCenter: c.trading_center || "-",
+      tradingUnit: c.unit_name || "-",
+      type: c.contract_type === "annual_bilateral" ? "年度合同" : 
+            c.contract_type === "monthly_bilateral" ? "月度合同" : 
+            c.contract_type === "daily_rolling" ? "日滚动" : c.contract_type,
+      startDate: c.start_date,
+      endDate: c.end_date,
+      volume: c.total_volume || 0,
+      avgPrice: c.unit_price || 0,
+      status: c.status === "active" ? "执行中" : c.status === "completed" ? "已完成" : "待执行",
+      syncStatus: "synced" as const,
+      direction: c.direction,
+      counterparty: c.counterparty,
+      totalAmount: c.total_amount
+    }));
+  }, [contractData]);
 
   // 筛选合同数据
   const filteredContracts = useMemo(() => {
-    return contractData.filter(contract => {
+    return transformedContracts.filter(contract => {
       const matchCenter = contractFilter.tradingCenter === "all" || contract.tradingCenter === contractFilter.tradingCenter;
       const matchUnit = contractFilter.tradingUnit === "all" || contract.tradingUnit === contractFilter.tradingUnit;
-      const matchKeyword = !contractFilter.keyword || contract.name.includes(contractFilter.keyword) || contract.id.includes(contractFilter.keyword);
       
       // 按合同类型筛选
       let matchType = true;
@@ -48,9 +62,9 @@ const ContractManagementTab = () => {
         matchType = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
       }
       
-      return matchCenter && matchUnit && matchKeyword && matchType;
+      return matchCenter && matchUnit && matchType;
     });
-  }, [contractData, contractFilter, contractTypeTab]);
+  }, [transformedContracts, contractFilter, contractTypeTab]);
 
   const getSyncStatusBadge = (status: string) => {
     switch (status) {
@@ -63,10 +77,11 @@ const ContractManagementTab = () => {
 
   const handleSyncContracts = () => {
     setLastSyncTime(new Date());
+    refetch();
   };
 
   // 计算即将到期合同数量
-  const expiringCount = contractData.filter(c => {
+  const expiringCount = transformedContracts.filter(c => {
     const endDate = new Date(c.endDate);
     const daysUntilExpiry = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
@@ -80,10 +95,10 @@ const ContractManagementTab = () => {
           <div className="flex items-center justify-between">
             <Tabs value={contractTypeTab} onValueChange={setContractTypeTab}>
               <TabsList>
-                <TabsTrigger value="all">全部合同 ({contractData.length})</TabsTrigger>
-                <TabsTrigger value="annual">年度/季度 ({contractData.filter(c => c.type === "年度合同" || c.type === "季度合同").length})</TabsTrigger>
-                <TabsTrigger value="monthly">月度合同 ({contractData.filter(c => c.type === "月度合同").length})</TabsTrigger>
-                <TabsTrigger value="daily">日滚合同 ({contractData.filter(c => c.type === "日滚动").length})</TabsTrigger>
+                <TabsTrigger value="all">全部合同 ({transformedContracts.length})</TabsTrigger>
+                <TabsTrigger value="annual">年度/季度 ({transformedContracts.filter(c => c.type === "年度合同" || c.type === "季度合同").length})</TabsTrigger>
+                <TabsTrigger value="monthly">月度合同 ({transformedContracts.filter(c => c.type === "月度合同").length})</TabsTrigger>
+                <TabsTrigger value="daily">日滚合同 ({transformedContracts.filter(c => c.type === "日滚动").length})</TabsTrigger>
                 <TabsTrigger value="expiring" className="text-amber-600">即将到期 ({expiringCount})</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -178,7 +193,12 @@ const ContractManagementTab = () => {
           <CardDescription>共 {filteredContracts.length} 条合同</CardDescription>
         </CardHeader>
         <CardContent>
-          {viewMode === "list" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">加载中...</span>
+            </div>
+          ) : viewMode === "list" ? (
             <div className="rounded-md border max-h-[500px] overflow-y-auto">
               <table className="w-full caption-bottom text-sm">
                 <thead className="sticky top-0 z-10 bg-[#F1F8F4]">

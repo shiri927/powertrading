@@ -20,7 +20,7 @@ import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, Info, BarChart3, 
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PowerPlanTab from "@/pages/retail/base-data/PowerPlanTab";
-import { useContractAnalysis } from "@/hooks/useContracts";
+import { useContractAnalysis, useContracts } from "@/hooks/useContracts";
 
 // 待办事项数据
 const generateTodoData = () => [
@@ -48,15 +48,40 @@ const BaseData = () => {
   const [newPlanDialogOpen, setNewPlanDialogOpen] = useState(false);
   const [newContractDialogOpen, setNewContractDialogOpen] = useState(false);
   const [newPlanType, setNewPlanType] = useState<"year" | "month">("year");
+  
+  // 合同管理筛选状态
+  const [contractFilters, setContractFilters] = useState({
+    tradingUnitId: "all",
+    direction: "all",
+    searchTerm: ""
+  });
 
   // 使用数据库hook获取合同分析数据
   const { contracts: contractData, positionData, metrics, isLoading: isContractLoading } = useContractAnalysis();
+  
+  // 使用数据库hook获取合同列表数据
+  const { data: contractList, isLoading: isContractListLoading, refetch: refetchContracts } = useContracts({
+    tradingUnitId: contractFilters.tradingUnitId,
+    direction: contractFilters.direction,
+    searchTerm: contractFilters.searchTerm
+  });
+  
   const todoData = generateTodoData();
   const announcementData = generateAnnouncementData();
   
   const analysisChartConfig = {
     volume: { label: "持仓电量", color: "#00B04D" },
     avgPrice: { label: "加权均价", color: "#f59e0b" },
+  };
+
+  // 计算合同汇总数据
+  const contractSummary = {
+    totalVolume: (contractList || []).reduce((sum, c) => sum + (c.total_volume || 0), 0),
+    settledVolume: (contractList || []).reduce((sum, c) => sum + (c.total_volume || 0) * 0.87, 0),
+    avgPrice: (contractList || []).length > 0 
+      ? (contractList || []).reduce((sum, c) => sum + (c.unit_price || 0) * (c.total_volume || 0), 0) / 
+        (contractList || []).reduce((sum, c) => sum + (c.total_volume || 0), 0)
+      : 0
   };
 
   // 交易单元列表
@@ -106,19 +131,25 @@ const BaseData = () => {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">合约电量</div>
-                <div className="text-2xl font-bold">519279.868 MWh</div>
+                <div className="text-2xl font-bold font-mono">
+                  {isContractListLoading ? "--" : contractSummary.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} MWh
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">统计电量</div>
-                <div className="text-2xl font-bold">451145.868 MWh</div>
+                <div className="text-2xl font-bold font-mono">
+                  {isContractListLoading ? "--" : contractSummary.settledVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} MWh
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">均价</div>
-                <div className="text-2xl font-bold">317.74 元/MWh</div>
+                <div className="text-2xl font-bold font-mono">
+                  {isContractListLoading ? "--" : contractSummary.avgPrice.toFixed(2)} 元/MWh
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -127,35 +158,49 @@ const BaseData = () => {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex gap-4 items-center">
-                <Select defaultValue="all-units">
+                <Select 
+                  value={contractFilters.tradingUnitId} 
+                  onValueChange={(value) => setContractFilters(prev => ({ ...prev, tradingUnitId: value }))}
+                >
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="交易单元" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all-units">全部交易单元</SelectItem>
-                    <SelectItem value="unit1">大山台二期</SelectItem>
-                    <SelectItem value="unit2">大山台三期</SelectItem>
+                    <SelectItem value="all">全部交易单元</SelectItem>
+                    {tradingUnits.map(unit => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
-                <Select defaultValue="all-directions">
+                <Select 
+                  value={contractFilters.direction} 
+                  onValueChange={(value) => setContractFilters(prev => ({ ...prev, direction: value }))}
+                >
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="方向" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all-directions">全部方向</SelectItem>
-                    <SelectItem value="buy">买入</SelectItem>
-                    <SelectItem value="sell">卖出</SelectItem>
+                    <SelectItem value="all">全部方向</SelectItem>
+                    <SelectItem value="purchase">买入</SelectItem>
+                    <SelectItem value="sale">卖出</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Input
                   placeholder="合同名称/主体"
                   className="w-[300px]"
+                  value={contractFilters.searchTerm}
+                  onChange={(e) => setContractFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
                 />
 
-                <Button>查询</Button>
-                <Button variant="outline">重置</Button>
+                <Button onClick={() => refetchContracts()}>查询</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setContractFilters({ tradingUnitId: "all", direction: "all", searchTerm: "" })}
+                >
+                  重置
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -163,184 +208,96 @@ const BaseData = () => {
           {/* Contracts Table */}
           <Card>
             <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox />
-                    </TableHead>
-                    <TableHead>交易单元</TableHead>
-                    <TableHead>方向</TableHead>
-                    <TableHead className="min-w-[300px]">合同名称</TableHead>
-                    <TableHead>合同类型</TableHead>
-                    <TableHead>关联场站</TableHead>
-                    <TableHead>执行周期</TableHead>
-                    <TableHead>合约电量(MWh)</TableHead>
-                    <TableHead>统计电量(MWh)</TableHead>
-                    <TableHead>均价(元/MWh)</TableHead>
-                    <TableHead>仓位计算</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[
-                    {
-                      unit: "山东省场站A",
-                      direction: "卖出",
-                      name: "华能山东新能源有限责任公司_2024年山东省场站A年度直接交易用户双边协商电力直接交易（新能源）合同#99",
-                      type: "省内",
-                      station: "-",
-                      period: "20240401-20240430",
-                      contract: 4000,
-                      stats: 4000,
-                      price: 320
-                    },
-                    {
-                      unit: "山东省场站B",
-                      direction: "卖出",
-                      name: "山东省电能服务有限公司_2024年山东省场站B月度直接交易用户双边协商电力直接交易（新能源）合同#16",
-                      type: "省内",
-                      station: "-",
-                      period: "20240401-20240430",
-                      contract: 1500,
-                      stats: 1500,
-                      price: 312
-                    },
-                    {
-                      unit: "山西省场站A",
-                      direction: "卖出",
-                      name: "山西华能电有限公司_2024年山西省场站A月度直接交易用户双边协商电力直接交易（新能源）合同#2",
-                      type: "省内",
-                      station: "-",
-                      period: "20240401-20240430",
-                      contract: 10000,
-                      stats: 10000,
-                      price: 288
-                    },
-                    {
-                      unit: "山西省场站B",
-                      direction: "卖出",
-                      name: "山西华越电子科技有限公司_2024年山西省场站B月度直接交易用户双边协商电力直接交易（新能源）合同#159",
-                      type: "省内",
-                      station: "-",
-                      period: "20240401-20240430",
-                      contract: 10000,
-                      stats: 10000,
-                      price: 332
-                    },
-                    {
-                      unit: "浙江省场站A",
-                      direction: "买入",
-                      name: "浙江省场站A 2024年4月08日省内交易协议(2024-4-10)合同24",
-                      type: "省内",
-                      station: "-",
-                      period: "20240410-20240410",
-                      contract: -21,
-                      stats: -21,
-                      price: 328.77
-                    },
-                    {
-                      unit: "浙江省场站A",
-                      direction: "卖出",
-                      name: "浙江省场站A 2024年4月09日省内交易协议(2024-4-11)合同60",
-                      type: "省内",
-                      station: "-",
-                      period: "20240411-20240411",
-                      contract: 102.935,
-                      stats: 102.935,
-                      price: 330.41
-                    },
-                    {
-                      unit: "浙江省场站B",
-                      direction: "卖出",
-                      name: "浙江省场站B 2024年4月12日省内交易协议(2024-4-14)合同124",
-                      type: "省内",
-                      station: "-",
-                      period: "20240414-20240414",
-                      contract: 53.93,
-                      stats: 53.93,
-                      price: 339.97
-                    },
-                    {
-                      unit: "浙江省场站B",
-                      direction: "买入",
-                      name: "浙江省场站B 2024年4月16日省内交易协议(2024-4-18)合同6",
-                      type: "省内",
-                      station: "-",
-                      period: "20240418-20240418",
-                      contract: -51,
-                      stats: -51,
-                      price: 48.66
-                    },
-                    {
-                      unit: "山东省场站C",
-                      direction: "卖出",
-                      name: "山东省场站C 2024年4月21-30日下半分月挂牌分交易（滚动集约）合同143",
-                      type: "省内",
-                      station: "-",
-                      period: "20240421-20240430",
-                      contract: 1615.45,
-                      stats: 1615.45,
-                      price: 255.09
-                    },
-                    {
-                      unit: "山西省场站C",
-                      direction: "卖出",
-                      name: "山西省场站C发电挂牌2024年4月01日省内挂牌交易",
-                      type: "省内",
-                      station: "-",
-                      period: "20240401-20240401",
-                      contract: 849.999,
-                      stats: 849.999,
-                      price: 311.69
-                    },
-                  ].map((contract, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
+              {isContractListLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">加载中...</span>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">
                         <Checkbox />
-                      </TableCell>
-                      <TableCell>{contract.unit}</TableCell>
-                      <TableCell>
-                        <Badge variant={contract.direction === "卖出" ? "default" : "secondary"}>
-                          {contract.direction}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[300px]">
-                        <div className="flex items-center gap-2">
-                          <Info className="h-4 w-4 text-primary cursor-pointer flex-shrink-0" />
-                          <span className="truncate">{contract.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{contract.type}</TableCell>
-                      <TableCell>{contract.station}</TableCell>
-                      <TableCell>{contract.period}</TableCell>
-                      <TableCell>{contract.contract}</TableCell>
-                      <TableCell>{contract.stats}</TableCell>
-                      <TableCell className="font-mono">{contract.price}</TableCell>
-                      <TableCell>
-                        <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setContractDialogOpen(true);
-                            }}
-                          >
-                            详情
-                          </Button>
-                          <Button variant="ghost" size="sm">编辑</Button>
-                          <Button variant="ghost" size="sm">删除</Button>
-                          <Button variant="ghost" size="sm">导出</Button>
-                        </div>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>交易单元</TableHead>
+                      <TableHead>方向</TableHead>
+                      <TableHead className="min-w-[300px]">合同名称</TableHead>
+                      <TableHead>合同类型</TableHead>
+                      <TableHead>交易对手</TableHead>
+                      <TableHead>执行周期</TableHead>
+                      <TableHead>合约电量(MWh)</TableHead>
+                      <TableHead>合同金额(元)</TableHead>
+                      <TableHead>均价(元/MWh)</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {(contractList || []).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                          暂无合同数据
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (contractList || []).map((contract) => (
+                        <TableRow key={contract.id}>
+                          <TableCell>
+                            <Checkbox />
+                          </TableCell>
+                          <TableCell>{contract.unit_name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant={contract.direction === "sale" ? "default" : "secondary"}>
+                              {contract.direction === "sale" ? "卖出" : "买入"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[300px]">
+                            <div className="flex items-center gap-2">
+                              <Info className="h-4 w-4 text-primary cursor-pointer flex-shrink-0" />
+                              <span className="truncate">{contract.contract_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {contract.contract_type === "annual_bilateral" ? "年度双边" : 
+                             contract.contract_type === "monthly_bilateral" ? "月度双边" : 
+                             contract.contract_type}
+                          </TableCell>
+                          <TableCell>{contract.counterparty || "-"}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {format(new Date(contract.start_date), "yyyy-MM-dd")} ~ {format(new Date(contract.end_date), "yyyy-MM-dd")}
+                          </TableCell>
+                          <TableCell className="font-mono text-right">{(contract.total_volume || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="font-mono text-right">{(contract.total_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="font-mono text-right">{(contract.unit_price || 0).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant={contract.status === "active" ? "default" : "secondary"}>
+                              {contract.status === "active" ? "执行中" : contract.status === "completed" ? "已完成" : contract.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedContract(contract);
+                                  setContractDialogOpen(true);
+                                }}
+                              >
+                                详情
+                              </Button>
+                              <Button variant="ghost" size="sm">编辑</Button>
+                              <Button variant="ghost" size="sm">删除</Button>
+                              <Button variant="ghost" size="sm">导出</Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
 
