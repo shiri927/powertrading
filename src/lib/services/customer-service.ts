@@ -88,7 +88,7 @@ export const customerService = {
 
     const { data, error } = await supabase
       .from('customers')
-      .insert(result.data)
+      .insert(result.data as any)
       .select()
       .single();
 

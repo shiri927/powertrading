@@ -83,7 +83,7 @@ export const settlementService = {
 
     const { data, error } = await supabase
       .from('settlement_records')
-      .insert(result.data)
+      .insert(result.data as any)
       .select()
       .single();
 
