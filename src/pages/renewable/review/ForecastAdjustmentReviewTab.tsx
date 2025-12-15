@@ -19,53 +19,30 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  MinusCircle
+  MinusCircle,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { format, subDays } from "date-fns";
 import { 
-  LineChart, 
   Line, 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   Legend, 
   ResponsiveContainer, 
-  Area, 
-  AreaChart, 
   ComposedChart,
   ReferenceLine,
-  ReferenceArea
+  ReferenceArea,
+  Bar
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useReviewData, ForecastAdjustmentData, ForecastEffectivenessMetrics } from "@/hooks/useReviewData";
+import { supabase } from "@/integrations/supabase/client";
 
 // ============= 数据结构定义 =============
-
-interface PowerCurveData {
-  timePoint: string;
-  originalForecast: number;
-  declaredPower: number;
-  actualOutput: number;
-  deviation: number;
-  deviationRate: number;
-  adjustmentStatus: 'over' | 'under' | 'normal';
-  dayAheadRevenue: number;
-  realTimeRevenue: number;
-  assessmentFee: number;
-}
-
-interface AdjustmentEffectivenessMetrics {
-  effectiveRate: number;
-  revenueIncrement: number;
-  assessmentImpact: number;
-  netRevenueChange: number;
-  overAdjustmentPeriods: number;
-  underAdjustmentPeriods: number;
-  normalPeriods: number;
-}
 
 interface StrategyOptimizationAdvice {
   id: string;
@@ -76,99 +53,15 @@ interface StrategyOptimizationAdvice {
   expectedImprovement?: string;
 }
 
-interface ForecastAdjustmentTreeNode {
-  key: string;
-  label: string;
-  level: number;
-  comprehensiveSettlement: number;
-  mediumLongTermRevenue: number;
-  spotRevenue: number;
-  recoveryFee: number;
-  assessmentFee: number;
-  deviationElectricityFee: number;
-  comprehensiveDeductionRevenue: number;
-  comprehensiveDeductionPrice: number;
-  children?: ForecastAdjustmentTreeNode[];
+interface TradingUnit {
+  id: string;
+  unit_name: string;
+  trading_center: string;
 }
 
-type ForecastAggregationDimension = 'tradingUnit' | 'date' | 'timePoint';
+// ============= 辅助函数 =============
 
-// ============= 模拟数据生成 =============
-
-const generatePowerCurveData = (granularity: '24' | '96'): PowerCurveData[] => {
-  const points = granularity === '24' ? 24 : 96;
-  const data: PowerCurveData[] = [];
-
-  for (let i = 0; i < points; i++) {
-    const hour = granularity === '24' ? i : Math.floor(i / 4);
-    const minute = granularity === '24' ? 0 : (i % 4) * 15;
-    const timePoint = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    
-    const isPeakHour = hour >= 8 && hour <= 22;
-    const baseOutput = isPeakHour ? 120 + Math.random() * 40 : 60 + Math.random() * 30;
-    
-    const originalForecast = baseOutput;
-    const adjustmentRatio = (Math.random() - 0.5) * 0.3;
-    const declaredPower = originalForecast * (1 + adjustmentRatio);
-    const actualOutput = originalForecast * (1 + (Math.random() - 0.5) * 0.2);
-    
-    const deviation = declaredPower - actualOutput;
-    const deviationRate = Math.abs(deviation / declaredPower) * 100;
-    
-    let adjustmentStatus: 'over' | 'under' | 'normal';
-    if (deviationRate > 10) {
-      adjustmentStatus = deviation > 0 ? 'over' : 'under';
-    } else {
-      adjustmentStatus = 'normal';
-    }
-
-    const dayAheadRevenue = declaredPower * (250 + Math.random() * 100);
-    const realTimeRevenue = actualOutput * (240 + Math.random() * 120);
-    const assessmentFee = deviationRate > 5 ? Math.abs(deviation) * (20 + Math.random() * 30) : 0;
-
-    data.push({
-      timePoint,
-      originalForecast,
-      declaredPower,
-      actualOutput,
-      deviation,
-      deviationRate,
-      adjustmentStatus,
-      dayAheadRevenue,
-      realTimeRevenue,
-      assessmentFee,
-    });
-  }
-
-  return data;
-};
-
-const calculateEffectivenessMetrics = (data: PowerCurveData[]): AdjustmentEffectivenessMetrics => {
-  const overPeriods = data.filter(d => d.adjustmentStatus === 'over').length;
-  const underPeriods = data.filter(d => d.adjustmentStatus === 'under').length;
-  const normalPeriods = data.filter(d => d.adjustmentStatus === 'normal').length;
-  
-  const effectiveRate = (normalPeriods / data.length) * 100;
-  
-  const totalDayAheadRevenue = data.reduce((sum, d) => sum + d.dayAheadRevenue, 0);
-  const totalRealTimeRevenue = data.reduce((sum, d) => sum + d.realTimeRevenue, 0);
-  const totalAssessmentFee = data.reduce((sum, d) => sum + d.assessmentFee, 0);
-  
-  const revenueIncrement = (totalDayAheadRevenue - totalRealTimeRevenue) * 0.1;
-  const netRevenueChange = revenueIncrement - totalAssessmentFee;
-
-  return {
-    effectiveRate,
-    revenueIncrement,
-    assessmentImpact: totalAssessmentFee,
-    netRevenueChange,
-    overAdjustmentPeriods: overPeriods,
-    underAdjustmentPeriods: underPeriods,
-    normalPeriods,
-  };
-};
-
-const generateOptimizationAdvice = (data: PowerCurveData[]): StrategyOptimizationAdvice[] => {
+const generateOptimizationAdvice = (data: ForecastAdjustmentData[]): StrategyOptimizationAdvice[] => {
   const overPeriods = data.filter(d => d.adjustmentStatus === 'over').map(d => d.timePoint);
   const underPeriods = data.filter(d => d.adjustmentStatus === 'under').map(d => d.timePoint);
   
@@ -215,127 +108,136 @@ const generateOptimizationAdvice = (data: PowerCurveData[]): StrategyOptimizatio
   return advice;
 };
 
-const generateTreeData = (dimension: ForecastAggregationDimension): ForecastAdjustmentTreeNode[] => {
-  const dates = ['20240506', '20240508', '20240516', '20240520'];
-  const units = ['山东省场站A', '山东省场站B', '山西省场站A'];
-  
-  const totalNode: ForecastAdjustmentTreeNode = {
-    key: 'total',
-    label: '合计',
-    level: 0,
-    comprehensiveSettlement: 0,
-    mediumLongTermRevenue: 0,
-    spotRevenue: 0,
-    recoveryFee: 0,
-    assessmentFee: 0,
-    deviationElectricityFee: 0,
-    comprehensiveDeductionRevenue: 0,
-    comprehensiveDeductionPrice: 0,
-    children: [],
-  };
-
-  if (dimension === 'date') {
-    totalNode.children = dates.map(date => {
-      const settlement = (Math.random() - 0.5) * 100000;
-      return {
-        key: date,
-        label: date,
-        level: 1,
-        comprehensiveSettlement: settlement,
-        mediumLongTermRevenue: settlement * 0.6,
-        spotRevenue: settlement * 0.3,
-        recoveryFee: -Math.abs(settlement * 0.05),
-        assessmentFee: -Math.abs(settlement * 0.05),
-        deviationElectricityFee: Math.abs(settlement * 0.02),
-        comprehensiveDeductionRevenue: settlement * 0.9,
-        comprehensiveDeductionPrice: 250 + Math.random() * 50,
-      };
-    });
-  } else if (dimension === 'tradingUnit') {
-    totalNode.children = units.map(unit => {
-      const settlement = (Math.random() - 0.5) * 150000;
-      return {
-        key: unit,
-        label: unit,
-        level: 1,
-        comprehensiveSettlement: settlement,
-        mediumLongTermRevenue: settlement * 0.6,
-        spotRevenue: settlement * 0.3,
-        recoveryFee: -Math.abs(settlement * 0.05),
-        assessmentFee: -Math.abs(settlement * 0.05),
-        deviationElectricityFee: Math.abs(settlement * 0.02),
-        comprehensiveDeductionRevenue: settlement * 0.9,
-        comprehensiveDeductionPrice: 250 + Math.random() * 50,
-      };
-    });
-  }
-
-  totalNode.children?.forEach(child => {
-    totalNode.comprehensiveSettlement += child.comprehensiveSettlement;
-    totalNode.mediumLongTermRevenue += child.mediumLongTermRevenue;
-    totalNode.spotRevenue += child.spotRevenue;
-    totalNode.recoveryFee += child.recoveryFee;
-    totalNode.assessmentFee += child.assessmentFee;
-  });
-
-  return [totalNode];
-};
-
 // ============= 组件 =============
 
 const ForecastAdjustmentReviewTab = () => {
   const [tradingCenter, setTradingCenter] = useState('all');
   const [selectedUnit, setSelectedUnit] = useState('all');
   const [granularity, setGranularity] = useState<'24' | '96'>('24');
-  const [dimension, setDimension] = useState<ForecastAggregationDimension>('date');
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['total']));
   const [isAdviceOpen, setIsAdviceOpen] = useState(true);
   const [showCurves, setShowCurves] = useState({ original: true, declared: true, actual: true });
+  const [localLoading, setLocalLoading] = useState(true);
+  const [powerCurveData, setPowerCurveData] = useState<ForecastAdjustmentData[]>([]);
+  const [tradingUnits, setTradingUnits] = useState<TradingUnit[]>([]);
+  const [dateRange, setDateRange] = useState({
+    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd'),
+  });
 
-  const tradingUnits = ['山东省场站A', '山东省场站B', '山西省场站A', '山西省场站B', '浙江省场站A', '浙江省场站B'];
-  
-  const powerCurveData = useMemo(() => generatePowerCurveData(granularity), [granularity]);
-  const effectiveness = useMemo(() => calculateEffectivenessMetrics(powerCurveData), [powerCurveData]);
-  const optimizationAdvice = useMemo(() => generateOptimizationAdvice(powerCurveData), [powerCurveData]);
-  const treeData = useMemo(() => generateTreeData(dimension), [dimension]);
+  const { fetchForecastAdjustmentData, calculateForecastEffectiveness } = useReviewData();
+
+  // 加载数据
+  const loadData = async () => {
+    setLocalLoading(true);
+    try {
+      // 获取交易单元
+      const { data: units } = await supabase
+        .from('trading_units')
+        .select('id, unit_name, trading_center')
+        .eq('is_active', true)
+        .eq('trading_category', 'renewable');
+      
+      if (units) {
+        setTradingUnits(units);
+      }
+
+      // 获取预测调整数据
+      const unitIds = units?.map(u => u.id) || [];
+      const data = await fetchForecastAdjustmentData(
+        dateRange.start, 
+        dateRange.end, 
+        unitIds.length > 0 ? unitIds : undefined,
+        granularity
+      );
+      setPowerCurveData(data);
+    } catch (error) {
+      console.error('Error loading forecast adjustment data:', error);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [granularity]);
+
+  // 过滤数据
+  const filteredData = useMemo(() => {
+    let result = powerCurveData;
+    if (tradingCenter !== 'all') {
+      const centerMap: Record<string, string> = {
+        'shandong': '山东',
+        'shanxi': '山西',
+        'zhejiang': '浙江'
+      };
+      result = result.filter(item => item.tradingUnit.includes(centerMap[tradingCenter] || ''));
+    }
+    if (selectedUnit !== 'all') {
+      result = result.filter(item => item.tradingUnit === selectedUnit);
+    }
+    return result;
+  }, [powerCurveData, tradingCenter, selectedUnit]);
+
+  // 按时间点聚合数据用于图表
+  const chartData = useMemo(() => {
+    const grouped = filteredData.reduce((acc, item) => {
+      if (!acc[item.timePoint]) {
+        acc[item.timePoint] = {
+          timePoint: item.timePoint,
+          originalForecast: 0,
+          declaredPower: 0,
+          actualOutput: 0,
+          deviation: 0,
+          deviationRate: 0,
+          dayAheadRevenue: 0,
+          realTimeRevenue: 0,
+          assessmentFee: 0,
+          count: 0,
+          adjustmentStatus: 'normal' as 'over' | 'under' | 'normal',
+        };
+      }
+      acc[item.timePoint].originalForecast += item.originalForecast;
+      acc[item.timePoint].declaredPower += item.declaredPower;
+      acc[item.timePoint].actualOutput += item.actualOutput;
+      acc[item.timePoint].deviation += item.deviation;
+      acc[item.timePoint].deviationRate += item.deviationRate;
+      acc[item.timePoint].dayAheadRevenue += item.dayAheadRevenue;
+      acc[item.timePoint].realTimeRevenue += item.realTimeRevenue;
+      acc[item.timePoint].assessmentFee += item.assessmentFee;
+      acc[item.timePoint].count += 1;
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.values(grouped)
+      .map((item: any) => {
+        const avgDeviationRate = item.deviationRate / item.count;
+        const avgDeviation = item.deviation / item.count;
+        let adjustmentStatus: 'over' | 'under' | 'normal' = 'normal';
+        if (avgDeviationRate > 10) {
+          adjustmentStatus = avgDeviation > 0 ? 'over' : 'under';
+        }
+        return {
+          ...item,
+          deviationRate: avgDeviationRate,
+          adjustmentStatus,
+        };
+      })
+      .sort((a, b) => a.timePoint.localeCompare(b.timePoint));
+  }, [filteredData]);
+
+  const effectiveness = useMemo(() => calculateForecastEffectiveness(filteredData), [filteredData, calculateForecastEffectiveness]);
+  const optimizationAdvice = useMemo(() => generateOptimizationAdvice(filteredData), [filteredData]);
 
   // 偏差对收益影响数据
   const deviationImpactData = useMemo(() => {
-    return powerCurveData.map(d => ({
+    return chartData.map(d => ({
       timePoint: d.timePoint,
       dayAheadRevenue: d.dayAheadRevenue / 1000,
       realTimeRevenue: d.realTimeRevenue / 1000,
       assessmentFee: -d.assessmentFee / 1000,
       deviationRate: d.deviationRate,
     }));
-  }, [powerCurveData]);
-
-  const toggleExpand = (key: string) => {
-    setExpandedKeys(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-  };
-
-  const getValueColor = (value: number) => {
-    if (value > 0) return "text-[#00B04D]";
-    if (value < 0) return "text-red-500";
-    return "";
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'over': return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'under': return <MinusCircle className="w-4 h-4 text-yellow-500" />;
-      case 'normal': return <CheckCircle2 className="w-4 h-4 text-[#00B04D]" />;
-      default: return null;
-    }
-  };
+  }, [chartData]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -355,31 +257,14 @@ const ForecastAdjustmentReviewTab = () => {
     }
   };
 
-  const renderTreeRow = (node: ForecastAdjustmentTreeNode, level: number = 0) => {
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedKeys.has(node.key);
-
+  if (localLoading) {
     return (
-      <>
-        <tr key={node.key} className="hover:bg-[#F8FBFA] border-b border-gray-100">
-          <td className="p-2">
-            <div style={{ paddingLeft: `${level * 12}px` }} className="flex items-center gap-1">
-              {hasChildren && (
-                <button onClick={() => toggleExpand(node.key)} className="p-0">
-                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                </button>
-              )}
-              <span className={cn(level === 0 && "font-bold")}>{node.label}</span>
-            </div>
-          </td>
-          <td className={cn("text-right p-2 font-mono text-xs", getValueColor(node.comprehensiveSettlement))}>
-            {node.comprehensiveSettlement.toFixed(2)}
-          </td>
-        </tr>
-        {isExpanded && hasChildren && node.children!.map(child => renderTreeRow(child, level + 1))}
-      </>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#00B04D]" />
+        <span className="ml-2 text-muted-foreground">加载预测功率调整数据...</span>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -393,7 +278,9 @@ const ForecastAdjustmentReviewTab = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部交易中心</SelectItem>
-                <SelectItem value="center1">交易中心1</SelectItem>
+                <SelectItem value="shandong">山东交易中心</SelectItem>
+                <SelectItem value="shanxi">山西交易中心</SelectItem>
+                <SelectItem value="zhejiang">浙江交易中心</SelectItem>
               </SelectContent>
             </Select>
 
@@ -404,15 +291,25 @@ const ForecastAdjustmentReviewTab = () => {
               <SelectContent>
                 <SelectItem value="all">全部交易单元</SelectItem>
                 {tradingUnits.map(unit => (
-                  <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                  <SelectItem key={unit.id} value={unit.unit_name}>{unit.unit_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 text-sm">
-              <span className="font-mono">20240501</span>
+              <input 
+                type="date" 
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="border-0 text-xs font-mono outline-none"
+              />
               <span>-</span>
-              <span className="font-mono">20240520</span>
+              <input 
+                type="date" 
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="border-0 text-xs font-mono outline-none"
+              />
             </div>
 
             <div className="flex items-center gap-2 bg-[#F1F8F4] rounded px-3 py-1">
@@ -430,10 +327,20 @@ const ForecastAdjustmentReviewTab = () => {
               </button>
             </div>
 
-            <Button size="sm">查询</Button>
-            <Button variant="outline" size="sm">重置</Button>
+            <Button size="sm" onClick={loadData}>
+              <Filter className="w-4 h-4 mr-2" />
+              查询
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              setTradingCenter('all');
+              setSelectedUnit('all');
+            }}>重置</Button>
 
-            <Button variant="outline" size="sm" className="ml-auto">
+            <Button variant="outline" size="sm" className="ml-auto" onClick={loadData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              刷新
+            </Button>
+            <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               导出
             </Button>
@@ -441,7 +348,7 @@ const ForecastAdjustmentReviewTab = () => {
         </CardContent>
       </Card>
 
-      {/* 调整策略有效性评估（核心新增） */}
+      {/* 调整策略有效性评估 */}
       <Card className="border-[#00B04D]/30 bg-[#F8FBFA]">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -504,7 +411,7 @@ const ForecastAdjustmentReviewTab = () => {
         </CardContent>
       </Card>
 
-      {/* 三曲线对比图（核心新增） */}
+      {/* 三曲线对比图 */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -544,81 +451,87 @@ const ForecastAdjustmentReviewTab = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <ComposedChart data={powerCurveData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-              <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} interval={granularity === '24' ? 0 : 7} />
-              <YAxis tick={{ fontSize: 10 }} label={{ value: '功率 (MW)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
-              <Tooltip 
-                contentStyle={{ fontSize: 11, backgroundColor: 'white', border: '1px solid #E8F0EC' }}
-                formatter={(value: number, name: string) => [value.toFixed(2) + ' MW', name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              
-              {/* 偏差区域高亮 */}
-              {powerCurveData.map((d, i) => {
-                if (d.adjustmentStatus === 'over') {
-                  return (
-                    <ReferenceArea 
-                      key={i}
-                      x1={d.timePoint} 
-                      x2={powerCurveData[i + 1]?.timePoint || d.timePoint}
-                      fill="rgba(239, 68, 68, 0.1)"
-                      strokeOpacity={0}
-                    />
-                  );
-                }
-                if (d.adjustmentStatus === 'under') {
-                  return (
-                    <ReferenceArea 
-                      key={i}
-                      x1={d.timePoint} 
-                      x2={powerCurveData[i + 1]?.timePoint || d.timePoint}
-                      fill="rgba(234, 179, 8, 0.1)"
-                      strokeOpacity={0}
-                    />
-                  );
-                }
-                return null;
-              })}
-              
-              {showCurves.original && (
-                <Line 
-                  type="monotone" 
-                  dataKey="originalForecast" 
-                  stroke="#888888" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name="原始功率预测"
+          {chartData.length === 0 ? (
+            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+              暂无数据
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={350}>
+              <ComposedChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} interval={granularity === '24' ? 0 : 7} />
+                <YAxis tick={{ fontSize: 10 }} label={{ value: '功率 (MW)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                <Tooltip 
+                  contentStyle={{ fontSize: 11, backgroundColor: 'white', border: '1px solid #E8F0EC' }}
+                  formatter={(value: number, name: string) => [value.toFixed(2) + ' MW', name]}
                 />
-              )}
-              {showCurves.declared && (
-                <Line 
-                  type="monotone" 
-                  dataKey="declaredPower" 
-                  stroke="#00B04D" 
-                  strokeWidth={2}
-                  dot={{ r: 2, fill: '#00B04D' }}
-                  name="申报曲线"
-                />
-              )}
-              {showCurves.actual && (
-                <Line 
-                  type="monotone" 
-                  dataKey="actualOutput" 
-                  stroke="#FFA500" 
-                  strokeWidth={2}
-                  dot={{ r: 2, fill: '#FFA500' }}
-                  name="实际出力"
-                />
-              )}
-            </ComposedChart>
-          </ResponsiveContainer>
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                
+                {/* 偏差区域高亮 */}
+                {chartData.map((d, i) => {
+                  if (d.adjustmentStatus === 'over') {
+                    return (
+                      <ReferenceArea 
+                        key={i}
+                        x1={d.timePoint} 
+                        x2={chartData[i + 1]?.timePoint || d.timePoint}
+                        fill="rgba(239, 68, 68, 0.1)"
+                        strokeOpacity={0}
+                      />
+                    );
+                  }
+                  if (d.adjustmentStatus === 'under') {
+                    return (
+                      <ReferenceArea 
+                        key={i}
+                        x1={d.timePoint} 
+                        x2={chartData[i + 1]?.timePoint || d.timePoint}
+                        fill="rgba(234, 179, 8, 0.1)"
+                        strokeOpacity={0}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                
+                {showCurves.original && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="originalForecast" 
+                    stroke="#888888" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    name="原始功率预测"
+                  />
+                )}
+                {showCurves.declared && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="declaredPower" 
+                    stroke="#00B04D" 
+                    strokeWidth={2}
+                    dot={{ r: 2, fill: '#00B04D' }}
+                    name="申报曲线"
+                  />
+                )}
+                {showCurves.actual && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="actualOutput" 
+                    stroke="#FFA500" 
+                    strokeWidth={2}
+                    dot={{ r: 2, fill: '#FFA500' }}
+                    name="实际出力"
+                  />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
-      {/* 调整过度/不足识别表格（核心新增） */}
+      {/* 调整过度/不足识别表格 */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">调整过度/不足识别分析</CardTitle>
@@ -630,6 +543,7 @@ const ForecastAdjustmentReviewTab = () => {
               <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
                 <TableRow>
                   <TableHead className="text-xs">时段</TableHead>
+                  <TableHead className="text-xs">交易单元</TableHead>
                   <TableHead className="text-xs text-right">原始预测(MW)</TableHead>
                   <TableHead className="text-xs text-right">申报电量(MW)</TableHead>
                   <TableHead className="text-xs text-right">实际出力(MW)</TableHead>
@@ -639,26 +553,35 @@ const ForecastAdjustmentReviewTab = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {powerCurveData.filter(d => d.adjustmentStatus !== 'normal').slice(0, 20).map((d, idx) => (
-                  <TableRow key={idx} className={cn(
-                    "hover:bg-[#F8FBFA]",
-                    d.adjustmentStatus === 'over' && "bg-red-50",
-                    d.adjustmentStatus === 'under' && "bg-yellow-50",
-                  )}>
-                    <TableCell className="text-xs font-mono">{d.timePoint}</TableCell>
-                    <TableCell className="text-xs text-right font-mono">{d.originalForecast.toFixed(2)}</TableCell>
-                    <TableCell className="text-xs text-right font-mono">{d.declaredPower.toFixed(2)}</TableCell>
-                    <TableCell className="text-xs text-right font-mono">{d.actualOutput.toFixed(2)}</TableCell>
-                    <TableCell className={cn(
-                      "text-xs text-right font-mono",
-                      d.deviation > 0 ? "text-red-500" : "text-[#00B04D]"
-                    )}>
-                      {d.deviation > 0 ? '+' : ''}{d.deviation.toFixed(2)}
+                {filteredData.filter(d => d.adjustmentStatus !== 'normal').length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      暂无偏差异常数据
                     </TableCell>
-                    <TableCell className="text-xs text-right font-mono">{d.deviationRate.toFixed(1)}%</TableCell>
-                    <TableCell className="text-center">{getStatusLabel(d.adjustmentStatus)}</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredData.filter(d => d.adjustmentStatus !== 'normal').slice(0, 30).map((d, idx) => (
+                    <TableRow key={idx} className={cn(
+                      "hover:bg-[#F8FBFA]",
+                      d.adjustmentStatus === 'over' && "bg-red-50",
+                      d.adjustmentStatus === 'under' && "bg-yellow-50",
+                    )}>
+                      <TableCell className="text-xs font-mono">{d.timePoint}</TableCell>
+                      <TableCell className="text-xs">{d.tradingUnit}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{d.originalForecast.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{d.declaredPower.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{d.actualOutput.toFixed(2)}</TableCell>
+                      <TableCell className={cn(
+                        "text-xs text-right font-mono",
+                        d.deviation > 0 ? "text-red-500" : "text-[#00B04D]"
+                      )}>
+                        {d.deviation > 0 ? '+' : ''}{d.deviation.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono">{d.deviationRate.toFixed(1)}%</TableCell>
+                      <TableCell className="text-center">{getStatusLabel(d.adjustmentStatus)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </ScrollArea>
@@ -729,41 +652,47 @@ const ForecastAdjustmentReviewTab = () => {
           <CardDescription className="text-xs">偏差率与收益/考核费用关联性</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={deviationImpactData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-              <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} interval={granularity === '24' ? 0 : 7} />
-              <YAxis 
-                yAxisId="left" 
-                tick={{ fontSize: 10 }} 
-                label={{ value: '收入 (千元)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right" 
-                tick={{ fontSize: 10 }} 
-                label={{ value: '偏差率 (%)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
-              />
-              <Tooltip 
-                contentStyle={{ fontSize: 11, backgroundColor: 'white', border: '1px solid #E8F0EC' }}
-                formatter={(value: number, name: string) => [value.toFixed(2), name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <ReferenceLine yAxisId="left" y={0} stroke="#666" strokeDasharray="3 3" />
-              <Bar yAxisId="left" dataKey="dayAheadRevenue" fill="#00B04D" name="日前收益(千元)" />
-              <Bar yAxisId="left" dataKey="realTimeRevenue" fill="#20B2AA" name="实时收益(千元)" />
-              <Bar yAxisId="left" dataKey="assessmentFee" fill="#FF6B6B" name="考核扣费(千元)" />
-              <Line 
-                yAxisId="right" 
-                type="monotone" 
-                dataKey="deviationRate" 
-                stroke="#9333EA" 
-                strokeWidth={2}
-                dot={{ r: 2 }}
-                name="偏差率(%)"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+          {deviationImpactData.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              暂无数据
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={deviationImpactData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                <XAxis dataKey="timePoint" tick={{ fontSize: 10 }} interval={granularity === '24' ? 0 : 7} />
+                <YAxis 
+                  yAxisId="left" 
+                  tick={{ fontSize: 10 }} 
+                  label={{ value: '收入 (千元)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  tick={{ fontSize: 10 }} 
+                  label={{ value: '偏差率 (%)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+                />
+                <Tooltip 
+                  contentStyle={{ fontSize: 11, backgroundColor: 'white', border: '1px solid #E8F0EC' }}
+                  formatter={(value: number, name: string) => [value.toFixed(2), name]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <ReferenceLine yAxisId="left" y={0} stroke="#666" strokeDasharray="3 3" />
+                <Bar yAxisId="left" dataKey="dayAheadRevenue" fill="#00B04D" name="日前收益(千元)" />
+                <Bar yAxisId="left" dataKey="realTimeRevenue" fill="#20B2AA" name="实时收益(千元)" />
+                <Bar yAxisId="left" dataKey="assessmentFee" fill="#FF6B6B" name="考核扣费(千元)" />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="deviationRate" 
+                  stroke="#9333EA" 
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  name="偏差率(%)"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
