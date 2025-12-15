@@ -15,12 +15,12 @@
 | 新能源发电侧 - 复盘分析 | 5 | 0 | 100% |
 | 新能源发电侧 - 交易决策 | 4 | 0 | 100% |
 | 新能源发电侧 - 出清结算 | 2 | 0 | 100% |
-| 新能源发电侧 - 基础数据 | 2 | 1 | 67% |
+| 新能源发电侧 - 基础数据 | 3 | 0 | 100% |
 | 售电业务侧 - 客户管理 | 4 | 0 | 100% |
 | 售电业务侧 - 出清结算 | 2 | 0 | 100% |
 | 市场与基本面数据 | 6 | 1 | 86% |
 | 报表与报告 | 1 | 1 | 50% |
-| **总计** | **26** | **3** | **90%** |
+| **总计** | **27** | **2** | **93%** |
 
 ---
 
@@ -58,7 +58,7 @@
 |------|----------|------------|----------|------|
 | 交易日历 | `src/pages/renewable/TradingCalendar.tsx` | `useTradingCalendar` | `trading_calendar` | ✅ 完成 |
 | 合同管理 | `src/pages/renewable/BaseData.tsx` | 直接Supabase查询 | `contracts`, `contract_time_series`, `trading_units` | ✅ 完成 |
-| 场站发电计划 | `src/pages/renewable/BaseData.tsx` | - | - | ⏳ 待迁移 |
+| 场站发电计划 | `src/pages/retail/base-data/PowerPlanTab.tsx` | `usePowerPlanData` | `power_plans`, `power_plan_time_series`, `trading_units` | ✅ 完成 |
 
 ### 2.5 售电业务侧 - 客户管理
 
@@ -294,7 +294,6 @@
 
 | 任务 | 描述 | 影响页面 | 预计工作量 |
 |------|------|----------|------------|
-| 场站发电计划模块 | 完善power_plans数据集成 | 基础数据-发电计划 | 4小时 |
 | 报告分析功能 | 实现自动化报告生成 | 报告分析页面 | 6小时 |
 
 ### 6.3 低优先级
@@ -383,6 +382,7 @@
 | 日滚动交易页面使用Mock数据 | 集成`usePredictionData`和`useTradingStrategies`Hook | `src/pages/renewable/decision/DailyRollingTab.tsx` |
 | 复盘分析报告列表使用Mock数据 | 创建`analysis_reports`表和`useAnalysisReports`Hook | `src/pages/renewable/Review.tsx` |
 | 机组结算页面刷新按钮类型错误 | 修复onClick事件处理函数类型 | `src/pages/market-fundamentals/UnitSettlement.tsx` |
+| 发电计划表单提交未连接数据库 | 修复年度/月度计划表单正确调用createPowerPlan保存数据 | `src/pages/retail/base-data/PowerPlanTab.tsx` |
 
 ---
 
@@ -392,6 +392,7 @@
 - ✅ 核心复盘分析模块100%完成数据库迁移（含报告列表）
 - ✅ 交易决策智能中心100%完成数据库迁移（含日滚动交易）
 - ✅ 出清结算模块100%完成数据库迁移
+- ✅ 基础数据模块100%完成数据库迁移（含场站发电计划表单提交）
 - ✅ 售电客户管理模块100%完成数据库迁移
 - ✅ 售电出清结算模块100%完成数据库迁移
 - ✅ 中长期交易页面完成数据库迁移
@@ -403,17 +404,17 @@
 - ✅ 创建24个专用数据获取Hooks
 - ✅ 建立完整的数据库表关系结构
 - ✅ 新建`analysis_reports`表存储复盘分析报告
+- ✅ 发电计划新建年度/月度计划表单正确保存到数据库
 
 ### 10.2 关键指标
-- 页面迁移完成率: **90%** (26/29)
+- 页面迁移完成率: **93%** (27/29)
 - Hooks覆盖率: **100%**（所有已迁移页面）
 - 数据表利用率: **93%**（28/30个表已使用）
 
 ### 10.3 下一步建议
 1. 优先扩展`load_predictions`数据日期范围
 2. 填充`energy_usage`和`execution_records`表
-3. 完成场站发电计划模块的数据完善
-4. 完成报告分析功能开发
+3. 完成报告分析功能开发
 
 ---
 
