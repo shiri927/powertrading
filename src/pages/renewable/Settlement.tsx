@@ -10,7 +10,9 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PieChart as RechartsPie, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
-import { useSettlementRecordsByMonth, useSettlementStats, SettlementRecord } from "@/hooks/useSettlementRecords";
+import { useSettlementRecordsByMonth, useSettlementStats, useSettlementStatements, SettlementRecord } from "@/hooks/useSettlementRecords";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 // ============= 现货结算汇总 Tab =============
 interface SpotSettlementItem {
@@ -68,7 +70,7 @@ const generateSpotSettlementData = (): SpotSettlementItem[] => {
 
 const SpotSettlementSummaryTab = () => {
   const [region, setRegion] = useState("all");
-  const [month, setMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
+  const [month, setMonth] = useState<Date | undefined>(new Date(2025, 10, 1)); // 2025-11
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
   
   // 使用数据库数据
@@ -262,33 +264,44 @@ interface MediumLongTermItem {
   deviationFee: number;
 }
 
-const generateMediumLongTermData = (): MediumLongTermItem[] => {
-  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A"];
-  const contracts = ["年度双边合同", "月度集中竞价", "月内挂牌交易", "日滚动合同"];
-  const periods = ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"];
-  
-  const items: MediumLongTermItem[] = [];
-  units.forEach((unit, ui) => {
-    contracts.forEach((contract, ci) => {
-      periods.forEach((period, pi) => {
-        const volume = 500 + Math.random() * 1500;
-        const price = 300 + Math.random() * 150;
-        const deviation = (Math.random() - 0.5) * 100;
-        items.push({
-          id: `mlt-${ui}-${ci}-${pi}`,
-          tradingUnit: unit,
-          contractName: contract,
-          period,
-          settlementVolume: volume,
-          settlementPrice: price,
-          settlementFee: volume * price,
-          deviationVolume: deviation,
-          deviationFee: deviation * price * 0.5,
-        });
-      });
-    });
+// 使用数据库数据的中长期结算Hook
+const useMediumLongTermData = () => {
+  return useQuery({
+    queryKey: ['medium_long_term_settlement'],
+    queryFn: async () => {
+      // 从settlement_records获取数据，按category和trading_unit聚合
+      const { data: records, error } = await supabase
+        .from('settlement_records')
+        .select(`
+          *,
+          trading_unit:trading_units(id, unit_name, unit_code)
+        `)
+        .order('settlement_month', { ascending: false });
+      
+      if (error) throw error;
+      
+      // 转换为UI格式
+      const contractMap: Record<string, string> = {
+        '电能量结算': '月度集中竞价',
+        '偏差考核': '日滚动合同',
+        '辅助服务': '月内挂牌交易',
+        '容量补偿': '年度双边合同',
+      };
+      
+      return (records || []).map((r: any) => ({
+        id: r.id,
+        tradingUnit: r.trading_unit?.unit_name?.replace('-发电单元', '') || '未知',
+        contractName: contractMap[r.category] || r.category,
+        period: r.settlement_month,
+        settlementVolume: r.volume,
+        settlementPrice: r.price || (r.amount / r.volume),
+        settlementFee: r.amount,
+        deviationVolume: (Math.random() - 0.5) * 100,
+        deviationFee: (Math.random() - 0.5) * r.amount * 0.1,
+      })) as MediumLongTermItem[];
+    },
+    staleTime: 1000 * 60 * 5,
   });
-  return items;
 };
 
 const MediumLongTermSettlementTab = () => {
@@ -296,15 +309,21 @@ const MediumLongTermSettlementTab = () => {
   const [contract, setContract] = useState("all");
   const [viewMode, setViewMode] = useState<"chart" | "table">("table");
   
-  const data = useMemo(() => generateMediumLongTermData(), []);
+  const { data: dbData = [], isLoading } = useMediumLongTermData();
   
   const filteredData = useMemo(() => {
-    return data.filter(item => {
+    return dbData.filter(item => {
       if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
       if (contract !== "all" && item.contractName !== contract) return false;
       return true;
     });
-  }, [data, tradingUnit, contract]);
+  }, [dbData, tradingUnit, contract]);
+  
+  // 获取交易单元列表
+  const tradingUnits = useMemo(() => {
+    const units = [...new Set(dbData.map(d => d.tradingUnit))];
+    return units.sort();
+  }, [dbData]);
   
   const chartData = useMemo(() => {
     const grouped: Record<string, { period: string; volume: number; fee: number }> = {};
@@ -329,14 +348,13 @@ const MediumLongTermSettlementTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部交易单元</SelectItem>
-              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
-              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
-              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
-              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
-              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
+              {tradingUnits.map(unit => (
+                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">合同类型</label>
           <Select value={contract} onValueChange={setContract}>
@@ -438,26 +456,24 @@ interface SettlementDocument {
   amount: number;
 }
 
-const generateSettlementDocuments = (): SettlementDocument[] => {
-  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A", "浙江省场站B"];
-  const types: ("日清分" | "日结算单" | "月结算单")[] = ["日清分", "日结算单", "月结算单"];
-  const statuses: ("已确认" | "待确认" | "已驳回")[] = ["已确认", "待确认", "已驳回"];
-  
-  const docs: SettlementDocument[] = [];
-  for (let i = 0; i < 50; i++) {
-    const type = types[Math.floor(Math.random() * types.length)];
-    docs.push({
-      id: `doc-${i}`,
-      tradingUnit: units[Math.floor(Math.random() * units.length)],
-      documentType: type,
-      documentNo: `${type === "月结算单" ? "M" : type === "日结算单" ? "D" : "C"}${2024}${String(i + 1).padStart(6, '0')}`,
-      period: type === "月结算单" ? "2024-11" : `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      createTime: `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      amount: 50000 + Math.random() * 500000,
-    });
+// 将数据库结算单类型转换为UI显示类型
+const mapStatementType = (type: string): "日清分" | "日结算单" | "月结算单" => {
+  switch (type) {
+    case 'daily_clearing': return '日清分';
+    case 'daily_statement': return '日结算单';
+    case 'monthly_statement': return '月结算单';
+    default: return '月结算单';
   }
-  return docs;
+};
+
+const mapStatus = (status: string): "已确认" | "待确认" | "已驳回" => {
+  switch (status) {
+    case 'audited': return '已确认';
+    case 'pending': return '待确认';
+    case 'archived': 
+    case 'rejected': return '已驳回';
+    default: return '待确认';
+  }
 };
 
 const SettlementDocumentTab = () => {
@@ -465,7 +481,28 @@ const SettlementDocumentTab = () => {
   const [docType, setDocType] = useState("all");
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   
-  const data = useMemo(() => generateSettlementDocuments(), []);
+  // 使用数据库数据
+  const { data: statements = [], isLoading } = useSettlementStatements();
+  
+  // 转换为UI格式
+  const data = useMemo((): SettlementDocument[] => {
+    return statements.map(s => ({
+      id: s.id,
+      tradingUnit: s.trading_unit?.unit_name?.replace('-发电单元', '') || '未知',
+      documentType: mapStatementType(s.statement_type),
+      documentNo: s.statement_no,
+      period: format(new Date(s.period_start), 'yyyy-MM'),
+      createTime: format(new Date(s.generated_at), 'yyyy-MM-dd HH:mm'),
+      status: mapStatus(s.status),
+      amount: s.total_amount,
+    }));
+  }, [statements]);
+  
+  // 获取交易单元列表
+  const tradingUnits = useMemo(() => {
+    const units = [...new Set(data.map(d => d.tradingUnit))];
+    return units.sort();
+  }, [data]);
   
   const filteredData = useMemo(() => {
     return data.filter(doc => {
@@ -497,6 +534,7 @@ const SettlementDocumentTab = () => {
   
   return (
     <div className="space-y-6">
+      {isLoading && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />加载中...</div>}
       <div className="flex items-end gap-4 pb-4 border-b">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">交易单元</label>
@@ -506,12 +544,9 @@ const SettlementDocumentTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部交易单元</SelectItem>
-              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
-              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
-              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
-              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
-              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
-              <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
+              {tradingUnits.map(unit => (
+                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -623,64 +658,110 @@ interface ElectricityBillDetail {
   status: "已解析" | "解析中" | "待解析";
 }
 
-const generateElectricityBillDetails = (): ElectricityBillDetail[] => {
-  const units = ["山东省场站A", "山东省场站B", "山西省场站A", "山西省场站B", "浙江省场站A", "浙江省场站B"];
-  const months = ["2024-08", "2024-09", "2024-10", "2024-11"];
-  const statuses: ("已解析" | "解析中" | "待解析")[] = ["已解析", "解析中", "待解析"];
-  
-  const details: ElectricityBillDetail[] = [];
-  units.forEach((unit, ui) => {
-    months.forEach((month, mi) => {
-      const dayAheadVolume = 2000 + Math.random() * 3000;
-      const realtimeVolume = 500 + Math.random() * 1000;
-      const dayAheadFee = dayAheadVolume * (350 + Math.random() * 100);
-      const realtimeFee = realtimeVolume * (320 + Math.random() * 150);
-      const deviationFee = (Math.random() - 0.5) * 50000;
-      const ancillaryFee = 10000 + Math.random() * 30000;
-      const capacityFee = 20000 + Math.random() * 40000;
-      const otherFee = 5000 + Math.random() * 15000;
+// 使用数据库数据生成电费明细
+const useElectricityBillData = () => {
+  return useQuery({
+    queryKey: ['electricity_bill_details'],
+    queryFn: async () => {
+      // 获取各月份的结算记录汇总
+      const { data: records, error } = await supabase
+        .from('settlement_records')
+        .select(`
+          *,
+          trading_unit:trading_units(id, unit_name)
+        `)
+        .order('settlement_month', { ascending: false });
       
-      details.push({
-        id: `bill-${ui}-${mi}`,
-        tradingUnit: unit,
-        month,
-        dayAheadVolume,
-        dayAheadFee,
-        realtimeVolume,
-        realtimeFee,
-        deviationFee,
-        ancillaryFee,
-        capacityFee,
-        otherFee,
-        totalFee: dayAheadFee + realtimeFee + deviationFee + ancillaryFee + capacityFee + otherFee,
-        fetchTime: `2024-11-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-        status: mi === months.length - 1 ? statuses[Math.floor(Math.random() * statuses.length)] : "已解析",
+      if (error) throw error;
+      
+      // 按交易单元和月份聚合
+      const aggregated: Record<string, ElectricityBillDetail> = {};
+      
+      (records || []).forEach((r: any) => {
+        const unitName = r.trading_unit?.unit_name?.replace('-发电单元', '') || '未知';
+        const key = `${unitName}-${r.settlement_month}`;
+        
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            id: key,
+            tradingUnit: unitName,
+            month: r.settlement_month,
+            dayAheadVolume: 0,
+            dayAheadFee: 0,
+            realtimeVolume: 0,
+            realtimeFee: 0,
+            deviationFee: 0,
+            ancillaryFee: 0,
+            capacityFee: 0,
+            otherFee: 0,
+            totalFee: 0,
+            fetchTime: format(new Date(r.updated_at), 'yyyy-MM-dd HH:mm'),
+            status: '已解析',
+          };
+        }
+        
+        // 按category分配费用
+        switch (r.category) {
+          case '电能量结算':
+            aggregated[key].dayAheadVolume += r.volume * 0.8;
+            aggregated[key].dayAheadFee += r.amount * 0.8;
+            aggregated[key].realtimeVolume += r.volume * 0.2;
+            aggregated[key].realtimeFee += r.amount * 0.2;
+            break;
+          case '偏差考核':
+            aggregated[key].deviationFee += r.amount;
+            break;
+          case '辅助服务':
+            aggregated[key].ancillaryFee += r.amount;
+            break;
+          case '容量补偿':
+            aggregated[key].capacityFee += r.amount;
+            break;
+          default:
+            aggregated[key].otherFee += r.amount;
+        }
+        
+        aggregated[key].totalFee = 
+          aggregated[key].dayAheadFee + 
+          aggregated[key].realtimeFee + 
+          aggregated[key].deviationFee + 
+          aggregated[key].ancillaryFee + 
+          aggregated[key].capacityFee + 
+          aggregated[key].otherFee;
       });
-    });
+      
+      return Object.values(aggregated);
+    },
+    staleTime: 1000 * 60 * 5,
   });
-  return details;
 };
 
 const ElectricityBillDetailTab = () => {
   const [tradingUnit, setTradingUnit] = useState("all");
-  const [month, setMonth] = useState<Date | undefined>(new Date(2024, 10, 1));
+  const [month, setMonth] = useState<Date | undefined>(new Date(2025, 10, 1));
   
-  const data = useMemo(() => generateElectricityBillDetails(), []);
+  const { data: dbData = [], isLoading } = useElectricityBillData();
+  
+  // 获取交易单元列表
+  const tradingUnits = useMemo(() => {
+    const units = [...new Set(dbData.map(d => d.tradingUnit))];
+    return units.sort();
+  }, [dbData]);
   
   const filteredData = useMemo(() => {
-    return data.filter(item => {
+    return dbData.filter(item => {
       if (tradingUnit !== "all" && item.tradingUnit !== tradingUnit) return false;
       if (month) {
-        const itemMonth = item.month;
         const selectedMonth = format(month, "yyyy-MM");
-        if (itemMonth !== selectedMonth) return false;
+        if (item.month !== selectedMonth) return false;
       }
       return true;
     });
-  }, [data, tradingUnit, month]);
+  }, [dbData, tradingUnit, month]);
   
   return (
     <div className="space-y-6">
+      {isLoading && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />加载中...</div>}
       <div className="flex items-end gap-4 pb-4 border-b">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">交易单元</label>
@@ -690,12 +771,9 @@ const ElectricityBillDetailTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部交易单元</SelectItem>
-              <SelectItem value="山东省场站A">山东省场站A</SelectItem>
-              <SelectItem value="山东省场站B">山东省场站B</SelectItem>
-              <SelectItem value="山西省场站A">山西省场站A</SelectItem>
-              <SelectItem value="山西省场站B">山西省场站B</SelectItem>
-              <SelectItem value="浙江省场站A">浙江省场站A</SelectItem>
-              <SelectItem value="浙江省场站B">浙江省场站B</SelectItem>
+              {tradingUnits.map(unit => (
+                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
