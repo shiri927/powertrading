@@ -11,9 +11,16 @@ import {
   LineChart, Line, BarChart, Bar, ComposedChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
-import { CalendarIcon, Download, RefreshCw, Database, TrendingUp, TrendingDown, BarChart3, Table2 } from "lucide-react";
+import { CalendarIcon, Download, RefreshCw, Database, TrendingUp, TrendingDown, BarChart3, Table2, Loader2 } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  useHistoricalPriceData,
+  useCentralizedBiddingData,
+  useRollingMatchData,
+  useMarketSummaryData,
+  usePriceDistributionData,
+} from "@/hooks/useMediumLongTermData";
 
 // 交易类型配置
 const transactionTypes = [
@@ -23,91 +30,12 @@ const transactionTypes = [
   { id: "listing", name: "挂牌交易", color: "#8b5cf6" },
 ];
 
-// 模拟历史序列价格数据
-const generateHistoricalPriceData = () => {
-  const data = [];
-  for (let i = 11; i >= 0; i--) {
-    const month = format(subMonths(new Date(), i), "yyyy-MM");
-    data.push({
-      month,
-      centralized: 320 + Math.random() * 60 - 30,
-      rolling: 310 + Math.random() * 50 - 25,
-      bilateral: 340 + Math.random() * 40 - 20,
-      listing: 300 + Math.random() * 45 - 22,
-      volume: 50000 + Math.random() * 20000,
-    });
-  }
-  return data;
-};
-
-// 模拟集中竞价详细数据
-const generateCentralizedBiddingData = () => {
-  const data = [];
-  for (let i = 11; i >= 0; i--) {
-    const month = format(subMonths(new Date(), i), "yyyy-MM");
-    data.push({
-      month,
-      thermalPrice: 350 + Math.random() * 50 - 25,
-      renewablePrice: 280 + Math.random() * 40 - 20,
-      avgPrice: 320 + Math.random() * 45 - 22,
-      volume: 30000 + Math.random() * 15000,
-      participants: Math.floor(80 + Math.random() * 40),
-    });
-  }
-  return data;
-};
-
-// 模拟滚动撮合数据
-const generateRollingMatchData = () => {
-  const data = [];
-  for (let i = 29; i >= 0; i--) {
-    const date = format(new Date(Date.now() - i * 24 * 60 * 60 * 1000), "MM-dd");
-    data.push({
-      date,
-      successRate: 75 + Math.random() * 20,
-      avgPrice: 310 + Math.random() * 40 - 20,
-      buyVolume: 5000 + Math.random() * 3000,
-      sellVolume: 4500 + Math.random() * 3500,
-      matchedVolume: 4000 + Math.random() * 2500,
-    });
-  }
-  return data;
-};
-
-// 模拟市场成交行情汇总
-const generateMarketSummaryData = () => {
-  const data = [];
-  for (let i = 11; i >= 0; i--) {
-    const month = format(subMonths(new Date(), i), "yyyy-MM");
-    const centralized = 25000 + Math.random() * 10000;
-    const rolling = 15000 + Math.random() * 8000;
-    const bilateral = 20000 + Math.random() * 12000;
-    const listing = 8000 + Math.random() * 5000;
-    const total = centralized + rolling + bilateral + listing;
-    data.push({
-      month,
-      centralized,
-      rolling,
-      bilateral,
-      listing,
-      total,
-      avgPrice: 325 + Math.random() * 30 - 15,
-    });
-  }
-  return data;
-};
-
-// 模拟价格分布数据
-const generatePriceDistributionData = () => {
-  const distribution = [];
-  for (let price = 250; price <= 400; price += 10) {
-    distribution.push({
-      priceRange: `${price}-${price + 10}`,
-      centralized: Math.floor(Math.random() * 40 + 5),
-      rolling: Math.floor(Math.random() * 30 + 3),
-    });
-  }
-  return distribution;
+// 时间范围映射
+const timeRangeMap: Record<string, number> = {
+  '3m': 3,
+  '6m': 6,
+  '12m': 12,
+  '24m': 24,
 };
 
 const MediumLongTerm = () => {
@@ -116,14 +44,27 @@ const MediumLongTerm = () => {
   const [timeRange, setTimeRange] = useState("12m");
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
 
-  const historicalPriceData = useMemo(() => generateHistoricalPriceData(), []);
-  const centralizedBiddingData = useMemo(() => generateCentralizedBiddingData(), []);
-  const rollingMatchData = useMemo(() => generateRollingMatchData(), []);
-  const marketSummaryData = useMemo(() => generateMarketSummaryData(), []);
-  const priceDistributionData = useMemo(() => generatePriceDistributionData(), []);
+  // 使用数据库hooks
+  const months = timeRangeMap[timeRange] || 12;
+  const { data: historicalPriceData = [], isLoading: loadingHistorical } = useHistoricalPriceData(months);
+  const { data: centralizedBiddingData = [], isLoading: loadingCentralized } = useCentralizedBiddingData(months);
+  const { data: rollingMatchData = [], isLoading: loadingRolling } = useRollingMatchData(30);
+  const { data: marketSummaryData = [], isLoading: loadingSummary } = useMarketSummaryData(months);
+  const { data: priceDistributionData = [], isLoading: loadingDistribution } = usePriceDistributionData();
+
+  const isLoading = loadingHistorical || loadingCentralized || loadingRolling || loadingSummary || loadingDistribution;
 
   // 计算汇总指标
   const summaryMetrics = useMemo(() => {
+    if (!marketSummaryData || marketSummaryData.length === 0) {
+      return {
+        monthlyVolume: '0',
+        yearlyVolume: '0',
+        avgPrice: '0.00',
+        centralizedRatio: '0.0',
+      };
+    }
+
     const lastMonth = marketSummaryData[marketSummaryData.length - 1];
     const totalVolume = marketSummaryData.reduce((sum, d) => sum + d.total, 0);
     const avgPrice = marketSummaryData.reduce((sum, d) => sum + d.avgPrice, 0) / marketSummaryData.length;
@@ -131,13 +72,27 @@ const MediumLongTerm = () => {
       monthlyVolume: lastMonth.total.toFixed(0),
       yearlyVolume: totalVolume.toFixed(0),
       avgPrice: avgPrice.toFixed(2),
-      centralizedRatio: ((lastMonth.centralized / lastMonth.total) * 100).toFixed(1),
+      centralizedRatio: lastMonth.total > 0 
+        ? ((lastMonth.centralized / lastMonth.total) * 100).toFixed(1)
+        : '0.0',
     };
   }, [marketSummaryData]);
 
   const handleDownload = () => {
     console.log("下载中长期行情数据");
   };
+
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+          <p className="text-muted-foreground">加载中长期行情数据...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">

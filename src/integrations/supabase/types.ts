@@ -497,6 +497,66 @@ export type Database = {
         }
         Relationships: []
       }
+      medium_long_term_prices: {
+        Row: {
+          avg_price: number | null
+          buy_volume: number | null
+          created_at: string
+          id: string
+          matched_volume: number | null
+          max_price: number | null
+          min_price: number | null
+          participants: number | null
+          province: string
+          renewable_price: number | null
+          sell_volume: number | null
+          success_rate: number | null
+          thermal_price: number | null
+          trade_date: string
+          trade_month: string
+          transaction_type: string
+          volume: number | null
+        }
+        Insert: {
+          avg_price?: number | null
+          buy_volume?: number | null
+          created_at?: string
+          id?: string
+          matched_volume?: number | null
+          max_price?: number | null
+          min_price?: number | null
+          participants?: number | null
+          province?: string
+          renewable_price?: number | null
+          sell_volume?: number | null
+          success_rate?: number | null
+          thermal_price?: number | null
+          trade_date: string
+          trade_month: string
+          transaction_type: string
+          volume?: number | null
+        }
+        Update: {
+          avg_price?: number | null
+          buy_volume?: number | null
+          created_at?: string
+          id?: string
+          matched_volume?: number | null
+          max_price?: number | null
+          min_price?: number | null
+          participants?: number | null
+          province?: string
+          renewable_price?: number | null
+          sell_volume?: number | null
+          success_rate?: number | null
+          thermal_price?: number | null
+          trade_date?: string
+          trade_month?: string
+          transaction_type?: string
+          volume?: number | null
+        }
+        Relationships: []
+      }
       news_policies: {
         Row: {
           category: string
@@ -848,6 +908,39 @@ export type Database = {
           region?: string | null
           station_type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      price_distribution: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          price_range_end: number
+          price_range_start: number
+          province: string
+          trade_month: string
+          transaction_type: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          price_range_end: number
+          price_range_start: number
+          province?: string
+          trade_month: string
+          transaction_type: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          price_range_end?: number
+          price_range_start?: number
+          province?: string
+          trade_month?: string
+          transaction_type?: string
         }
         Relationships: []
       }
