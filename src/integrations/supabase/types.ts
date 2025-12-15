@@ -619,6 +619,121 @@ export type Database = {
         }
         Relationships: []
       }
+      power_plan_time_series: {
+        Row: {
+          actual_power: number | null
+          created_at: string
+          effective_date: string
+          id: string
+          plan_id: string | null
+          planned_power: number | null
+          predicted_power: number | null
+          time_granularity: string
+          time_point: number
+        }
+        Insert: {
+          actual_power?: number | null
+          created_at?: string
+          effective_date: string
+          id?: string
+          plan_id?: string | null
+          planned_power?: number | null
+          predicted_power?: number | null
+          time_granularity?: string
+          time_point: number
+        }
+        Update: {
+          actual_power?: number | null
+          created_at?: string
+          effective_date?: string
+          id?: string
+          plan_id?: string | null
+          planned_power?: number | null
+          predicted_power?: number | null
+          time_granularity?: string
+          time_point?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "power_plan_time_series_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "power_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      power_plans: {
+        Row: {
+          actual_volume: number | null
+          completion_rate: number | null
+          created_at: string
+          created_by: string | null
+          deviation_rate: number | null
+          id: string
+          plan_month: number | null
+          plan_type: string
+          plan_year: number
+          planned_volume: number
+          published_at: string | null
+          reference_volume: number | null
+          reference_year: number | null
+          remarks: string | null
+          settled_volume: number | null
+          status: string
+          trading_unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_volume?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          deviation_rate?: number | null
+          id?: string
+          plan_month?: number | null
+          plan_type: string
+          plan_year: number
+          planned_volume?: number
+          published_at?: string | null
+          reference_volume?: number | null
+          reference_year?: number | null
+          remarks?: string | null
+          settled_volume?: number | null
+          status?: string
+          trading_unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_volume?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          deviation_rate?: number | null
+          id?: string
+          plan_month?: number | null
+          plan_type?: string
+          plan_year?: number
+          planned_volume?: number
+          published_at?: string | null
+          reference_volume?: number | null
+          reference_year?: number | null
+          remarks?: string | null
+          settled_volume?: number | null
+          status?: string
+          trading_unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "power_plans_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       power_stations: {
         Row: {
           commission_date: string | null
