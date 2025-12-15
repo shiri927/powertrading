@@ -10,17 +10,22 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, subMonths } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Play, Square, Download, TrendingUp, TrendingDown, Activity, Target, Clock, Award } from 'lucide-react';
+import { Calendar as CalendarIcon, Play, Square, Download, TrendingUp, TrendingDown, Activity, Target, Clock, Award, Save } from 'lucide-react';
 import { BacktestEngine, BacktestResult } from '@/lib/trading/backtest-engine';
-import { TradingStrategy, PRESET_STRATEGIES } from '@/lib/trading/strategy-types';
+import { TradingStrategy } from '@/lib/trading/strategy-types';
 import { generatePredictionData } from '@/lib/data-generation/prediction-data';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useTradingStrategies } from '@/hooks/useTradingStrategies';
+import { useBacktestResults } from '@/hooks/useBacktestResults';
 
 export const BacktestTab = () => {
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string>('preset_0');
+  const { strategies, isLoading: strategiesLoading } = useTradingStrategies();
+  const { saveResult } = useBacktestResults();
+  
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: subMonths(new Date(), 6),
     end: new Date(),
@@ -30,12 +35,12 @@ export const BacktestTab = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
 
-  // 模拟策略列表（实际应该从全局状态获取）
-  const strategies: TradingStrategy[] = PRESET_STRATEGIES.map((s, i) => ({
-    ...s,
-    id: `preset_${i}`,
-    isActive: false,
-  }));
+  // 当策略加载完成后，设置默认选中
+  useEffect(() => {
+    if (strategies.length > 0 && !selectedStrategyId) {
+      setSelectedStrategyId(strategies[0].id);
+    }
+  }, [strategies, selectedStrategyId]);
 
   const selectedStrategy = strategies.find(s => s.id === selectedStrategyId);
 
@@ -111,6 +116,11 @@ export const BacktestTab = () => {
     toast.success('报告已导出');
   };
 
+  const handleSaveResult = async () => {
+    if (!result || !selectedStrategyId) return;
+    await saveResult(selectedStrategyId, result, dateRange, initialCapital);
+  };
+
   return (
     <div className="space-y-6">
       {/* 回测参数设置区 */}
@@ -124,9 +134,9 @@ export const BacktestTab = () => {
             {/* 策略选择 */}
             <div className="space-y-2">
               <Label>策略选择</Label>
-              <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
+              <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId} disabled={strategiesLoading}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={strategiesLoading ? '加载中...' : '请选择策略'} />
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
                   {strategies.map(strategy => (
@@ -194,7 +204,7 @@ export const BacktestTab = () => {
           {/* 操作按钮 */}
           <div className="flex gap-2 mt-4">
             {!isRunning ? (
-              <Button onClick={runBacktest}>
+              <Button onClick={runBacktest} disabled={!selectedStrategyId}>
                 <Play className="h-4 w-4 mr-2" />
                 开始回测
               </Button>
@@ -204,6 +214,10 @@ export const BacktestTab = () => {
                 停止
               </Button>
             )}
+            <Button variant="outline" onClick={handleSaveResult} disabled={!result}>
+              <Save className="h-4 w-4 mr-2" />
+              保存结果
+            </Button>
             <Button variant="outline" onClick={exportReport} disabled={!result}>
               <Download className="h-4 w-4 mr-2" />
               导出报告

@@ -5,79 +5,75 @@ import { StrategyEditor } from '@/components/strategy/StrategyEditor';
 import { StrategyFlowDiagram } from '@/components/strategy/StrategyFlowDiagram';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, FileDown, FileUp } from 'lucide-react';
+import { Plus, FileDown, FileUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTradingStrategies } from '@/hooks/useTradingStrategies';
 import { useTradingStore } from '@/store/tradingStore';
 
 export const StrategyConfigTab = () => {
-  const { strategies, setStrategies, addStrategy, updateStrategy, deleteStrategy, toggleStrategyActive } = useTradingStore();
+  const { 
+    strategies: dbStrategies, 
+    isLoading, 
+    createStrategy: dbCreateStrategy, 
+    updateStrategy: dbUpdateStrategy, 
+    deleteStrategy: dbDeleteStrategy,
+    toggleActive: dbToggleActive,
+  } = useTradingStrategies();
   
-  // 初始化策略（仅首次）
+  // 同步到 Zustand store
+  const { setStrategies } = useTradingStore();
+  
   useEffect(() => {
-    if (strategies.length === 0) {
-      const initialStrategies = PRESET_STRATEGIES.map((s, i) => ({
-        ...s,
-        id: `preset_${i}`,
-        isActive: i === 0,
-      }));
-      setStrategies(initialStrategies);
+    if (dbStrategies.length > 0) {
+      setStrategies(dbStrategies);
     }
-  }, []);
+  }, [dbStrategies, setStrategies]);
 
   const [selectedStrategy, setSelectedStrategy] = useState<TradingStrategy | null>(
-    strategies.length > 0 ? strategies[0] : null
+    dbStrategies.length > 0 ? dbStrategies[0] : null
   );
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // 当策略列表变化时，更新选中策略
   useEffect(() => {
     if (selectedStrategy) {
-      const updated = strategies.find(s => s.id === selectedStrategy.id);
+      const updated = dbStrategies.find(s => s.id === selectedStrategy.id);
       if (updated) {
         setSelectedStrategy(updated);
       }
-    } else if (strategies.length > 0 && !selectedStrategy) {
-      setSelectedStrategy(strategies[0]);
+    } else if (dbStrategies.length > 0 && !selectedStrategy) {
+      setSelectedStrategy(dbStrategies[0]);
     }
-  }, [strategies]);
+  }, [dbStrategies]);
 
-  const handleSaveStrategy = (strategy: TradingStrategy) => {
+  const handleSaveStrategy = async (strategy: TradingStrategy) => {
     if (editMode === 'create') {
-      addStrategy(strategy);
-      toast.success('策略创建成功', {
-        description: `策略"${strategy.name}"已添加到策略库`,
-      });
+      const newStrategy = await dbCreateStrategy(strategy);
+      if (newStrategy) {
+        setSelectedStrategy(newStrategy);
+      }
     } else {
-      updateStrategy(strategy.id, strategy);
-      toast.success('策略保存成功', {
-        description: `策略"${strategy.name}"已更新`,
-      });
+      const success = await dbUpdateStrategy(strategy.id, strategy);
+      if (success) {
+        setSelectedStrategy(strategy);
+      }
     }
-    setSelectedStrategy(strategy);
     setEditMode('view');
   };
 
-  const handleDeleteStrategy = (strategyId: string) => {
-    deleteStrategy(strategyId);
-    setSelectedStrategy(null);
-    setEditMode('view');
-    toast.success('策略已删除');
+  const handleDeleteStrategy = async (strategyId: string) => {
+    const success = await dbDeleteStrategy(strategyId);
+    if (success) {
+      setSelectedStrategy(null);
+      setEditMode('view');
+    }
   };
 
-  const handleToggleActive = (strategy: TradingStrategy) => {
-    toggleStrategyActive(strategy.id);
-    
-    const updatedStrategy = { ...strategy, isActive: !strategy.isActive };
-    setSelectedStrategy(updatedStrategy);
-    
-    if (updatedStrategy.isActive) {
-      toast.success('策略已启用', {
-        description: `策略"${strategy.name}"开始运行`,
-      });
-    } else {
-      toast.info('策略已暂停', {
-        description: `策略"${strategy.name}"已停止运行`,
-      });
+  const handleToggleActive = async (strategy: TradingStrategy) => {
+    const success = await dbToggleActive(strategy.id);
+    if (success) {
+      const updatedStrategy = { ...strategy, isActive: !strategy.isActive };
+      setSelectedStrategy(updatedStrategy);
     }
   };
 
@@ -87,7 +83,7 @@ export const StrategyConfigTab = () => {
   };
 
   const handleExportStrategies = () => {
-    const dataStr = JSON.stringify(strategies, null, 2);
+    const dataStr = JSON.stringify(dbStrategies, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -105,12 +101,16 @@ export const StrategyConfigTab = () => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           try {
-            const imported = JSON.parse(e.target?.result as string);
-            setStrategies([...strategies, ...imported]);
+            const imported = JSON.parse(e.target?.result as string) as TradingStrategy[];
+            let successCount = 0;
+            for (const strategy of imported) {
+              const result = await dbCreateStrategy(strategy);
+              if (result) successCount++;
+            }
             toast.success('策略导入成功', {
-              description: `已导入 ${imported.length} 个策略`,
+              description: `已导入 ${successCount} 个策略`,
             });
           } catch (error) {
             toast.error('导入失败', {
@@ -123,6 +123,15 @@ export const StrategyConfigTab = () => {
     };
     input.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">加载策略中...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -164,7 +173,7 @@ export const StrategyConfigTab = () => {
         {/* 策略列表 */}
         <ScrollArea className="h-[calc(100vh-280px)]">
           <div className="space-y-3 pr-4">
-            {strategies.map(strategy => (
+            {dbStrategies.map(strategy => (
               <StrategyCard
                 key={strategy.id}
                 strategy={strategy}
@@ -228,8 +237,8 @@ export const StrategyConfigTab = () => {
                   onDelete={editMode === 'edit' ? handleDeleteStrategy : undefined}
                   onCancel={() => {
                     setEditMode('view');
-                    if (strategies.length > 0) {
-                      setSelectedStrategy(strategies[0]);
+                    if (dbStrategies.length > 0) {
+                      setSelectedStrategy(dbStrategies[0]);
                     }
                   }}
                 />
