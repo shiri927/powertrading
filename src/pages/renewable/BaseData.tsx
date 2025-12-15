@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, ComposedChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle, Clock, Edit, Info, BarChart3, Bell, RefreshCw, Eye, Megaphone } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, TrendingUp, Info, BarChart3, Bell, RefreshCw, Eye, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PowerPlanTab from "@/pages/retail/base-data/PowerPlanTab";
@@ -60,12 +60,9 @@ const generateAnnouncementData = () => [
 ];
 
 const BaseData = () => {
-  const [selectedYear, setSelectedYear] = useState<Date>(new Date(2024, 0, 1));
-  const [compareYear, setCompareYear] = useState<Date>(new Date(2023, 0, 1));
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingUnit, setEditingUnit] = useState<any>(null);
   const [analysisParams, setAnalysisParams] = useState({ dimension: "unit", period: "month", dateRange: "2025-11", settlementUnit: "all" });
   
   // 新增状态
@@ -84,47 +81,11 @@ const BaseData = () => {
     avgPrice: { label: "加权均价", color: "#f59e0b" },
   };
 
-  // 统计数据
-  const stats = [
-    { label: "交易单元总数", value: "155", icon: TrendingUp, color: "text-primary" },
-    { label: "计划已完成数", value: "0", percentage: "0%", icon: CheckCircle, color: "text-muted-foreground" },
-    { label: "待制定计划数", value: "155", percentage: "100%", icon: Clock, color: "text-warning", highlight: true },
-    { label: "待发布计划数", value: "0", percentage: "0%", icon: AlertCircle, color: "text-muted-foreground" },
-    { label: "修改待发布计划数", value: "0", percentage: "0%", icon: Edit, color: "text-muted-foreground" },
-  ];
-
   // 交易单元列表
   const tradingUnits = [
     "山东省场站A", "山东省场站B", "山东省场站C", "山东省场站D", "山东省场站E",
     "山西省场站A", "山西省场站B", "山西省场站C", "山西省场站D", "山西省场站E",
     "浙江省场站A", "浙江省场站B", "浙江省场站C", "浙江省场站D", "浙江省场站E"
-  ];
-
-  // 图表数据 - 优化图例名称
-  const chartData = [
-    { name: "天津摇橹", "2024年计划电量": 120000, "2023年同期计划": 95000, "2023年实际发电": 85000, "2023年预测电量": 110000 },
-    { name: "电量竞价年", "2024年计划电量": 180000, "2023年同期计划": 160000, "2023年实际发电": 150000, "2023年预测电量": 170000 },
-    { name: "南城沟一期", "2024年计划电量": 280000, "2023年同期计划": 250000, "2023年实际发电": 240000, "2023年预测电量": 260000 },
-    { name: "攀长花5期", "2024年计划电量": 150000, "2023年同期计划": 130000, "2023年实际发电": 120000, "2023年预测电量": 140000 },
-    { name: "布尔津", "2024年计划电量": 220000, "2023年同期计划": 200000, "2023年实际发电": 190000, "2023年预测电量": 210000 },
-  ];
-
-  // 表格数据
-  const tableData = [
-    { id: "合计", unit: "合计", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "" },
-    { id: "1", unit: "山东省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "2", unit: "山东省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "3", unit: "山东省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "4", unit: "山东省场站D", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "5", unit: "山东省场站E", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "6", unit: "山西省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "7", unit: "山西省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "8", unit: "山西省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "9", unit: "山西省场站D", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "10", unit: "山西省场站E", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "11", unit: "浙江省场站A", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "12", unit: "浙江省场站B", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
-    { id: "13", unit: "浙江省场站C", planVolume: "-", operatingVolume: "-", settlementVolume: "-", eid: "🔗" },
   ];
 
   return (
