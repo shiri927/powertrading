@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_reports: {
+        Row: {
+          author: string
+          category: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          file_path: string | null
+          id: string
+          name: string
+          period: string
+          publish_date: string | null
+          status: string
+          summary: string | null
+          trading_unit_id: string | null
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          author: string
+          category: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          name: string
+          period: string
+          publish_date?: string | null
+          status?: string
+          summary?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          author?: string
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          name?: string
+          period?: string
+          publish_date?: string | null
+          status?: string
+          summary?: string | null
+          trading_unit_id?: string | null
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_reports_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backtest_results: {
         Row: {
           avg_holding_time: number | null

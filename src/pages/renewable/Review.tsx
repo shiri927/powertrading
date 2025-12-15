@@ -49,21 +49,28 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useReviewData, InterSpotReviewData } from "@/hooks/useReviewData";
+import { useAnalysisReports } from "@/hooks/useAnalysisReports";
 
 // 导入新的优化组件
 import IntraProvincialReviewTab from "./review/IntraProvincialReviewTab";
 import ForecastAdjustmentReviewTab from "./review/ForecastAdjustmentReviewTab";
 
-// ============= 报告管理组件 =============
-const analysisReportData = [
-  { id: 1, name: "2024年3月市场分析报告", category: "市场分析", period: "2024年3月", author: "分析团队", status: "已发布", publishDate: "2024-03-28", views: 156 },
-  { id: 2, name: "新能源发电效益分析报告", category: "效益分析", period: "2024年3月", author: "技术部", status: "已发布", publishDate: "2024-03-25", views: 98 },
-  { id: 3, name: "现货市场价格趋势分析", category: "价格分析", period: "2024年3月", author: "市场部", status: "已发布", publishDate: "2024-03-20", views: 203 },
-  { id: 4, name: "售电业务年度总结报告", category: "业务总结", period: "2023年度", author: "业务部", status: "审核中", publishDate: "-", views: 0 },
-  { id: 5, name: "电网系统运行分析报告", category: "运行分析", period: "2024年2月", author: "运维团队", status: "已发布", publishDate: "2024-03-01", views: 142 },
-];
-
 const ReportManagementTab = () => {
+  const { reports, loading, fetchReports, getStats, incrementViews } = useAnalysisReports();
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  const stats = getStats();
+
+  const formatViews = (views: number) => {
+    if (views >= 1000) {
+      return `${(views / 1000).toFixed(1)}K`;
+    }
+    return views.toString();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -76,6 +83,10 @@ const ReportManagementTab = () => {
             <FileText className="h-4 w-4 mr-2" />
             新建报告
           </Button>
+          <Button variant="outline" onClick={() => fetchReports()}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+            刷新
+          </Button>
         </div>
       </div>
 
@@ -83,28 +94,28 @@ const ReportManagementTab = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">总报告数</div>
-            <div className="text-2xl font-bold text-[#00B04D]">86</div>
+            <div className="text-2xl font-bold text-[#00B04D]">{stats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">份报告</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">已发布</div>
-            <div className="text-2xl font-bold">72</div>
+            <div className="text-2xl font-bold">{stats.published}</div>
             <p className="text-xs text-muted-foreground mt-1">份报告</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">审核中</div>
-            <div className="text-2xl font-bold text-orange-500">8</div>
+            <div className="text-2xl font-bold text-orange-500">{stats.pending}</div>
             <p className="text-xs text-muted-foreground mt-1">份报告</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">总浏览量</div>
-            <div className="text-2xl font-bold">12.5K</div>
+            <div className="text-2xl font-bold">{formatViews(stats.totalViews)}</div>
             <p className="text-xs text-muted-foreground mt-1">次</p>
           </CardContent>
         </Card>
@@ -130,7 +141,20 @@ const ReportManagementTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {analysisReportData.map((report) => (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : reports.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    暂无报告数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                reports.map((report) => (
                 <TableRow key={report.id} className="hover:bg-[#F8FBFA]">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -148,18 +172,20 @@ const ReportManagementTab = () => {
                       {report.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{report.publishDate}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {report.publish_date ? format(new Date(report.publish_date), 'yyyy-MM-dd') : '-'}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Eye className="h-3 w-3" />
-                      {report.views}
+                      {report.views || 0}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       {report.status === "已发布" && (
                         <>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => incrementViews(report.id)}>
                             <Eye className="h-4 w-4 mr-1" />
                             查看
                           </Button>
@@ -172,7 +198,8 @@ const ReportManagementTab = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
