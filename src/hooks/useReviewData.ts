@@ -115,6 +115,31 @@ export interface InterSpotReviewData {
   profitLossDiff: number;
 }
 
+export interface ForecastAdjustmentData {
+  timePoint: string;
+  originalForecast: number;  // p50 预测值
+  declaredPower: number;     // 申报功率 (based on p10-p90 range adjustment)
+  actualOutput: number;      // 实际出力
+  deviation: number;         // 偏差量
+  deviationRate: number;     // 偏差率
+  adjustmentStatus: 'over' | 'under' | 'normal';
+  dayAheadRevenue: number;
+  realTimeRevenue: number;
+  assessmentFee: number;
+  tradingUnit: string;
+  date: string;
+}
+
+export interface ForecastEffectivenessMetrics {
+  effectiveRate: number;
+  revenueIncrement: number;
+  assessmentImpact: number;
+  netRevenueChange: number;
+  overAdjustmentPeriods: number;
+  underAdjustmentPeriods: number;
+  normalPeriods: number;
+}
+
 export function useReviewData() {
   const [contracts, setContracts] = useState<ReviewContract[]>([]);
   const [clearingData, setClearingData] = useState<ClearingReviewData[]>([]);
@@ -123,6 +148,7 @@ export function useReviewData() {
   const [tradingUnitTree, setTradingUnitTree] = useState<TradingUnitNode[]>([]);
   const [intraProvincialData, setIntraProvincialData] = useState<IntraSpotReviewData[]>([]);
   const [interProvincialData, setInterProvincialData] = useState<InterSpotReviewData[]>([]);
+  const [forecastAdjustmentData, setForecastAdjustmentData] = useState<ForecastAdjustmentData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -803,6 +829,161 @@ export function useReviewData() {
     }
   }, []);
 
+  // ============= 预测功率调整复盘数据 =============
+
+  const fetchForecastAdjustmentData = useCallback(async (
+    startDate: string,
+    endDate: string,
+    tradingUnitIds?: string[],
+    granularity: '24' | '96' = '24'
+  ): Promise<ForecastAdjustmentData[]> => {
+    try {
+      setIsLoading(true);
+      
+      let query = supabase
+        .from('load_predictions')
+        .select(`
+          id,
+          prediction_date,
+          hour,
+          p10,
+          p50,
+          p90,
+          actual_load,
+          confidence,
+          trading_unit_id,
+          trading_units (unit_name)
+        `)
+        .gte('prediction_date', startDate)
+        .lte('prediction_date', endDate)
+        .order('prediction_date', { ascending: true })
+        .order('hour', { ascending: true });
+
+      if (tradingUnitIds && tradingUnitIds.length > 0) {
+        query = query.in('trading_unit_id', tradingUnitIds);
+      }
+
+      const { data, error: fetchError } = await query.limit(1000);
+      if (fetchError) throw fetchError;
+
+      // 获取市场价格用于计算收益
+      const { data: marketPrices } = await supabase
+        .from('market_clearing_prices')
+        .select('price_date, hour, day_ahead_price, realtime_price')
+        .gte('price_date', startDate)
+        .lte('price_date', endDate);
+
+      const priceMap: Record<string, { dayAhead: number; realtime: number }> = {};
+      (marketPrices || []).forEach((p: any) => {
+        const key = `${p.price_date}_${p.hour}`;
+        priceMap[key] = {
+          dayAhead: Number(p.day_ahead_price) || 280,
+          realtime: Number(p.realtime_price) || 270,
+        };
+      });
+
+      // 转换数据格式
+      const formatted: ForecastAdjustmentData[] = (data || []).map((record: any) => {
+        const date = record.prediction_date;
+        const hour = record.hour;
+        const minute = granularity === '96' ? (hour % 4) * 15 : 0;
+        const displayHour = granularity === '96' ? Math.floor(hour / 4) : hour;
+        const timePoint = `${String(displayHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        
+        const originalForecast = Number(record.p50) || 0;
+        const p10 = Number(record.p10) || originalForecast * 0.85;
+        const p90 = Number(record.p90) || originalForecast * 1.15;
+        const actualOutput = Number(record.actual_load) || 0;
+        
+        // 申报功率 = 基于预测调整后的值 (假设调整策略是向 p90 方向偏移)
+        const adjustmentFactor = 0.3; // 调整幅度系数
+        const declaredPower = originalForecast + (p90 - originalForecast) * adjustmentFactor;
+        
+        const deviation = declaredPower - actualOutput;
+        const deviationRate = declaredPower > 0 ? (Math.abs(deviation) / declaredPower) * 100 : 0;
+        
+        let adjustmentStatus: 'over' | 'under' | 'normal';
+        if (deviationRate > 10) {
+          adjustmentStatus = deviation > 0 ? 'over' : 'under';
+        } else {
+          adjustmentStatus = 'normal';
+        }
+
+        // 获取价格计算收益
+        const priceKey = `${date}_${hour}`;
+        const prices = priceMap[priceKey] || { dayAhead: 280, realtime: 270 };
+        
+        const dayAheadRevenue = declaredPower * prices.dayAhead;
+        const realTimeRevenue = actualOutput * prices.realtime;
+        const assessmentFee = deviationRate > 5 ? Math.abs(deviation) * (prices.dayAhead * 0.1) : 0;
+
+        return {
+          timePoint,
+          originalForecast,
+          declaredPower,
+          actualOutput,
+          deviation,
+          deviationRate,
+          adjustmentStatus,
+          dayAheadRevenue,
+          realTimeRevenue,
+          assessmentFee,
+          tradingUnit: record.trading_units?.unit_name || '未知单元',
+          date,
+        };
+      });
+
+      setForecastAdjustmentData(formatted);
+      setError(null);
+      return formatted;
+    } catch (err) {
+      console.error('获取预测功率调整复盘数据失败:', err);
+      setError('获取预测功率调整复盘数据失败');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 计算预测调整有效性指标
+  const calculateForecastEffectiveness = useCallback((data: ForecastAdjustmentData[]): ForecastEffectivenessMetrics => {
+    if (data.length === 0) {
+      return {
+        effectiveRate: 0,
+        revenueIncrement: 0,
+        assessmentImpact: 0,
+        netRevenueChange: 0,
+        overAdjustmentPeriods: 0,
+        underAdjustmentPeriods: 0,
+        normalPeriods: 0,
+      };
+    }
+
+    const overPeriods = data.filter(d => d.adjustmentStatus === 'over').length;
+    const underPeriods = data.filter(d => d.adjustmentStatus === 'under').length;
+    const normalPeriods = data.filter(d => d.adjustmentStatus === 'normal').length;
+    
+    const effectiveRate = (normalPeriods / data.length) * 100;
+    
+    const totalDayAheadRevenue = data.reduce((sum, d) => sum + d.dayAheadRevenue, 0);
+    const totalRealTimeRevenue = data.reduce((sum, d) => sum + d.realTimeRevenue, 0);
+    const totalAssessmentFee = data.reduce((sum, d) => sum + d.assessmentFee, 0);
+    
+    // 收益增量 = 基于申报获得的额外收益
+    const revenueIncrement = (totalDayAheadRevenue - totalRealTimeRevenue) * 0.1;
+    const netRevenueChange = revenueIncrement - totalAssessmentFee;
+
+    return {
+      effectiveRate,
+      revenueIncrement,
+      assessmentImpact: totalAssessmentFee,
+      netRevenueChange,
+      overAdjustmentPeriods: overPeriods,
+      underAdjustmentPeriods: underPeriods,
+      normalPeriods,
+    };
+  }, []);
+
   // ============= 辅助函数 =============
 
   // 基于真实合同数据生成时间序列
@@ -884,6 +1065,7 @@ export function useReviewData() {
     tradingUnitTree,
     intraProvincialData,
     interProvincialData,
+    forecastAdjustmentData,
     isLoading,
     error,
     
@@ -896,9 +1078,11 @@ export function useReviewData() {
     fetchTradingUnitTree,
     fetchIntraProvincialReviewData,
     fetchInterProvincialReviewData,
+    fetchForecastAdjustmentData,
     
     // 辅助方法
     generateTimeSeriesFromContracts,
     calculateIntraSummary,
+    calculateForecastEffectiveness,
   };
 }
