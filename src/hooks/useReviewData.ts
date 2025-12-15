@@ -101,6 +101,20 @@ export interface IntraSummaryStats {
   assessmentPrice: number;
 }
 
+export interface InterSpotReviewData {
+  date: string;
+  timePoint: string;
+  tradingUnit: string;
+  dayAheadVolume: number;
+  dayAheadPrice: number;
+  dayAheadRevenue: number;
+  intraDayVolume: number;
+  intraDayPrice: number;
+  intraDayRevenue: number;
+  intraProvincialRealTimePrice: number;
+  profitLossDiff: number;
+}
+
 export function useReviewData() {
   const [contracts, setContracts] = useState<ReviewContract[]>([]);
   const [clearingData, setClearingData] = useState<ClearingReviewData[]>([]);
@@ -108,6 +122,7 @@ export function useReviewData() {
   const [customerRevenue, setCustomerRevenue] = useState<CustomerRevenueData[]>([]);
   const [tradingUnitTree, setTradingUnitTree] = useState<TradingUnitNode[]>([]);
   const [intraProvincialData, setIntraProvincialData] = useState<IntraSpotReviewData[]>([]);
+  const [interProvincialData, setInterProvincialData] = useState<InterSpotReviewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -667,6 +682,105 @@ export function useReviewData() {
     }
   }, []);
 
+  // ============= 省间现货复盘数据 =============
+
+  // 获取省间现货复盘数据
+  const fetchInterProvincialReviewData = useCallback(async (
+    startDate: string,
+    endDate: string,
+    tradingUnitIds?: string[]
+  ) => {
+    try {
+      setIsLoading(true);
+
+      // 获取出清记录（用于省间数据）
+      let query = supabase
+        .from('clearing_records')
+        .select(`
+          id,
+          clearing_date,
+          hour,
+          day_ahead_clear_price,
+          realtime_clear_price,
+          day_ahead_clear_volume,
+          realtime_clear_volume,
+          trading_type,
+          trading_unit_id,
+          trading_units (unit_name)
+        `)
+        .gte('clearing_date', startDate)
+        .lte('clearing_date', endDate)
+        .order('clearing_date', { ascending: true })
+        .order('hour', { ascending: true });
+
+      if (tradingUnitIds && tradingUnitIds.length > 0) {
+        query = query.in('trading_unit_id', tradingUnitIds);
+      }
+
+      const { data, error: fetchError } = await query.limit(500);
+      if (fetchError) throw fetchError;
+
+      // 获取市场出清价格（用于计算省内实时价格参考）
+      const { data: marketPrices } = await supabase
+        .from('market_clearing_prices')
+        .select('price_date, hour, day_ahead_price, realtime_price')
+        .gte('price_date', startDate)
+        .lte('price_date', endDate);
+
+      // 构建省内价格映射
+      const intraProvincialPriceMap: Record<string, number> = {};
+      (marketPrices || []).forEach((p: any) => {
+        const key = `${p.price_date}_${p.hour}`;
+        intraProvincialPriceMap[key] = Number(p.realtime_price) || Number(p.day_ahead_price) || 350;
+      });
+
+      // 转换为省间复盘数据格式
+      const formatted: InterSpotReviewData[] = (data || []).map((record: any) => {
+        const dateStr = record.clearing_date.replace(/-/g, '');
+        const hourStr = String(record.hour).padStart(2, '0') + '00';
+        
+        const dayAheadVolume = Number(record.day_ahead_clear_volume) || 0;
+        const dayAheadPrice = Number(record.day_ahead_clear_price) || 0;
+        const intraDayVolume = Number(record.realtime_clear_volume) || 0;
+        const intraDayPrice = Number(record.realtime_clear_price) || 0;
+        
+        // 获取省内实时价格
+        const priceKey = `${record.clearing_date}_${record.hour}`;
+        const intraProvincialPrice = intraProvincialPriceMap[priceKey] || (dayAheadPrice * 0.95);
+        
+        const dayAheadRevenue = dayAheadVolume * dayAheadPrice;
+        const intraDayRevenue = intraDayVolume * intraDayPrice;
+        const interRevenue = dayAheadRevenue + intraDayRevenue;
+        const assumedIntraRevenue = (dayAheadVolume + intraDayVolume) * intraProvincialPrice;
+        const profitLossDiff = interRevenue - assumedIntraRevenue;
+
+        return {
+          date: dateStr,
+          timePoint: hourStr,
+          tradingUnit: record.trading_units?.unit_name || '未知单元',
+          dayAheadVolume,
+          dayAheadPrice,
+          dayAheadRevenue,
+          intraDayVolume,
+          intraDayPrice,
+          intraDayRevenue,
+          intraProvincialRealTimePrice: intraProvincialPrice,
+          profitLossDiff,
+        };
+      });
+
+      setInterProvincialData(formatted);
+      setError(null);
+      return formatted;
+    } catch (err) {
+      console.error('获取省间现货复盘数据失败:', err);
+      setError('获取省间现货复盘数据失败');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // ============= 辅助函数 =============
 
   // 基于真实合同数据生成时间序列
@@ -747,6 +861,7 @@ export function useReviewData() {
     customerRevenue,
     tradingUnitTree,
     intraProvincialData,
+    interProvincialData,
     isLoading,
     error,
     
@@ -758,6 +873,7 @@ export function useReviewData() {
     fetchCustomerRevenue,
     fetchTradingUnitTree,
     fetchIntraProvincialReviewData,
+    fetchInterProvincialReviewData,
     
     // 辅助方法
     generateTimeSeriesFromContracts,
