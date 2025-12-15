@@ -261,6 +261,7 @@
 | `customers` | 10+ | - | ✅ 示例数据 |
 | `contracts` | 20+ | 2024-2025 | ✅ 生产数据 |
 | `clearing_records` | 6,696 | 2025-11-15 至 2025-12-15 | ✅ 生产数据 |
+| `time_segment_clearing` | 2,976 | 2025-11-15 至 2025-12-15 | ✅ 新建表（分时段交易出清） |
 | `settlement_records` | 36+ | 2025-11, 2025-12 | ✅ 生产数据 |
 | `market_clearing_prices` | 17,160 | 2024-01-01 至 2025-12-15 | ✅ 生产数据（已扩展） |
 | `medium_long_term_prices` | 48 | 2024-02 至 2025-01 | ✅ 生产数据 |

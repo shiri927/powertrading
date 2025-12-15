@@ -1724,6 +1724,65 @@ export type Database = {
         }
         Relationships: []
       }
+      time_segment_clearing: {
+        Row: {
+          bid_price: number | null
+          clear_price: number | null
+          clear_time: string | null
+          clear_volume: number | null
+          clearing_date: string
+          created_at: string
+          id: string
+          period_end: number
+          period_start: number
+          province: string
+          status: string
+          trading_sequence: string
+          trading_type: string
+          trading_unit_id: string | null
+        }
+        Insert: {
+          bid_price?: number | null
+          clear_price?: number | null
+          clear_time?: string | null
+          clear_volume?: number | null
+          clearing_date: string
+          created_at?: string
+          id?: string
+          period_end: number
+          period_start: number
+          province?: string
+          status?: string
+          trading_sequence: string
+          trading_type: string
+          trading_unit_id?: string | null
+        }
+        Update: {
+          bid_price?: number | null
+          clear_price?: number | null
+          clear_time?: string | null
+          clear_volume?: number | null
+          clearing_date?: string
+          created_at?: string
+          id?: string
+          period_end?: number
+          period_start?: number
+          province?: string
+          status?: string
+          trading_sequence?: string
+          trading_type?: string
+          trading_unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_segment_clearing_trading_unit_id_fkey"
+            columns: ["trading_unit_id"]
+            isOneToOne: false
+            referencedRelation: "trading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trading_bids: {
         Row: {
           bid_no: string
