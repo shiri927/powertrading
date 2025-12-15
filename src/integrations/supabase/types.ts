@@ -497,6 +497,69 @@ export type Database = {
         }
         Relationships: []
       }
+      news_policies: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          file_path: string | null
+          id: string
+          issuer: string | null
+          priority: string | null
+          province: string | null
+          publish_date: string
+          publish_time: string | null
+          source: string | null
+          status: string | null
+          summary: string | null
+          title: string
+          type: string
+          updated_at: string
+          url: string | null
+          views: number | null
+        }
+        Insert: {
+          category: string
+          content?: string | null
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          issuer?: string | null
+          priority?: string | null
+          province?: string | null
+          publish_date: string
+          publish_time?: string | null
+          source?: string | null
+          status?: string | null
+          summary?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          url?: string | null
+          views?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          issuer?: string | null
+          priority?: string | null
+          province?: string | null
+          publish_date?: string
+          publish_time?: string | null
+          source?: string | null
+          status?: string | null
+          summary?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       package_simulations: {
         Row: {
           break_even_price: number | null
