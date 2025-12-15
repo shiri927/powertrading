@@ -541,10 +541,10 @@ const MediumLongTermReview = () => {
   const { 
     fetchTradingUnitTree, 
     fetchContracts, 
-    generateTimeSeriesFromContracts,
-    isLoading 
+    generateTimeSeriesFromContracts
   } = useReviewData();
   
+  const [localLoading, setLocalLoading] = useState(true);
   const [tradingUnitTree, setTradingUnitTree] = useState<TradingUnitNode[]>([]);
   const [dbContracts, setDbContracts] = useState<any[]>([]);
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
@@ -559,54 +559,50 @@ const MediumLongTermReview = () => {
   // 加载交易单元树
   useEffect(() => {
     const loadData = async () => {
-      const tree = await fetchTradingUnitTree();
-      // 转换数据库数据为组件需要的格式
-      const formattedTree: TradingUnitNode[] = tree.map((unit: any) => ({
-        id: unit.id,
-        name: unit.unit_name,
-        type: 'unit' as const,
-        contracts: (unit.contracts || []).map((c: any) => ({
-          id: c.id,
-          tradingUnit: unit.unit_name,
-          contractType: c.contract_type === 'annual_bilateral' ? '年度双边' : '月度双边',
-          startDate: c.start_date,
-          endDate: c.end_date,
-          contractVolume: c.total_volume || 0,
-          contractPrice: c.unit_price || 0,
-          totalValue: c.total_amount || 0,
-        })),
-      }));
-      
-      // 按省份分组
-      const provinceGroups: Record<string, TradingUnitNode[]> = {};
-      formattedTree.forEach(unit => {
-        const province = unit.name.includes('山东') ? '山东省' : 
-                        unit.name.includes('山西') ? '山西省' : 
-                        unit.name.includes('浙江') ? '浙江省' : '其他';
-        if (!provinceGroups[province]) {
-          provinceGroups[province] = [];
+      setLocalLoading(true);
+      try {
+        const tree = await fetchTradingUnitTree();
+        
+        // hook 返回的已经是 TradingUnitNode[] 格式的树形数据
+        // 只需转换合同格式
+        const formattedTree: TradingUnitNode[] = tree.map((group: any) => ({
+          id: group.id,
+          name: group.name,
+          type: group.type as 'group' | 'station' | 'unit',
+          contracts: [],
+          children: (group.children || []).map((unit: any) => ({
+            id: unit.id,
+            name: unit.name,
+            type: 'unit' as const,
+            contracts: (unit.contracts || []).map((c: any) => ({
+              id: c.id,
+              tradingUnit: c.tradingUnit,
+              contractType: c.contractType === 'annual_bilateral' ? '年度双边' : 
+                           c.contractType === 'monthly_bilateral' ? '月度双边' : c.contractType,
+              startDate: c.startDate,
+              endDate: c.endDate,
+              contractVolume: c.contractVolume || 0,
+              contractPrice: c.contractPrice || 0,
+              totalValue: c.totalValue || 0,
+            })),
+          })),
+        }));
+        
+        setTradingUnitTree(formattedTree);
+        
+        // 默认选中第一个组的前两个单元
+        if (formattedTree.length > 0 && formattedTree[0].children && formattedTree[0].children.length > 0) {
+          setSelectedUnitIds(formattedTree[0].children.slice(0, 2).map(u => u.id));
         }
-        provinceGroups[province].push(unit);
-      });
-      
-      const groupedTree: TradingUnitNode[] = Object.entries(provinceGroups).map(([province, units], idx) => ({
-        id: `group-${idx}`,
-        name: `${province}场站组`,
-        type: 'station' as const,
-        contracts: [],
-        children: units,
-      }));
-      
-      setTradingUnitTree(groupedTree);
-      
-      // 默认选中前两个单元
-      if (formattedTree.length > 0) {
-        setSelectedUnitIds(formattedTree.slice(0, 2).map(u => u.id));
+        
+        // 加载合同
+        const contracts = await fetchContracts();
+        setDbContracts(contracts);
+      } catch (err) {
+        console.error('加载数据失败:', err);
+      } finally {
+        setLocalLoading(false);
       }
-      
-      // 加载合同
-      const contracts = await fetchContracts();
-      setDbContracts(contracts);
     };
     loadData();
   }, []);
@@ -642,7 +638,7 @@ const MediumLongTermReview = () => {
     };
   }, [selectedContracts]);
 
-  if (isLoading) {
+  if (localLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />

@@ -292,18 +292,34 @@ export function useReviewData() {
 
   // ============= 中长期策略复盘数据 =============
 
-  // 获取交易单元树形结构（按客户分组）
+  // 获取交易单元树形结构（按省份和电站分组）
   const fetchTradingUnitTree = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      // 获取客户数据
-      const { data: customers, error: customerError } = await supabase
-        .from('customers')
-        .select('id, name, industry_type')
-        .eq('is_active', true);
+      // 获取交易单元数据（包含电站信息）
+      const { data: tradingUnits, error: tuError } = await supabase
+        .from('trading_units')
+        .select(`
+          id,
+          unit_code,
+          unit_name,
+          trading_center,
+          trading_category,
+          registered_capacity,
+          station_id,
+          power_stations (
+            id,
+            name,
+            province,
+            station_type,
+            installed_capacity
+          )
+        `)
+        .eq('is_active', true)
+        .eq('trading_category', 'renewable');
 
-      if (customerError) throw customerError;
+      if (tuError) throw tuError;
 
       // 获取合同数据
       const { data: contractsData, error: contractError } = await supabase
@@ -313,36 +329,41 @@ export function useReviewData() {
 
       if (contractError) throw contractError;
 
-      // 按省份/区域分组客户
-      const provinceGroups: Record<string, TradingUnitNode> = {
-        '山东省客户组': { id: '1', name: '山东省客户组', type: 'station', contracts: [], children: [] },
-        '山西省客户组': { id: '2', name: '山西省客户组', type: 'station', contracts: [], children: [] },
-        '浙江省客户组': { id: '3', name: '浙江省客户组', type: 'station', contracts: [], children: [] },
-      };
+      // 按省份分组
+      const provinceGroups: Record<string, TradingUnitNode> = {};
 
-      (customers || []).forEach((customer, index) => {
-        // 根据行业类型分配到不同省份组（简化逻辑）
-        const groupKey = index % 3 === 0 
-          ? '山东省客户组' 
-          : index % 3 === 1 
-          ? '山西省客户组' 
-          : '浙江省客户组';
+      (tradingUnits || []).forEach((tu: any) => {
+        const station = tu.power_stations;
+        const province = station?.province || '其他';
+        const provinceKey = `${province}电站组`;
 
-        const customerContracts: ReviewContract[] = (contractsData || [])
-          .filter(c => c.counterparty === customer.name || c.contract_name?.includes(customer.name))
+        // 初始化省份组
+        if (!provinceGroups[provinceKey]) {
+          provinceGroups[provinceKey] = {
+            id: `group-${province}`,
+            name: provinceKey,
+            type: 'group',
+            contracts: [],
+            children: [],
+          };
+        }
+
+        // 获取该交易单元的合同
+        const unitContracts: ReviewContract[] = (contractsData || [])
+          .filter(c => c.trading_unit_id === tu.id)
           .map(c => {
             const volume = Number(c.total_volume) || 0;
             const price = Number(c.unit_price) || 0;
             const totalValue = Number(c.total_amount) || volume * price;
             
-            // 基于历史数据计算收益差（避免 Math.random）
+            // 基于历史数据计算收益差
             const baseMultiplier = 1 + (volume % 10) / 100;
             const revenueWithTrade = totalValue * baseMultiplier;
             const revenueWithoutTrade = totalValue * (baseMultiplier - 0.05);
 
             return {
               id: c.id,
-              tradingUnit: customer.name,
+              tradingUnit: tu.unit_name,
               contractType: c.contract_type || '月度交易',
               startDate: c.start_date,
               endDate: c.end_date,
@@ -354,11 +375,12 @@ export function useReviewData() {
             };
           });
 
-        provinceGroups[groupKey].children?.push({
-          id: customer.id,
-          name: customer.name,
+        // 添加交易单元节点
+        provinceGroups[provinceKey].children?.push({
+          id: tu.id,
+          name: tu.unit_name,
           type: 'unit',
-          contracts: customerContracts,
+          contracts: unitContracts,
         });
       });
 
