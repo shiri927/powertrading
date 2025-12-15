@@ -34,10 +34,12 @@ import {
   Target,
   AlertTriangle,
   CheckCircle,
-  BarChart3
+  BarChart3,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { 
@@ -60,6 +62,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useReviewData, ReviewContract, TradingUnitNode, IntraSpotReviewData, SettlementRevenueData, CustomerRevenueData } from "@/hooks/useReviewData";
 
 // ============= 报告管理组件 =============
 const analysisReportData = [
@@ -273,80 +276,50 @@ const ReportManagementTab = () => {
 
 // ============= 结算收益复盘组件 =============
 
-interface SettlementRevenueData {
-  period: string;
-  totalRevenue: number;
-  wholesaleExpense: number;
-  retailIncome: number;
-  grossProfit: number;
-  profitMargin: number;
-  yearOverYear: number;
-  monthOverMonth: number;
-}
-
-interface CustomerRevenueData {
-  customer: string;
-  volume: number;
-  revenue: number;
-  cost: number;
-  profit: number;
-  profitMargin: number;
-  priceMode: string;
-}
-
-const generateSettlementRevenueData = (periodType: string): SettlementRevenueData[] => {
-  const periods = periodType === "month" 
-    ? ["2024年1月", "2024年2月", "2024年3月", "2024年4月", "2024年5月", "2024年6月", "2024年7月", "2024年8月", "2024年9月", "2024年10月", "2024年11月"]
-    : periodType === "quarter"
-    ? ["2024年Q1", "2024年Q2", "2024年Q3", "2024年Q4"]
-    : ["2022年", "2023年", "2024年"];
-
-  return periods.map((period, i) => {
-    const retailIncome = 5000000 + Math.random() * 3000000;
-    const wholesaleExpense = 3500000 + Math.random() * 2000000;
-    const grossProfit = retailIncome - wholesaleExpense;
-    return {
-      period,
-      totalRevenue: retailIncome,
-      wholesaleExpense,
-      retailIncome,
-      grossProfit,
-      profitMargin: (grossProfit / retailIncome) * 100,
-      yearOverYear: -10 + Math.random() * 30,
-      monthOverMonth: -5 + Math.random() * 15,
-    };
-  });
-};
-
-const generateCustomerRevenueData = (): CustomerRevenueData[] => {
-  const customers = ["工业客户A", "商业客户B", "工业客户C", "商业客户D", "工业客户E", "商业客户F"];
-  const priceModes = ["固定电价", "浮动电价", "峰谷电价"];
-  
-  return customers.map((customer, i) => {
-    const volume = 50000 + Math.random() * 100000;
-    const revenue = volume * (0.55 + Math.random() * 0.15);
-    const cost = volume * (0.35 + Math.random() * 0.1);
-    const profit = revenue - cost;
-    return {
-      customer,
-      volume,
-      revenue,
-      cost,
-      profit,
-      profitMargin: (profit / revenue) * 100,
-      priceMode: priceModes[i % priceModes.length],
-    };
-  });
-};
-
 const SettlementRevenueReview = () => {
+  const { 
+    settlementRevenue, 
+    customerRevenue, 
+    isLoading, 
+    fetchSettlementRevenueSummary, 
+    fetchCustomerRevenue 
+  } = useReviewData();
+  
   const [periodType, setPeriodType] = useState<"month" | "quarter" | "year">("month");
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("2024年11月");
-  
-  const revenueData = useMemo(() => generateSettlementRevenueData(periodType), [periodType]);
-  const customerData = useMemo(() => generateCustomerRevenueData(), []);
-  
-  const currentPeriodData = revenueData[revenueData.length - 1];
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+
+  // 初始加载数据
+  useEffect(() => {
+    fetchSettlementRevenueSummary(periodType);
+    fetchCustomerRevenue();
+  }, [periodType, fetchSettlementRevenueSummary, fetchCustomerRevenue]);
+
+  // 设置默认选中的周期
+  useEffect(() => {
+    if (settlementRevenue.length > 0 && !selectedPeriod) {
+      setSelectedPeriod(settlementRevenue[settlementRevenue.length - 1].period);
+    }
+  }, [settlementRevenue, selectedPeriod]);
+
+  const handleRefresh = () => {
+    fetchSettlementRevenueSummary(periodType);
+    fetchCustomerRevenue();
+    toast.success("数据已刷新");
+  };
+
+  const currentPeriodData = useMemo(() => {
+    const found = settlementRevenue.find(d => d.period === selectedPeriod);
+    return found || {
+      period: selectedPeriod,
+      totalRevenue: 0,
+      wholesaleExpense: 0,
+      retailIncome: 0,
+      grossProfit: 0,
+      profitMargin: 0,
+      yearOverYear: 0,
+      monthOverMonth: 0,
+    };
+  }, [settlementRevenue, selectedPeriod]);
   
   const pieData = [
     { name: "中长期交易", value: 45, color: "#00B04D" },
@@ -379,7 +352,10 @@ const SettlementRevenueReview = () => {
                     key={option.value}
                     variant={periodType === option.value ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setPeriodType(option.value as any)}
+                    onClick={() => {
+                      setPeriodType(option.value as any);
+                      setSelectedPeriod("");
+                    }}
                     className={cn(periodType === option.value && "bg-[#00B04D] hover:bg-[#00A86B]")}
                   >
                     {option.label}
@@ -391,17 +367,18 @@ const SettlementRevenueReview = () => {
             <div className="space-y-2">
               <Label className="text-xs">选择周期</Label>
               <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="选择周期" /></SelectTrigger>
                 <SelectContent>
-                  {revenueData.map(d => (
+                  {settlementRevenue.map(d => (
                     <SelectItem key={d.period} value={d.period}>{d.period}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <Button className="bg-[#00B04D] hover:bg-[#009644]">
-              <Filter className="w-4 h-4 mr-2" />查询
+            <Button className="bg-[#00B04D] hover:bg-[#009644]" onClick={handleRefresh} disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              刷新
             </Button>
             <Button variant="outline">
               <Download className="w-4 h-4 mr-2" />导出分析报告
@@ -506,18 +483,24 @@ const SettlementRevenueReview = () => {
             <CardDescription className="text-xs">批发侧支出 vs 零售侧收入 vs 毛利润</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
-                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
-                <Tooltip formatter={(value: number) => `¥${(value / 10000).toFixed(2)}万`} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="wholesaleExpense" fill="#ef4444" name="批发侧支出" opacity={0.7} />
-                <Bar dataKey="retailIncome" fill="#3b82f6" name="零售侧收入" opacity={0.7} />
-                <Line type="monotone" dataKey="grossProfit" stroke="#00B04D" strokeWidth={2} name="毛利润" dot={{ r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {settlementRevenue.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <ComposedChart data={settlementRevenue}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
+                  <Tooltip formatter={(value: number) => `¥${(value / 10000).toFixed(2)}万`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="wholesaleExpense" fill="#ef4444" name="批发侧支出" opacity={0.7} />
+                  <Bar dataKey="retailIncome" fill="#3b82f6" name="零售侧收入" opacity={0.7} />
+                  <Line type="monotone" dataKey="grossProfit" stroke="#00B04D" strokeWidth={2} name="毛利润" dot={{ r: 4 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "暂无数据"}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -542,21 +525,29 @@ const SettlementRevenueReview = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customerData.sort((a, b) => b.profit - a.profit).map((customer, i) => (
-                <TableRow key={i} className="hover:bg-[#F8FBFA]">
-                  <TableCell className="font-medium">{customer.customer}</TableCell>
-                  <TableCell><Badge variant="outline">{customer.priceMode}</Badge></TableCell>
-                  <TableCell className="text-right font-mono">{customer.volume.toFixed(0)}</TableCell>
-                  <TableCell className="text-right font-mono">{customer.revenue.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-mono">{customer.cost.toFixed(2)}</TableCell>
-                  <TableCell className={cn("text-right font-mono font-semibold", customer.profit > 0 ? "text-[#00B04D]" : "text-red-500")}>
-                    {customer.profit.toFixed(2)}
-                  </TableCell>
-                  <TableCell className={cn("text-right font-mono", customer.profitMargin > 20 ? "text-[#00B04D]" : customer.profitMargin < 10 ? "text-red-500" : "")}>
-                    {customer.profitMargin.toFixed(1)}%
+              {customerRevenue.length > 0 ? (
+                customerRevenue.sort((a, b) => b.profit - a.profit).map((customer, i) => (
+                  <TableRow key={customer.customerId || i} className="hover:bg-[#F8FBFA]">
+                    <TableCell className="font-medium">{customer.customer}</TableCell>
+                    <TableCell><Badge variant="outline">{customer.priceMode}</Badge></TableCell>
+                    <TableCell className="text-right font-mono">{customer.volume.toFixed(0)}</TableCell>
+                    <TableCell className="text-right font-mono">{customer.revenue.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono">{customer.cost.toFixed(2)}</TableCell>
+                    <TableCell className={cn("text-right font-mono font-semibold", customer.profit > 0 ? "text-[#00B04D]" : "text-red-500")}>
+                      {customer.profit.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={cn("text-right font-mono", customer.profitMargin > 20 ? "text-[#00B04D]" : customer.profitMargin < 10 ? "text-red-500" : "")}>
+                      {customer.profitMargin.toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    {isLoading ? <Loader2 className="w-5 h-5 mx-auto animate-spin" /> : "暂无客户数据"}
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -605,142 +596,6 @@ const SettlementRevenueReview = () => {
       </Card>
     </div>
   );
-};
-
-// ============= 数据结构定义 =============
-
-interface PositionContract {
-  id: string;
-  tradingUnit: string;
-  contractType: string;
-  startDate: string;
-  endDate: string;
-  contractVolume: number;
-  contractPrice: number;
-  totalValue: number;
-  revenueWithTrade: number;
-  revenueWithoutTrade: number;
-}
-
-interface TradingUnitNode {
-  id: string;
-  name: string;
-  type: 'group' | 'station' | 'unit';
-  children?: TradingUnitNode[];
-  contracts: PositionContract[];
-}
-
-interface TimeSeriesPosition {
-  time: string;
-  price: number;
-  volume: number;
-  revenue: number;
-  revenueWithTrade: number;
-  revenueWithoutTrade: number;
-}
-
-// ============= 模拟数据生成 =============
-
-const generateTradingUnitTree = (): TradingUnitNode[] => {
-  return [
-    {
-      id: '1',
-      name: '山东省客户组',
-      type: 'station',
-      contracts: [],
-      children: [
-        { id: '1-1', name: '工业客户A', type: 'unit', contracts: generateContracts('工业客户A', 8) },
-        { id: '1-2', name: '商业客户B', type: 'unit', contracts: generateContracts('商业客户B', 10) },
-      ],
-    },
-    {
-      id: '2',
-      name: '山西省客户组',
-      type: 'station',
-      contracts: [],
-      children: [
-        { id: '2-1', name: '工业客户C', type: 'unit', contracts: generateContracts('工业客户C', 10) },
-        { id: '2-2', name: '商业客户D', type: 'unit', contracts: generateContracts('商业客户D', 7) },
-      ],
-    },
-    {
-      id: '3',
-      name: '浙江省客户组',
-      type: 'station',
-      contracts: [],
-      children: [
-        { id: '3-1', name: '工业客户E', type: 'unit', contracts: generateContracts('工业客户E', 9) },
-        { id: '3-2', name: '商业客户F', type: 'unit', contracts: generateContracts('商业客户F', 6) },
-      ],
-    },
-  ];
-};
-
-const generateContracts = (unitName: string, count: number): PositionContract[] => {
-  const types = ['月度交易', '旬交易', '日滚动交易'];
-  return Array.from({ length: count }, (_, i) => {
-    const volume = 500 + Math.random() * 1000;
-    const price = 250 + Math.random() * 150;
-    const totalValue = volume * price;
-    const revenueWithTrade = totalValue * (1 + Math.random() * 0.1);
-    const revenueWithoutTrade = totalValue * (0.9 + Math.random() * 0.15);
-    return {
-      id: `${unitName}-${i + 1}`,
-      tradingUnit: unitName,
-      contractType: types[Math.floor(Math.random() * types.length)],
-      startDate: `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-01`,
-      endDate: `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-28`,
-      contractVolume: volume,
-      contractPrice: price,
-      totalValue,
-      revenueWithTrade,
-      revenueWithoutTrade,
-    };
-  });
-};
-
-const generateTimeSeriesData = (
-  selectedUnits: string[],
-  allNodes: TradingUnitNode[],
-  granularity: string
-): TimeSeriesPosition[] => {
-  const contracts = getAllContracts(selectedUnits, allNodes);
-  const points = granularity === '24point' ? 24 : granularity === 'hour' ? 96 : granularity === 'day' ? 30 : 12;
-  
-  return Array.from({ length: points }, (_, i) => {
-    const basePrice = 280 + Math.random() * 120;
-    const baseVolume = contracts.reduce((sum, c) => sum + c.contractVolume, 0) / points;
-    const volume = baseVolume * (0.8 + Math.random() * 0.4);
-    const revenue = basePrice * volume;
-    
-    let timeLabel = '';
-    if (granularity === '24point') timeLabel = `${String(i).padStart(2, '0')}:00`;
-    else if (granularity === 'hour') {
-      const hour = Math.floor(i / 4);
-      const minute = (i % 4) * 15;
-      timeLabel = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    } else if (granularity === 'day') timeLabel = `${i + 1}日`;
-    else timeLabel = `${i + 1}月`;
-    
-    return {
-      time: timeLabel,
-      price: basePrice,
-      volume: volume,
-      revenue: revenue,
-      revenueWithTrade: revenue * (1 + Math.random() * 0.08),
-      revenueWithoutTrade: revenue * (0.92 + Math.random() * 0.1),
-    };
-  });
-};
-
-const getAllContracts = (selectedIds: string[], nodes: TradingUnitNode[]): PositionContract[] => {
-  let contracts: PositionContract[] = [];
-  const traverse = (node: TradingUnitNode) => {
-    if (selectedIds.includes(node.id)) contracts = [...contracts, ...node.contracts];
-    if (node.children) node.children.forEach(traverse);
-  };
-  nodes.forEach(traverse);
-  return contracts;
 };
 
 // ============= 树形选择组件 =============
@@ -815,7 +670,7 @@ const TradingUnitTree = ({ nodes, selectedIds, onSelectionChange }: {
 
 // ============= 详情表格对话框 =============
 
-const PositionDetailDialog = ({ contracts }: { contracts: PositionContract[] }) => {
+const PositionDetailDialog = ({ contracts }: { contracts: ReviewContract[] }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -845,10 +700,10 @@ const PositionDetailDialog = ({ contracts }: { contracts: PositionContract[] }) 
             </TableHeader>
             <TableBody>
               {contracts.map((contract) => {
-                const diff = contract.revenueWithTrade - contract.revenueWithoutTrade;
+                const diff = (contract.revenueWithTrade || 0) - (contract.revenueWithoutTrade || 0);
                 return (
                   <TableRow key={contract.id} className="hover:bg-[#F8FBFA]">
-                    <TableCell className="font-mono">{contract.id}</TableCell>
+                    <TableCell className="font-mono text-xs">{contract.id.substring(0, 8)}</TableCell>
                     <TableCell>{contract.tradingUnit}</TableCell>
                     <TableCell><Badge variant="outline">{contract.contractType}</Badge></TableCell>
                     <TableCell className="font-mono">{contract.startDate}</TableCell>
@@ -856,8 +711,8 @@ const PositionDetailDialog = ({ contracts }: { contracts: PositionContract[] }) 
                     <TableCell className="text-right font-mono">{contract.contractVolume.toFixed(2)}</TableCell>
                     <TableCell className="text-right font-mono">{contract.contractPrice.toFixed(2)}</TableCell>
                     <TableCell className="text-right font-mono">{contract.totalValue.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono">{contract.revenueWithTrade.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono">{contract.revenueWithoutTrade.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono text-[#00B04D]">{(contract.revenueWithTrade || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground">{(contract.revenueWithoutTrade || 0).toFixed(2)}</TableCell>
                     <TableCell className={cn("text-right font-mono font-semibold", diff > 0 ? "text-[#00B04D]" : "text-red-500")}>
                       {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                     </TableCell>
@@ -872,35 +727,75 @@ const PositionDetailDialog = ({ contracts }: { contracts: PositionContract[] }) 
   );
 };
 
-// ============= 中长期策略复盘主组件 =============
+// ============= 中长期策略复盘组件 =============
 
 const MediumLongTermReview = () => {
-  const [tradingUnitTree] = useState<TradingUnitNode[]>(generateTradingUnitTree());
-  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(['1-1', '2-1']);
+  const { 
+    tradingUnitTree, 
+    isLoading, 
+    fetchTradingUnitTree, 
+    generateTimeSeriesFromContracts 
+  } = useReviewData();
+
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [contractType, setContractType] = useState<string>('all');
-  const [granularity, setGranularity] = useState<string>('day');
+  const [granularity, setGranularity] = useState<string>('24point');
   const [mergeDisplay, setMergeDisplay] = useState(true);
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: new Date(2025, 0, 1),
-    to: new Date(2025, 11, 31),
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+    from: new Date('2025-01-01'),
+    to: new Date('2025-01-31'),
   });
 
+  // 初始加载
+  useEffect(() => {
+    fetchTradingUnitTree();
+  }, [fetchTradingUnitTree]);
+
+  // 设置默认选中
+  useEffect(() => {
+    if (tradingUnitTree.length > 0 && selectedUnitIds.length === 0) {
+      const allIds: string[] = [];
+      tradingUnitTree.forEach(node => {
+        allIds.push(node.id);
+        node.children?.forEach(child => allIds.push(child.id));
+      });
+      setSelectedUnitIds(allIds);
+    }
+  }, [tradingUnitTree, selectedUnitIds.length]);
+
+  const handleRefresh = () => {
+    fetchTradingUnitTree();
+    toast.success("数据已刷新");
+  };
+
+  // 获取选中的合同
   const selectedContracts = useMemo(() => {
-    const contracts = getAllContracts(selectedUnitIds, tradingUnitTree);
-    if (contractType === 'all') return contracts;
-    return contracts.filter(c => c.contractType === contractType);
-  }, [selectedUnitIds, contractType, tradingUnitTree]);
+    const contracts: ReviewContract[] = [];
+    const traverse = (node: TradingUnitNode) => {
+      if (selectedUnitIds.includes(node.id)) {
+        const filtered = contractType === 'all' 
+          ? node.contracts 
+          : node.contracts.filter(c => c.contractType === contractType);
+        contracts.push(...filtered);
+      }
+      node.children?.forEach(traverse);
+    };
+    tradingUnitTree.forEach(traverse);
+    return contracts;
+  }, [tradingUnitTree, selectedUnitIds, contractType]);
 
+  // 时间序列数据
   const timeSeriesData = useMemo(() => {
-    return generateTimeSeriesData(selectedUnitIds, tradingUnitTree, granularity);
-  }, [selectedUnitIds, granularity, tradingUnitTree]);
+    return generateTimeSeriesFromContracts(selectedContracts, granularity as any);
+  }, [selectedContracts, granularity, generateTimeSeriesFromContracts]);
 
+  // 统计数据
   const stats = useMemo(() => {
     const totalValue = selectedContracts.reduce((sum, c) => sum + c.totalValue, 0);
     const totalVolume = selectedContracts.reduce((sum, c) => sum + c.contractVolume, 0);
     const avgPrice = totalVolume > 0 ? totalValue / totalVolume : 0;
-    const totalRevenueWithTrade = selectedContracts.reduce((sum, c) => sum + c.revenueWithTrade, 0);
-    const totalRevenueWithoutTrade = selectedContracts.reduce((sum, c) => sum + c.revenueWithoutTrade, 0);
+    const totalRevenueWithTrade = selectedContracts.reduce((sum, c) => sum + (c.revenueWithTrade || 0), 0);
+    const totalRevenueWithoutTrade = selectedContracts.reduce((sum, c) => sum + (c.revenueWithoutTrade || 0), 0);
     const revenueDiff = totalRevenueWithTrade - totalRevenueWithoutTrade;
     return { totalValue, totalVolume, avgPrice, totalRevenueWithTrade, totalRevenueWithoutTrade, revenueDiff };
   }, [selectedContracts]);
@@ -911,12 +806,23 @@ const MediumLongTermReview = () => {
       <div className="w-[280px] flex-shrink-0">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">客户/合同总览</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">客户/合同总览</CardTitle>
+              <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </Button>
+            </div>
             <CardDescription className="text-xs">选择客户或合同查看策略分析</CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[calc(100vh-280px)]">
-              <TradingUnitTree nodes={tradingUnitTree} selectedIds={selectedUnitIds} onSelectionChange={setSelectedUnitIds} />
+              {tradingUnitTree.length > 0 ? (
+                <TradingUnitTree nodes={tradingUnitTree} selectedIds={selectedUnitIds} onSelectionChange={setSelectedUnitIds} />
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  {isLoading ? <Loader2 className="w-5 h-5 mx-auto animate-spin" /> : "暂无数据"}
+                </div>
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -963,7 +869,7 @@ const MediumLongTermReview = () => {
           </CardContent>
         </Card>
 
-        {/* 统计指标卡片 - 增加策略评估 */}
+        {/* 统计指标卡片 */}
         <div className="grid grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -1088,157 +994,102 @@ const MediumLongTermReview = () => {
   );
 };
 
-// ============= 省内现货复盘数据 =============
-
-interface IntraSpotReviewData {
-  date: string;
-  tradingUnit: string;
-  realTimeMeasuredVolume: number;
-  comprehensiveVolume: number;
-  baseVolume: number;
-  mediumLongTermVolume: number;
-  dayAheadClearingVolume: number;
-  comprehensivePrice: number;
-  arithmeticAvgPrice: number;
-  mediumLongTermPrice: number;
-  realTimeBuyPrice: number;
-  realTimeSellPrice: number;
-  dayAheadBuyPrice: number;
-  dayAheadSellPrice: number;
-  comprehensiveRevenue: number;
-  mediumLongTermRevenue: number;
-  spotRevenue: number;
-  deviationRecoveryFee: number;
-  assessmentFee: number;
-  deviationVolume: number;
-  deviationRate: number;
-}
-
-interface IntraSummaryStats {
-  totalRevenue: number;
-  totalVolume: number;
-  avgPrice: number;
-  mediumLongTermRevenue: number;
-  mediumLongTermVolume: number;
-  mediumLongTermAvgPrice: number;
-  spotRevenue: number;
-  spotVolume: number;
-  spotAvgPrice: number;
-  assessmentFee: number;
-  assessmentPrice: number;
-}
-
-const generateIntraProvincialData = (days: number = 20): IntraSpotReviewData[] => {
-  const data: IntraSpotReviewData[] = [];
-  const units = ['工业客户A', '商业客户B', '工业客户C', '商业客户D'];
-  const startDate = new Date('2024-05-01');
-
-  for (let i = 0; i < days; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    const dateStr = format(date, 'MM-dd');
-
-    units.forEach(unit => {
-      const baseVolume = 500 + Math.random() * 500;
-      const mediumLongTermVolume = 1000 + Math.random() * 2000;
-      const dayAheadVolume = 500 + Math.random() * 1000;
-      const realTimeVolume = dayAheadVolume * (0.95 + Math.random() * 0.1);
-      const comprehensiveVolume = baseVolume + mediumLongTermVolume + dayAheadVolume;
-
-      const mediumLongTermPrice = 280 + Math.random() * 80;
-      const dayAheadBuyPrice = 200 + Math.random() * 80;
-      const dayAheadSellPrice = dayAheadBuyPrice * 1.08;
-      const realTimeBuyPrice = dayAheadBuyPrice * (0.9 + Math.random() * 0.2);
-      const realTimeSellPrice = realTimeBuyPrice * 1.08;
-
-      const comprehensivePrice = ((mediumLongTermVolume * mediumLongTermPrice) + (dayAheadVolume * dayAheadBuyPrice) + (realTimeVolume * realTimeBuyPrice)) / comprehensiveVolume;
-      const arithmeticAvgPrice = (mediumLongTermPrice + dayAheadBuyPrice + realTimeBuyPrice) / 3;
-      const mediumLongTermRevenue = mediumLongTermVolume * mediumLongTermPrice;
-      const spotRevenue = (dayAheadVolume * dayAheadBuyPrice) + (realTimeVolume * realTimeBuyPrice);
-      const comprehensiveRevenue = mediumLongTermRevenue + spotRevenue;
-
-      data.push({
-        date: dateStr,
-        tradingUnit: unit,
-        realTimeMeasuredVolume: realTimeVolume,
-        comprehensiveVolume,
-        baseVolume,
-        mediumLongTermVolume,
-        dayAheadClearingVolume: dayAheadVolume,
-        comprehensivePrice,
-        arithmeticAvgPrice,
-        mediumLongTermPrice,
-        realTimeBuyPrice,
-        realTimeSellPrice,
-        dayAheadBuyPrice,
-        dayAheadSellPrice,
-        comprehensiveRevenue,
-        mediumLongTermRevenue,
-        spotRevenue,
-        deviationRecoveryFee: Math.random() * 8000 + 2000,
-        assessmentFee: Math.random() * 4000 + 1000,
-        deviationVolume: Math.abs(dayAheadVolume - realTimeVolume),
-        deviationRate: Math.abs((dayAheadVolume - realTimeVolume) / dayAheadVolume) * 100,
-      });
-    });
-  }
-  return data;
-};
-
-const calculateIntraSummary = (data: IntraSpotReviewData[]): IntraSummaryStats => {
-  const totalRevenue = data.reduce((sum, item) => sum + item.comprehensiveRevenue, 0);
-  const totalVolume = data.reduce((sum, item) => sum + item.comprehensiveVolume, 0);
-  const mediumLongTermRevenue = data.reduce((sum, item) => sum + item.mediumLongTermRevenue, 0);
-  const mediumLongTermVolume = data.reduce((sum, item) => sum + item.mediumLongTermVolume, 0);
-  const spotRevenue = data.reduce((sum, item) => sum + item.spotRevenue, 0);
-  const spotVolume = data.reduce((sum, item) => sum + item.dayAheadClearingVolume + item.realTimeMeasuredVolume, 0);
-  const assessmentFee = data.reduce((sum, item) => sum + item.assessmentFee, 0);
-
-  return {
-    totalRevenue,
-    totalVolume,
-    avgPrice: totalRevenue / totalVolume,
-    mediumLongTermRevenue,
-    mediumLongTermVolume,
-    mediumLongTermAvgPrice: mediumLongTermRevenue / mediumLongTermVolume,
-    spotRevenue,
-    spotVolume,
-    spotAvgPrice: spotRevenue / spotVolume,
-    assessmentFee,
-    assessmentPrice: assessmentFee / totalVolume,
-  };
-};
+// ============= 省内现货复盘组件 =============
 
 const IntraProvincialReview = () => {
-  const [rawData] = useState<IntraSpotReviewData[]>(() => generateIntraProvincialData(20));
+  const { 
+    intraProvincialData, 
+    isLoading, 
+    fetchIntraProvincialReviewData, 
+    calculateIntraSummary 
+  } = useReviewData();
+
   const [tradingCenter, setTradingCenter] = useState('all');
   const [dataType, setDataType] = useState('all');
-  const [selectedUnits, setSelectedUnits] = useState<string[]>(['工业客户A', '商业客户B', '工业客户C', '商业客户D']);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [dimension, setDimension] = useState<'tradingUnit' | 'date'>('tradingUnit');
+  const [dateRange, setDateRange] = useState({
+    from: '2024-05-01',
+    to: '2024-05-20',
+  });
 
-  const filteredData = useMemo(() => rawData.filter(item => selectedUnits.includes(item.tradingUnit)), [rawData, selectedUnits]);
-  const stats = useMemo(() => calculateIntraSummary(filteredData), [filteredData]);
+  // 初始加载
+  useEffect(() => {
+    fetchIntraProvincialReviewData(dateRange.from, dateRange.to);
+  }, [fetchIntraProvincialReviewData, dateRange]);
+
+  // 设置默认选中的单元
+  useEffect(() => {
+    if (intraProvincialData.length > 0 && selectedUnits.length === 0) {
+      const units = [...new Set(intraProvincialData.map(d => d.tradingUnit))];
+      setSelectedUnits(units);
+    }
+  }, [intraProvincialData, selectedUnits.length]);
+
+  const handleRefresh = () => {
+    fetchIntraProvincialReviewData(dateRange.from, dateRange.to);
+    toast.success("数据已刷新");
+  };
+
+  const filteredData = useMemo(() => 
+    intraProvincialData.filter(item => selectedUnits.includes(item.tradingUnit)), 
+    [intraProvincialData, selectedUnits]
+  );
+
+  const stats = useMemo(() => calculateIntraSummary(filteredData), [filteredData, calculateIntraSummary]);
+
+  // 聚合数据
+  const aggregatedData = useMemo(() => {
+    if (dimension === 'tradingUnit') {
+      const grouped = filteredData.reduce((acc, item) => {
+        if (!acc[item.tradingUnit]) {
+          acc[item.tradingUnit] = { tradingUnit: item.tradingUnit, comprehensiveVolume: 0, comprehensivePrice: 0, comprehensiveRevenue: 0, count: 0 };
+        }
+        acc[item.tradingUnit].comprehensiveVolume += item.comprehensiveVolume;
+        acc[item.tradingUnit].comprehensiveRevenue += item.comprehensiveRevenue;
+        acc[item.tradingUnit].count += 1;
+        return acc;
+      }, {} as Record<string, any>);
+      return Object.values(grouped).map((item: any) => ({
+        ...item,
+        comprehensivePrice: item.comprehensiveVolume > 0 ? item.comprehensiveRevenue / item.comprehensiveVolume : 0,
+      }));
+    } else {
+      const grouped = filteredData.reduce((acc, item) => {
+        if (!acc[item.date]) {
+          acc[item.date] = { date: item.date, comprehensiveVolume: 0, comprehensivePrice: 0, comprehensiveRevenue: 0 };
+        }
+        acc[item.date].comprehensiveVolume += item.comprehensiveVolume;
+        acc[item.date].comprehensiveRevenue += item.comprehensiveRevenue;
+        return acc;
+      }, {} as Record<string, any>);
+      return Object.values(grouped).map((item: any) => ({
+        ...item,
+        comprehensivePrice: item.comprehensiveVolume > 0 ? item.comprehensiveRevenue / item.comprehensiveVolume : 0,
+      }));
+    }
+  }, [filteredData, dimension]);
 
   const stationOverviewData = useMemo(() => {
     const grouped = filteredData.reduce((acc, item) => {
-      if (!acc[item.date]) acc[item.date] = { date: item.date, comprehensiveVolume: 0, comprehensivePrice: 0, arithmeticAvgPrice: 0, revenue: 0 };
+      if (!acc[item.date]) acc[item.date] = { date: item.date, comprehensiveVolume: 0, comprehensivePrice: 0, revenue: 0, priceSum: 0, count: 0 };
       acc[item.date].comprehensiveVolume += item.comprehensiveVolume;
       acc[item.date].revenue += item.comprehensiveRevenue;
-      acc[item.date].arithmeticAvgPrice += item.arithmeticAvgPrice;
+      acc[item.date].priceSum += item.comprehensivePrice;
+      acc[item.date].count += 1;
       return acc;
     }, {} as Record<string, any>);
 
     return Object.values(grouped).map((item: any) => ({
       ...item,
-      comprehensivePrice: item.revenue / item.comprehensiveVolume,
-      arithmeticAvgPrice: item.arithmeticAvgPrice / selectedUnits.length,
+      comprehensivePrice: item.comprehensiveVolume > 0 ? item.revenue / item.comprehensiveVolume : 0,
+      arithmeticAvgPrice: item.count > 0 ? item.priceSum / item.count : 0,
     }));
-  }, [filteredData, selectedUnits.length]);
+  }, [filteredData]);
 
   const volumeAnalysisData = useMemo(() => {
     const grouped = filteredData.reduce((acc, item) => {
-      if (!acc[item.date]) acc[item.date] = { date: item.date, baseVolume: 0, mediumLongTermVolume: 0, dayAheadClearingVolume: 0, realTimeMeasuredVolume: 0 };
-      acc[item.date].baseVolume += item.baseVolume;
+      if (!acc[item.date]) acc[item.date] = { date: item.date, mediumLongTermVolume: 0, dayAheadClearingVolume: 0, realTimeMeasuredVolume: 0 };
       acc[item.date].mediumLongTermVolume += item.mediumLongTermVolume;
       acc[item.date].dayAheadClearingVolume += item.dayAheadClearingVolume;
       acc[item.date].realTimeMeasuredVolume += item.realTimeMeasuredVolume;
@@ -1261,101 +1112,87 @@ const IntraProvincialReview = () => {
     }, {} as Record<string, any>);
 
     return Object.values(grouped).map((item: any) => ({
-      date: item.date,
-      comprehensivePrice: item.comprehensivePrice / item.count,
-      mediumLongTermPrice: item.mediumLongTermPrice / item.count,
-      realTimeBuyPrice: item.realTimeBuyPrice / item.count,
-      realTimeSellPrice: item.realTimeSellPrice / item.count,
-      dayAheadBuyPrice: item.dayAheadBuyPrice / item.count,
-      dayAheadSellPrice: item.dayAheadSellPrice / item.count,
+      ...item,
+      comprehensivePrice: item.count > 0 ? item.comprehensivePrice / item.count : 0,
+      mediumLongTermPrice: item.count > 0 ? item.mediumLongTermPrice / item.count : 0,
+      realTimeBuyPrice: item.count > 0 ? item.realTimeBuyPrice / item.count : 0,
+      realTimeSellPrice: item.count > 0 ? item.realTimeSellPrice / item.count : 0,
+      dayAheadBuyPrice: item.count > 0 ? item.dayAheadBuyPrice / item.count : 0,
+      dayAheadSellPrice: item.count > 0 ? item.dayAheadSellPrice / item.count : 0,
     }));
   }, [filteredData]);
 
-  const aggregatedData = useMemo(() => {
-    const grouped = filteredData.reduce((acc, item) => {
-      const key = dimension === 'tradingUnit' ? item.tradingUnit : item.date;
-      if (!acc[key]) acc[key] = { ...item };
-      else {
-        acc[key].realTimeMeasuredVolume += item.realTimeMeasuredVolume;
-        acc[key].comprehensiveVolume += item.comprehensiveVolume;
-        acc[key].comprehensiveRevenue += item.comprehensiveRevenue;
-      }
-      return acc;
-    }, {} as Record<string, IntraSpotReviewData>);
-    return Object.values(grouped);
-  }, [filteredData, dimension]);
+  const availableUnits = useMemo(() => 
+    [...new Set(intraProvincialData.map(d => d.tradingUnit))],
+    [intraProvincialData]
+  );
 
   return (
     <div className="space-y-4">
+      {/* 筛选栏 */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-xs text-muted-foreground mb-1 block">交易中心</label>
+            <div className="w-[140px]">
+              <Label className="text-xs mb-2 block">交易中心</Label>
               <Select value={tradingCenter} onValueChange={setTradingCenter}>
-                <SelectTrigger><SelectValue placeholder="交易中心" /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="center1">交易中心1</SelectItem>
+                  <SelectItem value="山东">山东</SelectItem>
+                  <SelectItem value="山西">山西</SelectItem>
+                  <SelectItem value="浙江">浙江</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-xs text-muted-foreground mb-1 block">类型</label>
+            <div className="w-[140px]">
+              <Label className="text-xs mb-2 block">数据类型</Label>
               <Select value={dataType} onValueChange={setDataType}>
-                <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="spot">现货</SelectItem>
-                  <SelectItem value="medium">中长期</SelectItem>
+                  <SelectItem value="dayAhead">日前</SelectItem>
+                  <SelectItem value="realtime">实时</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex-1 min-w-[200px]">
-              <label className="text-xs text-muted-foreground mb-1 block">客户</label>
-              <Select value={selectedUnits.join(',')} onValueChange={(val) => setSelectedUnits(val.split(','))}>
-                <SelectTrigger><SelectValue placeholder="全部客户" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="工业客户A,商业客户B,工业客户C,商业客户D">全部客户</SelectItem>
-                  <SelectItem value="工业客户A">工业客户A</SelectItem>
-                  <SelectItem value="商业客户B">商业客户B</SelectItem>
-                  <SelectItem value="工业客户C">工业客户C</SelectItem>
-                  <SelectItem value="商业客户D">商业客户D</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs mb-2 block">选择客户</Label>
+              <div className="flex flex-wrap gap-2">
+                {availableUnits.map(unit => (
+                  <Badge key={unit} variant={selectedUnits.includes(unit) ? "default" : "outline"} 
+                    className={cn("cursor-pointer", selectedUnits.includes(unit) && "bg-[#00B04D]")}
+                    onClick={() => setSelectedUnits(prev => prev.includes(unit) ? prev.filter(u => u !== unit) : [...prev, unit])}>
+                    {unit}
+                  </Badge>
+                ))}
+              </div>
             </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs text-muted-foreground mb-1 block">日期范围</label>
-              <Button variant="outline" className="w-full justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />2024-05-01 至 2024-05-20
-              </Button>
-            </div>
-
-            <Button>查询</Button>
-            <Button variant="outline">重置</Button>
-            <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-2" />导出</Button>
+            <Button className="bg-[#00B04D] hover:bg-[#009644]" onClick={handleRefresh} disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              查询
+            </Button>
+            <Button variant="outline"><Download className="w-4 h-4 mr-2" />导出</Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-4 gap-4">
+      {/* 汇总统计卡片 */}
+      <div className="grid grid-cols-6 gap-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">综合统计</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">综合</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">收入</span>
-                <span className="text-lg font-bold font-mono text-right">{(stats.totalRevenue / 10000).toFixed(2)}万元</span>
+                <span className="text-xs text-muted-foreground">总收入</span>
+                <span className="text-lg font-bold font-mono text-right text-[#00B04D]">{(stats.totalRevenue / 10000).toFixed(2)}万元</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">电量</span>
-                <span className="text-sm font-mono text-right">{stats.totalVolume.toFixed(2)} MWh</span>
+                <span className="text-xs text-muted-foreground">总电量</span>
+                <span className="text-sm font-mono text-right">{(stats.totalVolume / 1000).toFixed(2)} GWh</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">电价</span>
+                <span className="text-xs text-muted-foreground">均价</span>
                 <span className="text-sm font-mono text-right">{stats.avgPrice.toFixed(2)} 元/MWh</span>
               </div>
             </div>
@@ -1372,10 +1209,10 @@ const IntraProvincialReview = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">电量</span>
-                <span className="text-sm font-mono text-right">{stats.mediumLongTermVolume.toFixed(2)} MWh</span>
+                <span className="text-sm font-mono text-right">{(stats.mediumLongTermVolume / 1000).toFixed(2)} GWh</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">电价</span>
+                <span className="text-xs text-muted-foreground">均价</span>
                 <span className="text-sm font-mono text-right">{stats.mediumLongTermAvgPrice.toFixed(2)} 元/MWh</span>
               </div>
             </div>
@@ -1392,13 +1229,21 @@ const IntraProvincialReview = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">电量</span>
-                <span className="text-sm font-mono text-right">{stats.spotVolume.toFixed(2)} MWh</span>
+                <span className="text-sm font-mono text-right">{(stats.spotVolume / 1000).toFixed(2)} GWh</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">电价</span>
+                <span className="text-xs text-muted-foreground">均价</span>
                 <span className="text-sm font-mono text-right">{stats.spotAvgPrice.toFixed(2)} 元/MWh</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">考核费用</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold font-mono text-orange-500">{(stats.assessmentFee / 10000).toFixed(2)}万元</div>
+            <p className="text-xs text-muted-foreground">单位电价: {stats.assessmentPrice.toFixed(2)} 元/MWh</p>
           </CardContent>
         </Card>
 
@@ -1417,6 +1262,16 @@ const IntraProvincialReview = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">市场表现</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold font-mono text-[#00B04D]">
+              {stats.totalRevenue > 0 ? '+' : ''}{((stats.totalRevenue - stats.assessmentFee) / 10000).toFixed(2)}万元
+            </div>
+            <p className="text-xs text-muted-foreground">净收益</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -1426,23 +1281,43 @@ const IntraProvincialReview = () => {
             <CardDescription className="text-xs">选择客户查看详情</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-3 flex gap-2">
+              <Button size="sm" variant={dimension === 'tradingUnit' ? 'default' : 'outline'} 
+                onClick={() => setDimension('tradingUnit')}
+                className={cn(dimension === 'tradingUnit' && "bg-[#00B04D] hover:bg-[#00A86B]")}>
+                按客户
+              </Button>
+              <Button size="sm" variant={dimension === 'date' ? 'default' : 'outline'} 
+                onClick={() => setDimension('date')}
+                className={cn(dimension === 'date' && "bg-[#00B04D] hover:bg-[#00A86B]")}>
+                按日期
+              </Button>
+            </div>
             <ScrollArea className="h-[600px]">
               <Table>
                 <TableHeader className="sticky top-0 bg-[#F1F8F4] z-10">
                   <TableRow>
-                    <TableHead className="text-xs">客户</TableHead>
+                    <TableHead className="text-xs">{dimension === 'tradingUnit' ? '客户' : '日期'}</TableHead>
                     <TableHead className="text-xs text-right">电量</TableHead>
                     <TableHead className="text-xs text-right">电价</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {aggregatedData.map((item, index) => (
-                    <TableRow key={index} className="hover:bg-[#F8FBFA] cursor-pointer">
-                      <TableCell className="text-xs font-medium">{dimension === 'tradingUnit' ? item.tradingUnit : item.date}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{item.comprehensiveVolume.toFixed(2)}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{item.comprehensivePrice.toFixed(2)}</TableCell>
+                  {aggregatedData.length > 0 ? (
+                    aggregatedData.map((item: any, index) => (
+                      <TableRow key={index} className="hover:bg-[#F8FBFA] cursor-pointer">
+                        <TableCell className="text-xs font-medium">{dimension === 'tradingUnit' ? item.tradingUnit : item.date}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{item.comprehensiveVolume.toFixed(2)}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{item.comprehensivePrice.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        {isLoading ? <Loader2 className="w-5 h-5 mx-auto animate-spin" /> : "暂无数据"}
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </ScrollArea>
@@ -1480,7 +1355,7 @@ const IntraProvincialReview = () => {
               <CardDescription className="text-xs">各类电量构成（中长期、现货市场量价费及偏差回收）</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{ baseVolume: { label: "基数电量", color: "#90EE90" }, mediumLongTermVolume: { label: "中长期电量", color: "#00D65C" }, dayAheadClearingVolume: { label: "日前出清电量", color: "#00B04D" }, realTimeMeasuredVolume: { label: "实时计量电量", color: "#008F3D" } }} className="h-[250px]">
+              <ChartContainer config={{ mediumLongTermVolume: { label: "中长期电量", color: "#00D65C" }, dayAheadClearingVolume: { label: "日前出清电量", color: "#00B04D" }, realTimeMeasuredVolume: { label: "实时计量电量", color: "#008F3D" } }} className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={volumeAnalysisData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E8F0EC" />
@@ -1488,7 +1363,6 @@ const IntraProvincialReview = () => {
                     <YAxis tick={{ fontSize: 11 }} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="baseVolume" stackId="a" fill="#90EE90" name="基数电量" />
                     <Bar dataKey="mediumLongTermVolume" stackId="a" fill="#00D65C" name="中长期电量" />
                     <Bar dataKey="dayAheadClearingVolume" stackId="a" fill="#00B04D" name="日前出清电量" />
                     <Bar dataKey="realTimeMeasuredVolume" stackId="a" fill="#008F3D" name="实时计量电量" />
