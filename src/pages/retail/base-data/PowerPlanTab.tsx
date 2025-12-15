@@ -12,43 +12,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { Plus, TrendingUp, TrendingDown, AlertTriangle, ChevronDown, Download, Upload } from "lucide-react";
-
-// 电量计划指标
-const generatePowerPlanMetrics = () => [
-  { label: "交易单元总数", value: "12", unit: "个" },
-  { label: "计划已完成", value: "8", subValue: "66.7%", status: "success" },
-  { label: "待制定计划", value: "3", subValue: "25.0%", status: "warning" },
-  { label: "待发布计划", value: "1", subValue: "8.3%", status: "info" },
-];
-
-// 电量计划图表数据
-const generatePowerPlanData = () => 
-  Array.from({ length: 12 }, (_, i) => ({
-    month: `${i + 1}月`,
-    planned: 8000 + Math.random() * 2000,
-    actual: 7500 + Math.random() * 2500,
-    settled: 7200 + Math.random() * 2300,
-    completion: 85 + Math.random() * 15,
-    deviationRate: (Math.random() - 0.5) * 20,
-  }));
-
-// 结算分析数据
-const generateSettlementAnalysis = () => [
-  { label: "预测电量", value: "125,600", unit: "MWh", change: "+3.2%", trend: "up" },
-  { label: "结算电量", value: "122,450", unit: "MWh", change: "-2.5%", trend: "down" },
-  { label: "预测偏差率", value: "2.51%", unit: "", change: "-0.8%", trend: "down", status: "success" },
-  { label: "偏差考核费用", value: "18,520", unit: "元", change: "+12.3%", trend: "up", status: "warning" },
-];
-
-// 典型曲线数据
-const generateTypicalCurveData = () => 
-  Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i.toString().padStart(2, '0')}:00`,
-    workday: 600 + Math.sin((i - 6) * Math.PI / 12) * 300 + Math.random() * 50,
-    weekend: 450 + Math.sin((i - 8) * Math.PI / 12) * 200 + Math.random() * 40,
-    holiday: 350 + Math.sin((i - 9) * Math.PI / 12) * 150 + Math.random() * 30,
-  }));
+import { Plus, TrendingUp, TrendingDown, ChevronDown, Download, Upload, Loader2, RefreshCw } from "lucide-react";
+import { usePowerPlanData } from "@/hooks/usePowerPlanData";
 
 const chartConfig = {
   planned: { label: "计划电量", color: "#3b82f6" },
@@ -65,36 +30,61 @@ const PowerPlanTab = () => {
   const [curveTab, setCurveTab] = useState("overview");
   const [curveOpen, setCurveOpen] = useState(false);
   
-  const powerPlanMetrics = generatePowerPlanMetrics();
-  const powerPlanData = generatePowerPlanData();
-  const settlementAnalysis = generateSettlementAnalysis();
-  const typicalCurveData = generateTypicalCurveData();
+  const { 
+    metrics: powerPlanMetrics, 
+    monthlyData: powerPlanData, 
+    settlementAnalysis, 
+    typicalCurves: typicalCurveData,
+    isLoading,
+    refetch 
+  } = usePowerPlanData();
 
   return (
     <div className="space-y-4">
+      {/* 刷新按钮 */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={refetch} disabled={isLoading}>
+          {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          刷新数据
+        </Button>
+      </div>
+
       {/* 指标概览 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {powerPlanMetrics.map((metric, index) => (
-          <Card key={index}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold font-mono">{metric.value}</span>
-                <span className="text-sm text-muted-foreground">{metric.unit}</span>
-              </div>
-              {metric.subValue && (
-                <Badge 
-                  variant={metric.status === "success" ? "default" : metric.status === "warning" ? "secondary" : "outline"} 
-                  className="mt-2"
-                >
-                  {metric.subValue}
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {isLoading && powerPlanMetrics.length === 0 ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          powerPlanMetrics.map((metric, index) => (
+            <Card key={index}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold font-mono">{metric.value}</span>
+                  <span className="text-sm text-muted-foreground">{metric.unit}</span>
+                </div>
+                {metric.subValue && (
+                  <Badge 
+                    variant={metric.status === "success" ? "default" : metric.status === "warning" ? "secondary" : "outline"} 
+                    className="mt-2"
+                  >
+                    {metric.subValue}
+                  </Badge>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* 结算数据统计分析 */}
