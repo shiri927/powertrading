@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { TechBorderCard } from "@/components/dashboard/TechBorderCard";
 import { ViewToggle } from "@/components/dashboard/ViewToggle";
-import { ChinaMapStatic } from "@/components/dashboard/ChinaMapStatic";
+import { ChinaMapECharts } from "@/components/dashboard/ChinaMapECharts";
 import { MetricCardGlow } from "@/components/dashboard/MetricCardGlow";
 import { ItemizedSettlementTable } from "@/components/dashboard/ItemizedSettlementTable";
 import { RegionalProductionChart } from "@/components/dashboard/RegionalProductionChart";
@@ -197,7 +197,7 @@ const Dashboard = () => {
         {/* Center Column - Map */}
         <div className="col-span-6 flex flex-col gap-3">
           <TechBorderCard title="场站分布" className="flex-1">
-            <ChinaMapStatic />
+            <ChinaMapECharts />
           </TechBorderCard>
         </div>
 
