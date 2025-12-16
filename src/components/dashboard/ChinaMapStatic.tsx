@@ -60,12 +60,11 @@ export const ChinaMapStatic = memo(() => {
           src={chinaMapBg}
           alt="中国地图"
           className="object-contain"
-          style={{ 
+        style={{ 
             width: "115%",
             height: "115%",
             maxWidth: "none",
-            filter: "drop-shadow(0 0 15px rgba(30, 144, 255, 0.3))",
-            mixBlendMode: "multiply"
+            filter: "drop-shadow(0 0 15px rgba(30, 144, 255, 0.3))"
           }}
         />
         
