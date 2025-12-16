@@ -1477,6 +1477,74 @@ export type Database = {
         }
         Relationships: []
       }
+      retail_contracts: {
+        Row: {
+          contract_name: string
+          contract_no: string
+          contract_price: number
+          contract_type: string
+          contract_volume: number
+          created_at: string
+          customer_id: string
+          end_date: string
+          execution_month: string
+          id: string
+          remarks: string | null
+          settlement_amount: number | null
+          settlement_volume: number | null
+          signing_date: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contract_name: string
+          contract_no: string
+          contract_price?: number
+          contract_type?: string
+          contract_volume?: number
+          created_at?: string
+          customer_id: string
+          end_date: string
+          execution_month: string
+          id?: string
+          remarks?: string | null
+          settlement_amount?: number | null
+          settlement_volume?: number | null
+          signing_date: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contract_name?: string
+          contract_no?: string
+          contract_price?: number
+          contract_type?: string
+          contract_volume?: number
+          created_at?: string
+          customer_id?: string
+          end_date?: string
+          execution_month?: string
+          id?: string
+          remarks?: string | null
+          settlement_amount?: number | null
+          settlement_volume?: number | null
+          signing_date?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_records: {
         Row: {
           amount: number

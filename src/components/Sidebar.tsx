@@ -87,6 +87,9 @@ const navigation = [{
       name: "用户管理",
       href: "/retail/trading/customer-management"
     }, {
+      name: "零售合同管理",
+      href: "/retail/trading/contract-management"
+    }, {
       name: "套餐模拟计算",
       href: "/retail/trading/package-simulation"
     }]

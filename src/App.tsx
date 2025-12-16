@@ -46,6 +46,7 @@ import CustomerManagement from "./pages/retail/trading/CustomerManagement";
 import LoadManagement from "./pages/retail/trading/LoadManagement";
 import PackageSimulation from "./pages/retail/trading/PackageSimulation";
 import ExecutionTracking from "./pages/retail/trading/ExecutionTracking";
+import RetailContractManagement from "./pages/retail/trading/RetailContractManagement";
 
 // Retail Decision pages
 import RetailDecision from "./pages/retail/Decision";
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/retail/load-management" element={<LoadManagement />} />
             <Route path="/retail/trading" element={<RetailTrading />} />
             <Route path="/retail/trading/customer-management" element={<CustomerManagement />} />
+            <Route path="/retail/trading/contract-management" element={<RetailContractManagement />} />
             <Route path="/retail/trading/package-simulation" element={<PackageSimulation />} />
             <Route path="/retail/trading/execution-tracking" element={<ExecutionTracking />} />
             <Route path="/retail/clearing-settlement" element={<RetailClearingSettlement />} />
