@@ -51,7 +51,7 @@ export const ChinaMapStatic = memo(() => {
     <div 
       className="relative w-full h-full flex items-center justify-center overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, hsl(210, 50%, 8%) 0%, hsl(210, 45%, 12%) 100%)"
+        background: "linear-gradient(135deg, #1a2a3a 0%, #1e3348 100%)"
       }}
     >
       {/* Background Map Image */}
@@ -60,9 +60,9 @@ export const ChinaMapStatic = memo(() => {
           src={chinaMapBg}
           alt="中国地图"
           className="object-contain"
-        style={{ 
-            width: "115%",
-            height: "115%",
+          style={{ 
+            width: "100%",
+            height: "100%",
             maxWidth: "none",
             filter: "drop-shadow(0 0 15px rgba(30, 144, 255, 0.3))"
           }}
