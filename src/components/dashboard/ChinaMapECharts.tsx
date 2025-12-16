@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from "react";
+import { memo, useEffect, useState } from "react";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { MapChart, ScatterChart, EffectScatterChart } from "echarts/charts";
@@ -10,6 +10,7 @@ import {
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
+import { chinaGeoJson } from "./china-map-geo";
 
 // Register ECharts components
 echarts.use([
@@ -39,47 +40,15 @@ const stationsGeoData = [
 // Provinces with stations for highlighting
 const provincesWithStations = ["山东", "山西", "浙江"];
 
-// China GeoJSON CDN URLs (jsDelivr - Aliyun blocked by Referer ACL)
-const GEO_SOURCES = [
-  "https://cdn.jsdelivr.net/gh/apache/echarts-website/examples/data/asset/geo/china.json",
-  "https://fastly.jsdelivr.net/gh/apache/echarts-website/examples/data/asset/geo/china.json",
-];
-
 export const ChinaMapECharts = memo(() => {
   const [mapRegistered, setMapRegistered] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadMap = async () => {
-      // Check if already registered
-      if (echarts.getMap("china")) {
-        setMapRegistered(true);
-        setLoading(false);
-        return;
-      }
-
-      // Try each source until one works
-      for (const url of GEO_SOURCES) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) {
-            const geoJson = await response.json();
-            echarts.registerMap("china", geoJson);
-            setMapRegistered(true);
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.warn(`Failed to load from ${url}`, err);
-        }
-      }
-      
-      setError("地图数据加载失败");
-      setLoading(false);
-    };
-
-    loadMap();
+    // Register map with local GeoJSON data (synchronous, no network needed)
+    if (!echarts.getMap("china")) {
+      echarts.registerMap("china", chinaGeoJson as any);
+    }
+    setMapRegistered(true);
   }, []);
 
   const getOption = (): EChartsOption => {
@@ -220,21 +189,13 @@ export const ChinaMapECharts = memo(() => {
     };
   };
 
-  if (loading) {
+  if (!mapRegistered) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
           <span className="text-cyan-300 text-sm">加载地图...</span>
         </div>
-      </div>
-    );
-  }
-
-  if (error || !mapRegistered) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <span className="text-red-400 text-sm">{error || "地图初始化失败"}</span>
       </div>
     );
   }
