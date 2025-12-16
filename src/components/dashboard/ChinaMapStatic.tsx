@@ -48,17 +48,16 @@ export const ChinaMapStatic = memo(() => {
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Background Map Image - cropped to show only the map portion */}
-      <div className="relative w-full h-full max-h-[400px] flex items-center justify-center overflow-hidden">
-        <div 
-          className="w-full h-full"
-          style={{
-            backgroundImage: `url(${chinaMapBg})`,
-            backgroundSize: "180%",
-            backgroundPosition: "50% 55%",
-            backgroundRepeat: "no-repeat",
-            minHeight: "350px"
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Background Map Image */}
+      <div className="relative w-full h-full flex items-center justify-center">
+        <img
+          src={chinaMapBg}
+          alt="中国地图"
+          className="w-full h-full object-contain"
+          style={{ 
+            maxHeight: "100%",
+            filter: "drop-shadow(0 0 15px rgba(30, 144, 255, 0.3))"
           }}
         />
         
