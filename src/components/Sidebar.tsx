@@ -16,14 +16,14 @@ const navigation = [{
   }, {
     name: "售电侧收益",
     href: "/revenue/retail"
-  }, {
-    name: "气象数据",
-    href: "/market-fundamentals/weather"
   }]
 }, {
   name: "市场与基本面数据",
   icon: BarChart3,
   children: [{
+    name: "气象数据",
+    href: "/market-fundamentals/weather"
+  }, {
     name: "机组结算披露",
     href: "/market-fundamentals/unit-settlement"
   }, {
