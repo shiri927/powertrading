@@ -61,8 +61,8 @@ export const ChinaMapStatic = memo(() => {
           alt="中国地图"
           className="object-contain"
           style={{ 
-            width: "120%",
-            height: "120%",
+            width: "150%",
+            height: "150%",
             maxWidth: "none",
             filter: "drop-shadow(0 0 15px rgba(30, 144, 255, 0.3))"
           }}
