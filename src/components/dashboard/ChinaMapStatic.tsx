@@ -48,7 +48,12 @@ export const ChinaMapStatic = memo(() => {
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div 
+      className="relative w-full h-full flex items-center justify-center"
+      style={{
+        background: "linear-gradient(135deg, hsl(210, 50%, 8%) 0%, hsl(210, 45%, 12%) 100%)"
+      }}
+    >
       {/* Background Map Image */}
       <div className="relative w-full h-full flex items-center justify-center">
         <img
