@@ -60,41 +60,38 @@ export const ChinaMapECharts = memo(() => {
       capacity: station.capacity,
     }));
 
-    // Province data for coloring
-    const provinceData = provincesWithStations.map((name) => ({
-      name,
-      value: 100,
-    }));
-
     return {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "item",
         backgroundColor: "rgba(0, 20, 40, 0.95)",
-        borderColor: "rgba(30, 144, 255, 0.6)",
+        borderColor: "rgba(0, 176, 77, 0.6)",
         borderWidth: 1,
         textStyle: {
-          color: "#00D4FF",
+          color: "#00E676",
           fontSize: 12,
         },
         formatter: (params: any) => {
           if (params.seriesType === "effectScatter") {
             return `
-              <div style="padding: 4px 8px;">
-                <div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
-                <div>省份: ${params.data.province}</div>
-                <div>装机容量: ${params.data.capacity}MW</div>
+              <div style="padding: 8px 12px;">
+                <div style="font-weight: bold; margin-bottom: 6px; color: #00E676; font-size: 14px;">${params.name}</div>
+                <div style="color: #a0aec0; margin-bottom: 4px;">省份: <span style="color: #fff;">${params.data.province}</span></div>
+                <div style="color: #a0aec0;">装机容量: <span style="color: #00E676; font-weight: bold;">${params.data.capacity}MW</span></div>
               </div>
             `;
+          }
+          if (params.seriesType === "map") {
+            return `<div style="padding: 4px 8px; color: #fff;">${params.name}</div>`;
           }
           return params.name;
         },
       },
       geo: {
         map: "china",
-        roam: false,
-        zoom: 1.2,
-        center: [104, 36],
+        roam: true,
+        zoom: 1.15,
+        center: [105, 36],
         aspectScale: 0.85,
         silent: false,
         itemStyle: {
@@ -105,25 +102,43 @@ export const ChinaMapECharts = memo(() => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: "#1a3a5c" },
+              { offset: 0, color: "#1e3a5f" },
+              { offset: 0.5, color: "#152d4a" },
               { offset: 1, color: "#0d2137" },
             ],
           },
-          borderColor: "rgba(30, 144, 255, 0.4)",
+          borderColor: "rgba(100, 180, 255, 0.4)",
           borderWidth: 1,
-          shadowColor: "rgba(30, 144, 255, 0.3)",
-          shadowBlur: 10,
+          shadowColor: "rgba(0, 100, 200, 0.3)",
+          shadowBlur: 15,
+          shadowOffsetX: 0,
+          shadowOffsetY: 5,
         },
         emphasis: {
           itemStyle: {
-            areaColor: "rgba(0, 212, 255, 0.3)",
+            areaColor: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: "#2d5a8a" },
+                { offset: 1, color: "#1e4a6a" },
+              ],
+            },
             borderColor: "#00D4FF",
             borderWidth: 2,
+            shadowColor: "rgba(0, 212, 255, 0.5)",
+            shadowBlur: 20,
           },
           label: {
             show: true,
-            color: "#00D4FF",
-            fontSize: 12,
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: "bold",
+            textShadowColor: "rgba(0, 0, 0, 0.8)",
+            textShadowBlur: 4,
           },
         },
         select: {
@@ -141,12 +156,30 @@ export const ChinaMapECharts = memo(() => {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: "#00796b" },
-                { offset: 1, color: "#004d40" },
+                { offset: 0, color: "#00805a" },
+                { offset: 0.5, color: "#006548" },
+                { offset: 1, color: "#004d38" },
               ],
             },
-            borderColor: "rgba(0, 230, 118, 0.6)",
-            borderWidth: 1.5,
+            borderColor: "rgba(0, 230, 118, 0.8)",
+            borderWidth: 2,
+            shadowColor: "rgba(0, 230, 118, 0.4)",
+            shadowBlur: 15,
+          },
+          emphasis: {
+            itemStyle: {
+              areaColor: {
+                type: "linear",
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: "#00a070" },
+                  { offset: 1, color: "#007858" },
+                ],
+              },
+            },
           },
         })),
       },
@@ -157,31 +190,43 @@ export const ChinaMapECharts = memo(() => {
           type: "effectScatter",
           coordinateSystem: "geo",
           data: scatterData,
-          symbolSize: (val: number[]) => Math.max(8, val[2] / 3),
+          symbolSize: (val: number[]) => Math.max(12, val[2] / 2.5),
           showEffectOn: "render",
           rippleEffect: {
             brushType: "stroke",
-            scale: 4,
+            scale: 5,
             period: 3,
           },
           itemStyle: {
-            color: "#00E676",
-            shadowBlur: 15,
+            color: {
+              type: "radial",
+              x: 0.5,
+              y: 0.5,
+              r: 0.5,
+              colorStops: [
+                { offset: 0, color: "#00FF88" },
+                { offset: 0.7, color: "#00E676" },
+                { offset: 1, color: "#00B04D" },
+              ],
+            },
+            shadowBlur: 20,
             shadowColor: "rgba(0, 230, 118, 0.8)",
           },
           zlevel: 2,
         },
-        // Static station markers
+        // Static station markers (inner dot)
         {
           name: "场站位置",
           type: "scatter",
           coordinateSystem: "geo",
           data: scatterData,
-          symbolSize: 6,
+          symbolSize: 8,
           itemStyle: {
-            color: "#00E676",
-            borderColor: "#fff",
-            borderWidth: 1,
+            color: "#fff",
+            borderColor: "#00E676",
+            borderWidth: 2,
+            shadowBlur: 10,
+            shadowColor: "rgba(255, 255, 255, 0.5)",
           },
           zlevel: 3,
         },
@@ -193,8 +238,8 @@ export const ChinaMapECharts = memo(() => {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-cyan-300 text-sm">加载地图...</span>
+          <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-emerald-300 text-sm">加载地图...</span>
         </div>
       </div>
     );
@@ -202,6 +247,13 @@ export const ChinaMapECharts = memo(() => {
 
   return (
     <div className="relative w-full h-full">
+      {/* Outer glow effect */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, rgba(0, 176, 77, 0.08) 0%, transparent 70%)",
+        }}
+      />
       <ReactEChartsCore
         echarts={echarts}
         option={getOption()}
@@ -211,25 +263,32 @@ export const ChinaMapECharts = memo(() => {
       />
       {/* Legend */}
       <div
-        className="absolute bottom-2 left-2 text-xs p-2 rounded"
+        className="absolute bottom-3 left-3 text-xs p-3 rounded-lg backdrop-blur-sm"
         style={{
-          backgroundColor: "rgba(0, 20, 40, 0.8)",
-          border: "1px solid rgba(30, 144, 255, 0.3)",
+          backgroundColor: "rgba(0, 20, 40, 0.85)",
+          border: "1px solid rgba(0, 176, 77, 0.4)",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
         }}
       >
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="w-3.5 h-3.5 rounded-full animate-pulse"
+            style={{ 
+              backgroundColor: "#00E676", 
+              boxShadow: "0 0 10px #00E676, 0 0 20px rgba(0, 230, 118, 0.5)" 
+            }}
+          />
+          <span style={{ color: "rgba(255, 255, 255, 0.9)" }}>发电场站</span>
+        </div>
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: "#00E676", boxShadow: "0 0 6px #00E676" }}
+            className="w-3.5 h-3.5 rounded"
+            style={{ 
+              background: "linear-gradient(135deg, #00805a, #004d38)",
+              border: "1px solid rgba(0, 230, 118, 0.6)"
+            }}
           />
-          <span style={{ color: "rgba(255, 255, 255, 0.8)" }}>发电场站</span>
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "#00796b" }}
-          />
-          <span style={{ color: "rgba(255, 255, 255, 0.8)" }}>有场站省份</span>
+          <span style={{ color: "rgba(255, 255, 255, 0.9)" }}>有场站省份</span>
         </div>
       </div>
     </div>
