@@ -13,20 +13,36 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useDashboardData } from "@/hooks/useDashboardData";
 
 // 气象报警数据 (暂时保留mock - 需要后续创建weather_alerts表)
-const weatherAlertData = [
-  { station: "山东场站A", type: "大风预警", level: "黄色", time: "12-14 08:00" },
-  { station: "浙江场站B", type: "暴雨预警", level: "蓝色", time: "12-14 14:00" },
-  { station: "山西场站C", type: "高温预警", level: "橙色", time: "12-15 10:00" },
-];
-
+const weatherAlertData = [{
+  station: "山东场站A",
+  type: "大风预警",
+  level: "黄色",
+  time: "12-14 08:00"
+}, {
+  station: "浙江场站B",
+  type: "暴雨预警",
+  level: "蓝色",
+  time: "12-14 14:00"
+}, {
+  station: "山西场站C",
+  type: "高温预警",
+  level: "橙色",
+  time: "12-15 10:00"
+}];
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [spotView, setSpotView] = useState<"chart" | "table">("chart");
   const [supplyDemandView, setSupplyDemandView] = useState<"chart" | "table">("chart");
 
   // 从数据库获取数据
-  const { isLoading, stationStats, settlementStats, clearingStats, marketPriceStats, tradingUnitStats } = useDashboardData();
-
+  const {
+    isLoading,
+    stationStats,
+    settlementStats,
+    clearingStats,
+    marketPriceStats,
+    tradingUnitStats
+  } = useDashboardData();
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -41,14 +57,11 @@ const Dashboard = () => {
     const unitRevenue = settlementStats?.unitRevenue || 0;
 
     // 计算日前结算占比
-    const dayAheadRecord = settlementStats?.settlementData?.find(s => 
-      s.type.includes("日前") || s.type.includes("现货")
-    );
+    const dayAheadRecord = settlementStats?.settlementData?.find(s => s.type.includes("日前") || s.type.includes("现货"));
     const dayAheadRatio = dayAheadRecord?.ratio || 0;
 
     // 计算等效利用小时
     const equivalentHours = totalCapacity > 0 ? Number((totalVolume * 10 / totalCapacity).toFixed(1)) : 0;
-
     return {
       totalCapacity,
       stationCount,
@@ -56,7 +69,7 @@ const Dashboard = () => {
       equivalentHours,
       totalAmount,
       unitRevenue,
-      dayAheadRatio,
+      dayAheadRatio
     };
   }, [stationStats, settlementStats]);
 
@@ -67,7 +80,7 @@ const Dashboard = () => {
       name: p.name,
       capacity: p.capacity,
       generation: Number(p.generation.toFixed(2)),
-      color: colors[i % 3],
+      color: colors[i % 3]
     })) || [];
   }, [tradingUnitStats]);
 
@@ -76,7 +89,7 @@ const Dashboard = () => {
     return stationStats?.stations?.map(s => ({
       name: s.name,
       generation: Number(((s.installed_capacity || 0) * 8.5).toFixed(1)),
-      province: s.province,
+      province: s.province
     })).sort((a, b) => b.generation - a.generation).slice(0, 9) || [];
   }, [stationStats]);
 
@@ -86,7 +99,7 @@ const Dashboard = () => {
       name: p.name,
       capacity: p.capacity,
       generation: Number(p.generation.toFixed(2)),
-      revenue: Number(p.revenue.toFixed(2)),
+      revenue: Number(p.revenue.toFixed(2))
     })) || [];
   }, [tradingUnitStats]);
 
@@ -104,25 +117,18 @@ const Dashboard = () => {
   const settlementData = useMemo(() => {
     return settlementStats?.settlementData || [];
   }, [settlementStats]);
-
   if (isLoading) {
-    return (
-      <div className="dashboard-screen flex items-center justify-center h-screen">
+    return <div className="dashboard-screen flex items-center justify-center h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
           <span className="text-cyan-300 text-lg">加载数据中...</span>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="dashboard-screen p-4">
+  return <div className="dashboard-screen p-4">
       {/* Header Title */}
       <div className="text-center py-3 mb-3">
-        <h1 className="glow-title text-2xl font-bold tracking-widest">
-          电力交易决策系统
-        </h1>
+        <h1 className="glow-title text-2xl font-bold tracking-widest">电力交易决策平台</h1>
       </div>
 
       {/* 8 Metric Cards - Two Rows */}
@@ -138,7 +144,9 @@ const Dashboard = () => {
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-12 gap-3" style={{ height: "calc(100vh - 280px)" }}>
+      <div className="grid grid-cols-12 gap-3" style={{
+      height: "calc(100vh - 280px)"
+    }}>
         {/* Left Column */}
         <div className="col-span-3 flex flex-col gap-3">
           {/* 区域生产情况 */}
@@ -148,27 +156,30 @@ const Dashboard = () => {
 
           {/* 省内现货交易 */}
           <TechBorderCard title="省内现货交易" className="flex-1" headerRight={<ViewToggle view={spotView} onViewChange={setSpotView} />}>
-            {spotTradingData.length === 0 ? (
-              <div className="empty-state py-8">
+            {spotTradingData.length === 0 ? <div className="empty-state py-8">
                 <FileX className="empty-state-icon w-8 h-8" />
                 <span className="text-xs text-cyan-300/70">暂无出清数据</span>
-              </div>
-            ) : spotView === "chart" ? (
-              <ResponsiveContainer width="100%" height={160}>
+              </div> : spotView === "chart" ? <ResponsiveContainer width="100%" height={160}>
                 <ComposedChart data={spotTradingData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="date" tick={{
+                fontSize: 10
+              }} />
+                  <YAxis yAxisId="left" tick={{
+                fontSize: 10
+              }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{
+                fontSize: 10
+              }} />
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Legend wrapperStyle={{
+                fontSize: 10
+              }} />
                   <Bar yAxisId="left" dataKey="dayAheadVolume" fill="hsl(200, 80%, 50%)" name="日前(MWh)" />
                   <Bar yAxisId="left" dataKey="realTimeVolume" fill="hsl(149, 80%, 45%)" name="实时(MWh)" />
                   <Line yAxisId="right" type="monotone" dataKey="dayAheadPrice" stroke="hsl(45, 100%, 50%)" name="日前价格" strokeWidth={2} />
                 </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="overflow-auto max-h-[160px]">
+              </ResponsiveContainer> : <div className="overflow-auto max-h-[160px]">
                 <table className="dashboard-table">
                   <thead>
                     <tr>
@@ -179,18 +190,15 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {spotTradingData.map((row) => (
-                      <tr key={row.date}>
+                    {spotTradingData.map(row => <tr key={row.date}>
                         <td>{row.date}</td>
                         <td className="text-right font-mono">{row.dayAheadVolume}</td>
                         <td className="text-right font-mono">{row.realTimeVolume}</td>
                         <td className="text-right font-mono">{row.dayAheadPrice}</td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            )}
+              </div>}
           </TechBorderCard>
         </div>
 
@@ -205,37 +213,34 @@ const Dashboard = () => {
         <div className="col-span-3 flex flex-col gap-3">
           {/* 分项量价费 */}
           <TechBorderCard title="分项量价费汇总" className="flex-1">
-            {settlementData.length === 0 ? (
-              <div className="empty-state py-8">
+            {settlementData.length === 0 ? <div className="empty-state py-8">
                 <FileX className="empty-state-icon w-8 h-8" />
                 <span className="text-xs text-cyan-300/70">暂无结算数据</span>
-              </div>
-            ) : (
-              <ItemizedSettlementTable data={settlementData} />
-            )}
+              </div> : <ItemizedSettlementTable data={settlementData} />}
           </TechBorderCard>
 
           {/* 供需预测 */}
           <TechBorderCard title="供需预测" className="flex-[0.8]" headerRight={<ViewToggle view={supplyDemandView} onViewChange={setSupplyDemandView} />}>
-            {supplyDemandData.length === 0 ? (
-              <div className="empty-state py-4">
+            {supplyDemandData.length === 0 ? <div className="empty-state py-4">
                 <FileX className="empty-state-icon w-8 h-8" />
                 <span className="text-xs text-cyan-300/70">暂无市场价格数据</span>
-              </div>
-            ) : supplyDemandView === "chart" ? (
-              <ResponsiveContainer width="100%" height={130}>
+              </div> : supplyDemandView === "chart" ? <ResponsiveContainer width="100%" height={130}>
                 <LineChart data={supplyDemandData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <XAxis dataKey="date" tick={{
+                fontSize: 10
+              }} />
+                  <YAxis tick={{
+                fontSize: 10
+              }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(value: number) => value.toLocaleString()} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Legend wrapperStyle={{
+                fontSize: 10
+              }} />
                   <Line type="monotone" dataKey="renewableOutput" stroke="hsl(149, 80%, 45%)" name="新能源出力" strokeWidth={2} />
                   <Line type="monotone" dataKey="userLoad" stroke="hsl(45, 100%, 50%)" name="用户负荷" strokeWidth={2} />
                 </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="overflow-auto max-h-[130px]">
+              </ResponsiveContainer> : <div className="overflow-auto max-h-[130px]">
                 <table className="dashboard-table">
                   <thead>
                     <tr>
@@ -245,23 +250,19 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {supplyDemandData.map((row) => (
-                      <tr key={row.date}>
+                    {supplyDemandData.map(row => <tr key={row.date}>
                         <td>{row.date}</td>
                         <td className="text-right font-mono">{row.renewableOutput.toLocaleString()}</td>
                         <td className="text-right font-mono">{row.userLoad.toLocaleString()}</td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            )}
+              </div>}
           </TechBorderCard>
 
           {/* 气象报警 */}
           <TechBorderCard title="气象报警信息" className="flex-[0.6]">
-            {weatherAlertData.length > 0 ? (
-              <div className="overflow-auto max-h-[100px]">
+            {weatherAlertData.length > 0 ? <div className="overflow-auto max-h-[100px]">
                 <table className="dashboard-table">
                   <thead>
                     <tr>
@@ -272,35 +273,22 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {weatherAlertData.map((alert, index) => (
-                      <tr key={index}>
+                    {weatherAlertData.map((alert, index) => <tr key={index}>
                         <td className="text-xs">{alert.station}</td>
                         <td className="text-xs">{alert.type}</td>
                         <td>
-                          <span
-                            className={`text-xs px-1.5 py-0.5 rounded ${
-                              alert.level === "橙色"
-                                ? "bg-orange-500/30 text-orange-300"
-                                : alert.level === "黄色"
-                                ? "bg-yellow-500/30 text-yellow-300"
-                                : "bg-blue-500/30 text-blue-300"
-                            }`}
-                          >
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${alert.level === "橙色" ? "bg-orange-500/30 text-orange-300" : alert.level === "黄色" ? "bg-yellow-500/30 text-yellow-300" : "bg-blue-500/30 text-blue-300"}`}>
                             {alert.level}
                           </span>
                         </td>
                         <td className="text-xs font-mono">{alert.time}</td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="empty-state py-4">
+              </div> : <div className="empty-state py-4">
                 <FileX className="empty-state-icon w-8 h-8" />
                 <span className="text-xs">暂无数据</span>
-              </div>
-            )}
+              </div>}
           </TechBorderCard>
         </div>
       </div>
@@ -312,8 +300,6 @@ const Dashboard = () => {
       <div className="timestamp-footer">
         {format(currentTime, "yyyy/MM/dd HH:mm:ss")}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
