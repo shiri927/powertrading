@@ -39,8 +39,11 @@ const stationsGeoData = [
 // Provinces with stations for highlighting
 const provincesWithStations = ["山东", "山西", "浙江"];
 
-// China GeoJSON CDN URL
-const CHINA_GEO_URL = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+// China GeoJSON CDN URLs (jsDelivr - Aliyun blocked by Referer ACL)
+const GEO_SOURCES = [
+  "https://cdn.jsdelivr.net/gh/apache/echarts-website/examples/data/asset/geo/china.json",
+  "https://fastly.jsdelivr.net/gh/apache/echarts-website/examples/data/asset/geo/china.json",
+];
 
 export const ChinaMapECharts = memo(() => {
   const [mapRegistered, setMapRegistered] = useState(false);
@@ -48,28 +51,32 @@ export const ChinaMapECharts = memo(() => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load and register China map
     const loadMap = async () => {
-      try {
-        // Check if already registered
-        if (echarts.getMap("china")) {
-          setMapRegistered(true);
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch(CHINA_GEO_URL);
-        if (!response.ok) throw new Error("Failed to load map data");
-        
-        const geoJson = await response.json();
-        echarts.registerMap("china", geoJson);
+      // Check if already registered
+      if (echarts.getMap("china")) {
         setMapRegistered(true);
-      } catch (err) {
-        console.error("Error loading China map:", err);
-        setError("地图加载失败");
-      } finally {
         setLoading(false);
+        return;
       }
+
+      // Try each source until one works
+      for (const url of GEO_SOURCES) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const geoJson = await response.json();
+            echarts.registerMap("china", geoJson);
+            setMapRegistered(true);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn(`Failed to load from ${url}`, err);
+        }
+      }
+      
+      setError("地图数据加载失败");
+      setLoading(false);
     };
 
     loadMap();
