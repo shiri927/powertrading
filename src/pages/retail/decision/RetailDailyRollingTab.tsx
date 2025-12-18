@@ -84,185 +84,185 @@ const RetailDailyRollingTab = () => {
             setSelectedProvince(val);
             setSelectedUnit("all");
           }}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[150px] bg-[#1a3a5c]/80 border-[#2a4a6c] text-white">
               <SelectValue placeholder="选择省份" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部省份</SelectItem>
+            <SelectContent className="bg-[#1a3a5c] border-[#2a4a6c]">
+              <SelectItem value="all" className="text-white hover:bg-[#2a4a6c]">全部省份</SelectItem>
               {PROVINCES.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id} className="text-white hover:bg-[#2a4a6c]">{p.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-[#1a3a5c]/80 border-[#2a4a6c] text-white">
               <SelectValue placeholder="选择交易单元" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部交易单元</SelectItem>
+            <SelectContent className="bg-[#1a3a5c] border-[#2a4a6c]">
+              <SelectItem value="all" className="text-white hover:bg-[#2a4a6c]">全部交易单元</SelectItem>
               {availableUnits.map(u => (
-                <SelectItem key={u} value={u}>{u}</SelectItem>
+                <SelectItem key={u} value={u} className="text-white hover:bg-[#2a4a6c]">{u}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={tradingPeriod} onValueChange={setTradingPeriod}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[120px] bg-[#1a3a5c]/80 border-[#2a4a6c] text-white">
               <SelectValue placeholder="交易周期" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">今日</SelectItem>
-              <SelectItem value="tomorrow">明日</SelectItem>
-              <SelectItem value="week">本周</SelectItem>
+            <SelectContent className="bg-[#1a3a5c] border-[#2a4a6c]">
+              <SelectItem value="today" className="text-white hover:bg-[#2a4a6c]">今日</SelectItem>
+              <SelectItem value="tomorrow" className="text-white hover:bg-[#2a4a6c]">明日</SelectItem>
+              <SelectItem value="week" className="text-white hover:bg-[#2a4a6c]">本周</SelectItem>
             </SelectContent>
           </Select>
-          <Button>查询</Button>
-          <Button variant="outline">重置</Button>
+          <Button className="bg-[#00B04D] hover:bg-[#009040] text-white">查询</Button>
+          <Button variant="outline" className="border-[#2a4a6c] text-slate-300 hover:bg-[#2a4a6c]">重置</Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">导出策略</Button>
-          <Button className="bg-[#00B04D] hover:bg-[#009040]">生成申报方案</Button>
+          <Button variant="outline" className="border-[#2a4a6c] text-slate-300 hover:bg-[#2a4a6c]">导出策略</Button>
+          <Button className="bg-[#00B04D] hover:bg-[#009040] text-white">生成申报方案</Button>
         </div>
       </div>
 
       {/* 交易限制提示栏 */}
-      <Alert className="border-amber-200 bg-amber-50">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <AlertDescription className="text-amber-800">
+      <Alert className="border-amber-500/50 bg-amber-900/30">
+        <AlertTriangle className="h-4 w-4 text-amber-400" />
+        <AlertDescription className="text-amber-200">
           <span className="font-medium">交易限制提醒：</span>
-          单笔买入限额 <span className="font-mono font-semibold">{metrics.buyLimit} MWh</span> | 
-          单笔卖出限额 <span className="font-mono font-semibold">{metrics.sellLimit} MWh</span> | 
-          偏差考核阈值 <span className="font-mono font-semibold">±5%</span> | 
-          当日累计限额 <span className="font-mono font-semibold">{(metrics.buyLimit * 3)} MWh</span>
+          单笔买入限额 <span className="font-mono font-semibold text-amber-100">{metrics.buyLimit} MWh</span> | 
+          单笔卖出限额 <span className="font-mono font-semibold text-amber-100">{metrics.sellLimit} MWh</span> | 
+          偏差考核阈值 <span className="font-mono font-semibold text-amber-100">±5%</span> | 
+          当日累计限额 <span className="font-mono font-semibold text-amber-100">{(metrics.buyLimit * 3)} MWh</span>
         </AlertDescription>
       </Alert>
 
       {/* 8个指标卡（售电侧视角） */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">预测负荷量</p>
+              <TrendingUp className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">预测负荷量</p>
             </div>
-            <p className="text-2xl font-bold text-primary font-mono">{metrics.predictedLoad.toLocaleString()} MWh</p>
+            <p className="text-2xl font-bold text-[#00B04D] font-mono">{metrics.predictedLoad.toLocaleString()} MWh</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">建议购电量</p>
+              <ShoppingCart className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">建议购电量</p>
             </div>
-            <p className="text-2xl font-bold text-primary font-mono">{metrics.suggestedPurchase.toLocaleString()} MWh</p>
+            <p className="text-2xl font-bold text-cyan-400 font-mono">{metrics.suggestedPurchase.toLocaleString()} MWh</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">预期价差收益</p>
+              <Wallet className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">预期价差收益</p>
             </div>
-            <p className="text-2xl font-bold text-green-600 font-mono">¥ {metrics.expectedRevenue}万</p>
+            <p className="text-2xl font-bold text-emerald-400 font-mono">¥ {metrics.expectedRevenue}万</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <Info className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">策略置信度</p>
+              <Info className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">策略置信度</p>
             </div>
-            <p className="text-2xl font-bold text-primary font-mono">{metrics.confidence}%</p>
+            <p className="text-2xl font-bold text-amber-400 font-mono">{metrics.confidence}%</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">客户用电总量</p>
+              <Users className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">客户用电总量</p>
             </div>
-            <p className="text-2xl font-bold text-primary font-mono">{metrics.customerUsage.toLocaleString()} MWh</p>
+            <p className="text-2xl font-bold text-blue-400 font-mono">{metrics.customerUsage.toLocaleString()} MWh</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">已持仓电量</p>
+              <Package className="h-4 w-4 text-slate-400" />
+              <p className="text-xs text-slate-400">已持仓电量</p>
             </div>
-            <p className="text-2xl font-bold text-primary font-mono">{metrics.currentPosition.toLocaleString()} MWh</p>
+            <p className="text-2xl font-bold text-purple-400 font-mono">{metrics.currentPosition.toLocaleString()} MWh</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              <p className="text-xs text-muted-foreground">买入限额</p>
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <p className="text-xs text-slate-400">买入限额</p>
             </div>
-            <p className="text-2xl font-bold text-green-600 font-mono">{metrics.buyLimit} MWh</p>
+            <p className="text-2xl font-bold text-emerald-400 font-mono">{metrics.buyLimit} MWh</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingDown className="h-4 w-4 text-red-600" />
-              <p className="text-xs text-muted-foreground">卖出限额</p>
+              <TrendingDown className="h-4 w-4 text-rose-400" />
+              <p className="text-xs text-slate-400">卖出限额</p>
             </div>
-            <p className="text-2xl font-bold text-red-600 font-mono">{metrics.sellLimit} MWh</p>
+            <p className="text-2xl font-bold text-rose-400 font-mono">{metrics.sellLimit} MWh</p>
           </CardContent>
         </Card>
       </div>
 
       {/* 策略依据折叠面板 */}
       <Collapsible open={showStrategyBasis} onOpenChange={setShowStrategyBasis}>
-        <Card>
+        <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="cursor-pointer hover:bg-[#2a4a6c]/30 transition-colors">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-base flex items-center gap-2 text-white">
                   <Info className="h-4 w-4" />
                   策略生成依据
                 </CardTitle>
-                {showStrategyBasis ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showStrategyBasis ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
               </div>
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="pt-0">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium mb-2 text-sm">现货价格预测</h4>
-                  <p className="text-xs text-muted-foreground">
+                <div className="p-4 bg-[#0d2137]/80 rounded-lg border border-[#2a4a6c]">
+                  <h4 className="font-medium mb-2 text-sm text-cyan-400">现货价格预测</h4>
+                  <p className="text-xs text-slate-400">
                     数据来源：市场数据中心<br />
                     更新时间：2025-12-14 08:30<br />
                     预测周期：未来24小时<br />
-                    预测准确率：89.2%
+                    预测准确率：<span className="text-emerald-400">89.2%</span>
                   </p>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium mb-2 text-sm">负荷预测分析</h4>
-                  <p className="text-xs text-muted-foreground">
+                <div className="p-4 bg-[#0d2137]/80 rounded-lg border border-[#2a4a6c]">
+                  <h4 className="font-medium mb-2 text-sm text-cyan-400">负荷预测分析</h4>
+                  <p className="text-xs text-slate-400">
                     数据来源：客户用电数据<br />
                     模型类型：LSTM负荷预测<br />
                     更新时间：2025-12-14 06:00<br />
-                    预测准确率：92.3%
+                    预测准确率：<span className="text-emerald-400">92.3%</span>
                   </p>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium mb-2 text-sm">持仓分析结论</h4>
-                  <p className="text-xs text-muted-foreground">
-                    当前持仓：{metrics.currentPosition} MWh<br />
-                    持仓成本：¥348.2/MWh<br />
-                    建议操作：{metrics.currentPosition > 500 ? "适度减仓" : "可增仓"}<br />
-                    风险评估：中低
+                <div className="p-4 bg-[#0d2137]/80 rounded-lg border border-[#2a4a6c]">
+                  <h4 className="font-medium mb-2 text-sm text-cyan-400">持仓分析结论</h4>
+                  <p className="text-xs text-slate-400">
+                    当前持仓：<span className="text-white">{metrics.currentPosition} MWh</span><br />
+                    持仓成本：<span className="text-white">¥348.2/MWh</span><br />
+                    建议操作：<span className="text-amber-400">{metrics.currentPosition > 500 ? "适度减仓" : "可增仓"}</span><br />
+                    风险评估：<span className="text-emerald-400">中低</span>
                   </p>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium mb-2 text-sm">市场供需分析</h4>
-                  <p className="text-xs text-muted-foreground">
-                    供需比例：1.05（供略大于需）<br />
+                <div className="p-4 bg-[#0d2137]/80 rounded-lg border border-[#2a4a6c]">
+                  <h4 className="font-medium mb-2 text-sm text-cyan-400">市场供需分析</h4>
+                  <p className="text-xs text-slate-400">
+                    供需比例：<span className="text-white">1.05</span>（供略大于需）<br />
                     预测趋势：供需平衡偏紧<br />
-                    价格趋势：预计小幅上涨<br />
-                    交易建议：低价时段适量购入
+                    价格趋势：<span className="text-amber-400">预计小幅上涨</span><br />
+                    交易建议：<span className="text-emerald-400">低价时段适量购入</span>
                   </p>
                 </div>
               </div>
@@ -272,9 +272,9 @@ const RetailDailyRollingTab = () => {
       </Collapsible>
 
       {/* 策略表格 */}
-      <Card>
+      <Card className="bg-[#1a3a5c]/60 border-[#2a4a6c] backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-base">
+          <CardTitle className="text-base text-white">
             日滚交易策略建议
             {selectedProvince !== "all" && (
               <Badge variant="outline" className="ml-2 border-[#00B04D] text-[#00B04D]">
@@ -282,37 +282,44 @@ const RetailDailyRollingTab = () => {
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>基于负荷预测和现货价格分析的购电策略推荐</CardDescription>
+          <CardDescription className="text-slate-400">基于负荷预测和现货价格分析的购电策略推荐</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border border-[#2a4a6c] overflow-hidden">
             <Table>
-              <TableHeader className="bg-[#F1F8F4]">
-                <TableRow>
-                  <TableHead>时段</TableHead>
-                  <TableHead className="text-right">预测负荷 (MW)</TableHead>
-                  <TableHead className="text-right">建议购电量 (MWh)</TableHead>
-                  <TableHead className="text-right">预测现货价 (¥/MWh)</TableHead>
-                  <TableHead className="text-right">售电价格 (¥/MWh)</TableHead>
-                  <TableHead className="text-right">预期价差收益 (¥)</TableHead>
-                  <TableHead>策略建议</TableHead>
-                  <TableHead>风险等级</TableHead>
+              <TableHeader className="bg-[#0d2137]">
+                <TableRow className="border-[#2a4a6c] hover:bg-[#0d2137]">
+                  <TableHead className="text-slate-300">时段</TableHead>
+                  <TableHead className="text-right text-slate-300">预测负荷 (MW)</TableHead>
+                  <TableHead className="text-right text-slate-300">建议购电量 (MWh)</TableHead>
+                  <TableHead className="text-right text-slate-300">预测现货价 (¥/MWh)</TableHead>
+                  <TableHead className="text-right text-slate-300">售电价格 (¥/MWh)</TableHead>
+                  <TableHead className="text-right text-slate-300">预期价差收益 (¥)</TableHead>
+                  <TableHead className="text-slate-300">策略建议</TableHead>
+                  <TableHead className="text-slate-300">风险等级</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {strategyData.map((row, i) => (
-                  <TableRow key={i} className="hover:bg-[#F8FBFA]">
-                    <TableCell className="font-mono">{row.timeSlot}</TableCell>
-                    <TableCell className="text-right font-mono">{row.load}</TableCell>
-                    <TableCell className="text-right font-mono">{row.volume}</TableCell>
-                    <TableCell className="text-right font-mono">{row.spotPrice}</TableCell>
-                    <TableCell className="text-right font-mono">{row.retailPrice}</TableCell>
-                    <TableCell className="text-right font-mono text-green-600">{row.spreadRevenue}</TableCell>
+                  <TableRow key={i} className="border-[#2a4a6c] hover:bg-[#2a4a6c]/30">
+                    <TableCell className="font-mono text-white">{row.timeSlot}</TableCell>
+                    <TableCell className="text-right font-mono text-cyan-300">{row.load}</TableCell>
+                    <TableCell className="text-right font-mono text-blue-300">{row.volume}</TableCell>
+                    <TableCell className="text-right font-mono text-amber-300">{row.spotPrice}</TableCell>
+                    <TableCell className="text-right font-mono text-purple-300">{row.retailPrice}</TableCell>
+                    <TableCell className="text-right font-mono text-emerald-400">{row.spreadRevenue}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{row.strategy}</Badge>
+                      <Badge variant="outline" className="border-[#2a4a6c] text-slate-200">{row.strategy}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={row.risk === "高" ? "destructive" : row.risk === "中" ? "secondary" : "default"}>
+                      <Badge 
+                        variant={row.risk === "高" ? "destructive" : "default"}
+                        className={
+                          row.risk === "高" ? "bg-rose-500/80" : 
+                          row.risk === "中" ? "bg-amber-500/80 text-white" : 
+                          "bg-emerald-500/80 text-white"
+                        }
+                      >
                         {row.risk}
                       </Badge>
                     </TableCell>
