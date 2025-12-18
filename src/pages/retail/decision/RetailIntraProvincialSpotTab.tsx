@@ -12,7 +12,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Cell } from "recharts";
 import { ChevronDown, ChevronUp, Brain, Target, AlertTriangle, TrendingUp, TrendingDown, Zap, Calculator, CheckCircle2, Download, Clock, Settings, Loader2 } from "lucide-react";
 import { useMarketClearingPrices } from "@/hooks/useMarketClearingPrices";
-import { format, subDays } from "date-fns";
 
 // 生成24小时申报策略数据
 const generateBiddingData = () => {
@@ -46,7 +45,7 @@ const RetailIntraProvincialSpotTab = () => {
   const [adjustRatio, setAdjustRatio] = useState([0]);
   const [showOptimization, setShowOptimization] = useState(true);
   const [useAiStrategy, setUseAiStrategy] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState('2025-12-15'); // 使用有数据的日期
 
   // 根据选中的交易单元获取省份
   const selectedProvince = useMemo(() => getProvinceFromUnit(selectedUnit), [selectedUnit]);
@@ -127,10 +126,9 @@ const RetailIntraProvincialSpotTab = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Array.from({ length: 7 }, (_, i) => {
-                const date = format(subDays(new Date(), i + 1), 'yyyy-MM-dd');
-                return <SelectItem key={date} value={date}>{date}</SelectItem>;
-              })}
+              {['2025-12-15', '2025-12-14', '2025-12-13', '2025-12-12', '2025-12-11', '2025-12-10', '2025-12-09'].map(date => (
+                <SelectItem key={date} value={date}>{date}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
