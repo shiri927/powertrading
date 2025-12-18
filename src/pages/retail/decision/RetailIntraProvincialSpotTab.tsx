@@ -9,25 +9,12 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from "recharts";
-import { ChevronDown, ChevronUp, Brain, Target, AlertTriangle, TrendingUp, TrendingDown, Zap, Calculator, CheckCircle2, Download, Clock, Settings } from "lucide-react";
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Cell } from "recharts";
+import { ChevronDown, ChevronUp, Brain, Target, AlertTriangle, TrendingUp, TrendingDown, Zap, Calculator, CheckCircle2, Download, Clock, Settings, Loader2 } from "lucide-react";
+import { useMarketClearingPrices } from "@/hooks/useMarketClearingPrices";
+import { format, subDays } from "date-fns";
 
-// 生成负荷预测对比数据
-const generateLoadForecastData = () => {
-  return Array.from({ length: 24 }, (_, i) => {
-    const base = 180 + Math.sin(i / 24 * Math.PI * 2) * 60;
-    return {
-      hour: `${i.toString().padStart(2, '0')}:00`,
-      customerDeclare: base + Math.random() * 15, // 客户申报曲线
-      aiPredict: base + Math.random() * 10, // AI预测曲线
-      historical: base - 5 + Math.random() * 20, // 历史同期曲线
-      upper: base + 25, // 上置信区间
-      lower: base - 25, // 下置信区间
-    };
-  });
-};
-
-// 生成96点申报策略数据
+// 生成24小时申报策略数据
 const generateBiddingData = () => {
   return Array.from({ length: 24 }, (_, i) => {
     const base = 150 + Math.sin(i / 24 * Math.PI * 2) * 50;
@@ -45,14 +32,62 @@ const generateBiddingData = () => {
   });
 };
 
+// 从交易单元提取省份
+const getProvinceFromUnit = (unit: string): string => {
+  if (unit.includes('山东')) return '山东';
+  if (unit.includes('山西')) return '山西';
+  if (unit.includes('浙江')) return '浙江';
+  return '山东';
+};
+
 const RetailIntraProvincialSpotTab = () => {
   const [selectedUnit, setSelectedUnit] = useState("山东售电公司A");
   const [adjustMode, setAdjustMode] = useState("semi-auto");
   const [adjustRatio, setAdjustRatio] = useState([0]);
   const [showOptimization, setShowOptimization] = useState(true);
   const [useAiStrategy, setUseAiStrategy] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
 
-  const loadForecastData = useMemo(() => generateLoadForecastData(), []);
+  // 根据选中的交易单元获取省份
+  const selectedProvince = useMemo(() => getProvinceFromUnit(selectedUnit), [selectedUnit]);
+
+  // 从数据库获取市场出清价格数据
+  const { data: marketClearingData, isLoading: isLoadingPrices } = useMarketClearingPrices(selectedDate, selectedProvince);
+
+  // 转换为价差预测图表数据
+  const priceDiffData = useMemo(() => {
+    if (!marketClearingData || marketClearingData.length === 0) {
+      // 如果没有数据，返回空数组
+      return [];
+    }
+    
+    return marketClearingData.map(record => ({
+      hour: `${String(record.hour).padStart(2, '0')}:00`,
+      dayAheadPrice: record.day_ahead_price || 0,
+      realtimePrice: record.realtime_price || 0,
+      priceDiff: (record.day_ahead_price || 0) - (record.realtime_price || 0),
+    }));
+  }, [marketClearingData]);
+
+  // 计算统计指标
+  const priceStats = useMemo(() => {
+    if (priceDiffData.length === 0) {
+      return { avgDayAhead: 0, avgRealtime: 0, avgDiff: 0, maxDiff: 0, minDiff: 0 };
+    }
+    
+    const dayAheadPrices = priceDiffData.map(d => d.dayAheadPrice);
+    const realtimePrices = priceDiffData.map(d => d.realtimePrice);
+    const diffs = priceDiffData.map(d => d.priceDiff);
+    
+    return {
+      avgDayAhead: dayAheadPrices.reduce((a, b) => a + b, 0) / dayAheadPrices.length,
+      avgRealtime: realtimePrices.reduce((a, b) => a + b, 0) / realtimePrices.length,
+      avgDiff: diffs.reduce((a, b) => a + b, 0) / diffs.length,
+      maxDiff: Math.max(...diffs),
+      minDiff: Math.min(...diffs),
+    };
+  }, [priceDiffData]);
+
   const biddingData = useMemo(() => generateBiddingData(), []);
 
   // 运筹优化结果
@@ -86,10 +121,18 @@ const RetailIntraProvincialSpotTab = () => {
               <SelectItem value="浙江售电公司A">浙江售电公司A</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
-            <Clock className="h-4 w-4 mr-1" />
-            2025-12-14
-          </Button>
+          <Select value={selectedDate} onValueChange={setSelectedDate}>
+            <SelectTrigger className="w-[140px]">
+              <Clock className="h-4 w-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 7 }, (_, i) => {
+                const date = format(subDays(new Date(), i + 1), 'yyyy-MM-dd');
+                return <SelectItem key={date} value={date}>{date}</SelectItem>;
+              })}
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-2">
             <Label className="text-sm">调整模式：</Label>
             <Select value={adjustMode} onValueChange={setAdjustMode}>
@@ -115,30 +158,116 @@ const RetailIntraProvincialSpotTab = () => {
         </div>
       </div>
 
-      {/* 负荷预测数据展示区 */}
+      {/* 价差预测分析区 */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            负荷预测多源对比
+            价差预测分析
           </CardTitle>
-          <CardDescription>客户申报曲线 vs AI预测曲线 vs 历史同期曲线</CardDescription>
+          <CardDescription>日前价格 vs 实时价格 vs 价差（日前-实时）| 省份：{selectedProvince} | 日期：{selectedDate}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={loadForecastData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" tick={{ fontSize: 11 }} />
-              <YAxis label={{ value: '负荷 (MW)', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="upper" stroke="none" fill="#E8F5E9" name="置信区间" />
-              <Area type="monotone" dataKey="lower" stroke="none" fill="white" />
-              <Line type="monotone" dataKey="customerDeclare" stroke="#1976D2" strokeWidth={2} name="客户申报" dot={false} />
-              <Line type="monotone" dataKey="aiPredict" stroke="#00B04D" strokeWidth={2} name="AI预测" dot={false} />
-              <Line type="monotone" dataKey="historical" stroke="#9E9E9E" strokeWidth={1} strokeDasharray="5 5" name="历史同期" dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
+          {isLoadingPrices ? (
+            <div className="flex items-center justify-center h-[280px]">
+              <Loader2 className="h-8 w-8 animate-spin text-[#00B04D]" />
+              <span className="ml-2 text-muted-foreground">加载价格数据...</span>
+            </div>
+          ) : priceDiffData.length === 0 ? (
+            <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+              暂无 {selectedProvince} {selectedDate} 的价格数据
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={priceDiffData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11 }} />
+                  <YAxis 
+                    yAxisId="left"
+                    label={{ value: '价格 (元/MWh)', angle: -90, position: 'insideLeft', fontSize: 11 }} 
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [
+                      `${value.toFixed(2)} 元/MWh`,
+                      name === 'dayAheadPrice' ? '日前价格' : 
+                      name === 'realtimePrice' ? '实时价格' : '价差(日前-实时)'
+                    ]}
+                    labelFormatter={(label) => `时间：${label}`}
+                  />
+                  <Legend 
+                    formatter={(value) => 
+                      value === 'dayAheadPrice' ? '日前价格' : 
+                      value === 'realtimePrice' ? '实时价格' : '价差(日前-实时)'
+                    }
+                  />
+                  
+                  {/* 价差柱状图 - 正值绿色，负值红色 */}
+                  <Bar 
+                    yAxisId="left"
+                    dataKey="priceDiff" 
+                    name="priceDiff"
+                    opacity={0.7}
+                  >
+                    {priceDiffData.map((entry, index) => (
+                      <Cell key={index} fill={entry.priceDiff >= 0 ? '#00B04D' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                  
+                  {/* 日前价格曲线 - 蓝色 */}
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="dayAheadPrice" 
+                    stroke="#1976D2" 
+                    strokeWidth={2} 
+                    name="dayAheadPrice" 
+                    dot={false}
+                  />
+                  
+                  {/* 实时价格曲线 - 橙色 */}
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="realtimePrice" 
+                    stroke="#FF9800" 
+                    strokeWidth={2} 
+                    name="realtimePrice" 
+                    dot={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+              
+              {/* 统计指标卡片 */}
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                <div className="p-3 bg-[#F1F8F4] rounded-lg text-center">
+                  <p className="text-xs text-muted-foreground">日前均价</p>
+                  <p className="text-lg font-bold font-mono text-[#1976D2]">{priceStats.avgDayAhead.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">元/MWh</p>
+                </div>
+                <div className="p-3 bg-[#F1F8F4] rounded-lg text-center">
+                  <p className="text-xs text-muted-foreground">实时均价</p>
+                  <p className="text-lg font-bold font-mono text-[#FF9800]">{priceStats.avgRealtime.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">元/MWh</p>
+                </div>
+                <div className="p-3 bg-[#F1F8F4] rounded-lg text-center">
+                  <p className="text-xs text-muted-foreground">平均价差</p>
+                  <p className={`text-lg font-bold font-mono ${priceStats.avgDiff >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                    {priceStats.avgDiff >= 0 ? '+' : ''}{priceStats.avgDiff.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">元/MWh</p>
+                </div>
+                <div className="p-3 bg-[#F1F8F4] rounded-lg text-center">
+                  <p className="text-xs text-muted-foreground">最大价差</p>
+                  <p className={`text-lg font-bold font-mono ${priceStats.maxDiff >= 0 ? 'text-[#00B04D]' : 'text-red-500'}`}>
+                    {priceStats.maxDiff >= 0 ? '+' : ''}{priceStats.maxDiff.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">元/MWh</p>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
