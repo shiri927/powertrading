@@ -41,7 +41,7 @@ const getProvinceFromUnit = (unit: string): string => {
 
 const RetailIntraProvincialSpotTab = () => {
   const [selectedUnit, setSelectedUnit] = useState("山东售电公司A");
-  const [adjustMode, setAdjustMode] = useState("semi-auto");
+  const [adjustMode, setAdjustMode] = useState("auto");
   const [adjustRatio, setAdjustRatio] = useState([0]);
   const [showOptimization, setShowOptimization] = useState(true);
   const [useAiStrategy, setUseAiStrategy] = useState(true);
@@ -145,8 +145,8 @@ const RetailIntraProvincialSpotTab = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="semi-auto">半人工</SelectItem>
-                <SelectItem value="manual">纯人工</SelectItem>
+                <SelectItem value="auto">自动</SelectItem>
+                <SelectItem value="manual">人工</SelectItem>
               </SelectContent>
             </Select>
           </div>
