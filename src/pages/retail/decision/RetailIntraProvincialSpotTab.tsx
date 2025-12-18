@@ -53,19 +53,28 @@ const RetailIntraProvincialSpotTab = () => {
   // 从数据库获取市场出清价格数据
   const { data: marketClearingData, isLoading: isLoadingPrices } = useMarketClearingPrices(selectedDate, selectedProvince);
 
-  // 转换为价差预测图表数据
+  // 转换为96点价差预测图表数据
   const priceDiffData = useMemo(() => {
     if (!marketClearingData || marketClearingData.length === 0) {
-      // 如果没有数据，返回空数组
       return [];
     }
     
-    return marketClearingData.map(record => ({
-      hour: `${String(record.hour).padStart(2, '0')}:00`,
-      dayAheadPrice: record.day_ahead_price || 0,
-      realtimePrice: record.realtime_price || 0,
-      priceDiff: (record.day_ahead_price || 0) - (record.realtime_price || 0),
-    }));
+    return marketClearingData
+      .sort((a, b) => {
+        if (a.hour !== b.hour) return a.hour - b.hour;
+        return (a.quarter || 1) - (b.quarter || 1);
+      })
+      .map(record => {
+        const quarter = record.quarter || 1;
+        const minutes = ['00', '15', '30', '45'][quarter - 1];
+        return {
+          time: `${String(record.hour).padStart(2, '0')}:${minutes}`,
+          hourValue: record.hour + (quarter - 1) * 0.25, // 用于X轴数值定位
+          dayAheadPrice: record.day_ahead_price || 0,
+          realtimePrice: record.realtime_price || 0,
+          priceDiff: (record.day_ahead_price || 0) - (record.realtime_price || 0),
+        };
+      });
   }, [marketClearingData]);
 
   // 计算统计指标
@@ -187,7 +196,14 @@ const RetailIntraProvincialSpotTab = () => {
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={priceDiffData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 11 }} />
+                  <XAxis 
+                    dataKey="hourValue"
+                    type="number"
+                    domain={[1, 24]}
+                    ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]}
+                    tickFormatter={(value) => `${String(Math.floor(value)).padStart(2, '0')}:00`}
+                    tick={{ fontSize: 10 }}
+                  />
                   {/* 左Y轴 - 价格 */}
                   <YAxis 
                     yAxisId="left"
@@ -208,7 +224,10 @@ const RetailIntraProvincialSpotTab = () => {
                       name === 'dayAheadPrice' ? '日前价格' : 
                       name === 'realtimePrice' ? '实时价格' : '价差(日前-实时)'
                     ]}
-                    labelFormatter={(label) => `时间：${label}`}
+                    labelFormatter={(label) => {
+                      const item = priceDiffData.find(d => d.hourValue === label);
+                      return item ? `时间：${item.time}` : `时间：${label}`;
+                    }}
                   />
                   <Legend 
                     formatter={(value) => 
@@ -229,7 +248,7 @@ const RetailIntraProvincialSpotTab = () => {
                     ))}
                   </Bar>
                   
-                  {/* 日前价格曲线 - 蓝色 + 24个数据点 */}
+                  {/* 日前价格曲线 - 蓝色 + 96个数据点 */}
                   <Line 
                     yAxisId="left"
                     type="monotone" 
@@ -237,10 +256,10 @@ const RetailIntraProvincialSpotTab = () => {
                     stroke="#1976D2" 
                     strokeWidth={2} 
                     name="dayAheadPrice" 
-                    dot={{ r: 3, fill: '#1976D2', strokeWidth: 0 }}
+                    dot={{ r: 2, fill: '#1976D2', strokeWidth: 0 }}
                   />
                   
-                  {/* 实时价格曲线 - 橙色 + 24个数据点 */}
+                  {/* 实时价格曲线 - 橙色 + 96个数据点 */}
                   <Line 
                     yAxisId="left"
                     type="monotone" 
@@ -248,7 +267,7 @@ const RetailIntraProvincialSpotTab = () => {
                     stroke="#FF9800" 
                     strokeWidth={2} 
                     name="realtimePrice" 
-                    dot={{ r: 3, fill: '#FF9800', strokeWidth: 0 }}
+                    dot={{ r: 2, fill: '#FF9800', strokeWidth: 0 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>

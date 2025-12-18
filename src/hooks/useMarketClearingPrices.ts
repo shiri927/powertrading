@@ -11,6 +11,7 @@ export interface MarketClearingPrice {
   province: string;
   price_date: string;
   hour: number;
+  quarter: number | null;
   day_ahead_price: number | null;
   realtime_price: number | null;
   created_at: string | null;
@@ -35,7 +36,7 @@ export interface ClearingStats {
   minPrice: number;
 }
 
-// 按日期和省份获取市场出清价格
+// 按日期和省份获取市场出清价格（支持96点数据）
 export const useMarketClearingPrices = (date: string, province: string = '山东') => {
   return useQuery({
     queryKey: ['market_clearing_prices', date, province],
@@ -45,7 +46,8 @@ export const useMarketClearingPrices = (date: string, province: string = '山东
         .select('*')
         .eq('price_date', date)
         .eq('province', province)
-        .order('hour', { ascending: true });
+        .order('hour', { ascending: true })
+        .order('quarter', { ascending: true });
       
       if (error) throw error;
       return data || [];
