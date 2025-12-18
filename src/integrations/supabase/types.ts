@@ -861,6 +861,7 @@ export type Database = {
           id: string
           price_date: string
           province: string
+          quarter: number | null
           realtime_price: number | null
         }
         Insert: {
@@ -870,6 +871,7 @@ export type Database = {
           id?: string
           price_date: string
           province?: string
+          quarter?: number | null
           realtime_price?: number | null
         }
         Update: {
@@ -879,6 +881,7 @@ export type Database = {
           id?: string
           price_date?: string
           province?: string
+          quarter?: number | null
           realtime_price?: number | null
         }
         Relationships: []
