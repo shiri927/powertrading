@@ -87,6 +87,13 @@ const RetailIntraProvincialSpotTab = () => {
     };
   }, [priceDiffData]);
 
+  // 计算价差Y轴的对称范围（0在中心）
+  const maxAbsDiff = useMemo(() => {
+    if (priceDiffData.length === 0) return 50;
+    const maxAbs = Math.max(...priceDiffData.map(d => Math.abs(d.priceDiff)));
+    return Math.ceil(maxAbs / 10) * 10 + 10; // 向上取整到10的倍数并留余量
+  }, [priceDiffData]);
+
   const biddingData = useMemo(() => generateBiddingData(), []);
 
   // 运筹优化结果
@@ -181,9 +188,18 @@ const RetailIntraProvincialSpotTab = () => {
                 <ComposedChart data={priceDiffData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="hour" tick={{ fontSize: 11 }} />
+                  {/* 左Y轴 - 价格 */}
                   <YAxis 
                     yAxisId="left"
                     label={{ value: '价格 (元/MWh)', angle: -90, position: 'insideLeft', fontSize: 11 }} 
+                    tick={{ fontSize: 11 }}
+                  />
+                  {/* 右Y轴 - 价差（0在中心） */}
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[-maxAbsDiff, maxAbsDiff]}
+                    label={{ value: '价差 (元/MWh)', angle: 90, position: 'insideRight', fontSize: 11 }} 
                     tick={{ fontSize: 11 }}
                   />
                   <Tooltip 
@@ -201,9 +217,9 @@ const RetailIntraProvincialSpotTab = () => {
                     }
                   />
                   
-                  {/* 价差柱状图 - 正值绿色，负值红色 */}
+                  {/* 价差柱状图 - 使用右轴，正值绿色，负值红色 */}
                   <Bar 
-                    yAxisId="left"
+                    yAxisId="right"
                     dataKey="priceDiff" 
                     name="priceDiff"
                     opacity={0.7}
@@ -213,7 +229,7 @@ const RetailIntraProvincialSpotTab = () => {
                     ))}
                   </Bar>
                   
-                  {/* 日前价格曲线 - 蓝色 */}
+                  {/* 日前价格曲线 - 蓝色 + 24个数据点 */}
                   <Line 
                     yAxisId="left"
                     type="monotone" 
@@ -221,10 +237,10 @@ const RetailIntraProvincialSpotTab = () => {
                     stroke="#1976D2" 
                     strokeWidth={2} 
                     name="dayAheadPrice" 
-                    dot={false}
+                    dot={{ r: 3, fill: '#1976D2', strokeWidth: 0 }}
                   />
                   
-                  {/* 实时价格曲线 - 橙色 */}
+                  {/* 实时价格曲线 - 橙色 + 24个数据点 */}
                   <Line 
                     yAxisId="left"
                     type="monotone" 
@@ -232,7 +248,7 @@ const RetailIntraProvincialSpotTab = () => {
                     stroke="#FF9800" 
                     strokeWidth={2} 
                     name="realtimePrice" 
-                    dot={false}
+                    dot={{ r: 3, fill: '#FF9800', strokeWidth: 0 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
